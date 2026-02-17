@@ -18,6 +18,7 @@ class User extends Authenticatable
      * @var list<string>
      */
     protected $fillable = [
+        'full_name',
         'name',
         'email',
         'password',
@@ -33,6 +34,15 @@ class User extends Authenticatable
         'remember_token',
     ];
 
+    public function metrics()
+    {
+        return $this->hasOne(\App\Models\UserMetrics::class);
+    }
+
+    public function nutritionGoals()
+    {
+        return $this->hasOne(\App\Models\NutritionGoals::class);
+    }
     /**
      * Get the attributes that should be cast.
      *

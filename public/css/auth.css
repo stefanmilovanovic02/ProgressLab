@@ -243,3 +243,199 @@ body{
     padding: 16px 14px 14px;
   }
 }
+
+
+/* ============================
+   Register page styles
+   ============================ */
+
+.auth-card--register{
+  width: 520px;
+}
+
+/* Stepper */
+.stepper{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.stepper-item{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.stepper-dot{
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(0,0,0,.18);
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  color: rgba(255,255,255,.65);
+}
+
+.stepper-label{
+  font-size: 11px;
+  color: rgba(255,255,255,.55);
+  white-space: nowrap;
+}
+
+.stepper-line{
+  flex: 1;
+  height: 1px;
+  background: rgba(255,255,255,.10);
+  margin: 0 6px;
+}
+
+.stepper-item.is-active .stepper-dot{
+  background: rgba(255,255,255,.14);
+  color: rgba(255,255,255,.90);
+  border-color: rgba(255,255,255,.22);
+}
+.stepper-item.is-active .stepper-label{
+  color: rgba(255,255,255,.85);
+}
+
+/* Steps */
+.steps{
+  display: block;
+}
+
+.step{
+  display: none;
+}
+.step.is-active{
+  display: block;
+}
+
+.step-title{
+  margin: 4px 0 4px;
+  font-size: 16px;
+  color: rgba(255,255,255,.92);
+}
+.step-desc{
+  margin: 0 0 12px;
+  font-size: 12px;
+  color: rgba(255,255,255,.55);
+}
+
+/* Layout helpers */
+.grid-2{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.field-select{
+  appearance: none;
+}
+
+/* Action buttons */
+.step-actions{
+  display: flex;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.auth-button--ghost{
+  background: rgba(0,0,0,.18);
+}
+
+/* Preview cards */
+.tdee-preview,
+.macros-preview{
+  margin-top: 6px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.12);
+  border-radius: 10px;
+  padding: 12px;
+}
+
+.tdee-preview-row{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 4px 0;
+}
+
+.tdee-label{
+  font-size: 11px;
+  color: rgba(255,255,255,.55);
+}
+.tdee-value{
+  font-size: 12px;
+  color: rgba(255,255,255,.90);
+  font-weight: 600;
+}
+.tdee-note{
+  margin: 8px 0 0;
+  font-size: 11px;
+  color: rgba(255,255,255,.45);
+}
+
+/* Goal cards */
+.goal-grid{
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.goal-card{
+  cursor: pointer;
+  user-select: none;
+}
+.goal-card input{
+  display: none;
+}
+
+.goal-card-inner{
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.12);
+  border-radius: 10px;
+  padding: 12px;
+  transition: transform .08s ease, border-color .08s ease, background .08s ease;
+}
+
+.goal-title{
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255,255,255,.92);
+  margin-bottom: 3px;
+}
+.goal-desc{
+  font-size: 11px;
+  color: rgba(255,255,255,.55);
+}
+
+.goal-card input:checked + .goal-card-inner{
+  border-color: rgba(255,255,255,.22);
+  background: rgba(255,255,255,.08);
+}
+
+.goal-card-inner:active{
+  transform: translateY(1px);
+}
+
+/* ============================
+   Register responsiveness
+   ============================ */
+
+@media (max-width: 560px){
+  .auth-card--register{
+    width: 420px;
+  }
+  .grid-2{
+    grid-template-columns: 1fr;
+  }
+  .step-actions{
+    flex-direction: column;
+  }
+}

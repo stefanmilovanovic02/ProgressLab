@@ -31,6 +31,11 @@ use App\Http\Controllers\ProfileController;
     Route::get('/register/macros', [RegisterController::class, 'showMacros'])->name('register.macros');
     Route::post('/register/macros', [RegisterController::class, 'storeMacros'])->name('register.store.macros');
 
+    // Step 3 (Goal + macros)
+Route::get('/register/goal', [RegisterController::class, 'showGoal'])->name('register.goal');
+Route::post('/register/goal', [RegisterController::class, 'storeGoal'])->name('register.store.goal');
+
+
     // Forgot Password
     Route::get('/forgot-password', [ForgotPasswordController::class, 'show'])
         ->name('password.request');
@@ -48,7 +53,7 @@ use App\Http\Controllers\ProfileController;
 Route::post('/logout', [LoginController::class, 'destroy'])
     ->middleware('auth')
     ->name('logout');
-    
+
 // App (Logged in users)
 Route::middleware(['auth'])->group(function () {
 
