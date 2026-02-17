@@ -2,9 +2,12 @@
 
 use Illuminate\Support\Facades\Route;
 
-// Controllers (create later)
-// use App\Http\Controllers\Auth\LoginController;
-// use App\Http\Controllers\Auth\RegisterController;
+// Controllers
+use App\Http\Controllers\Auth\LoginController;
+use App\Http\Controllers\Auth\RegisterController;
+use App\Http\Controllers\Auth\ForgotPasswordController;
+use App\Http\Controllers\Auth\ResetPasswordController;
+
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\AddTodayController;
 use App\Http\Controllers\WorkoutController;
@@ -15,28 +18,37 @@ use App\Http\Controllers\FriendsController;
 use App\Http\Controllers\ProfileController;
 
 // Guest (Not logged in)
- // Login
-Route::get('/login', [\App\Http\Controllers\Auth\LoginController::class, 'show'])
-    ->name('login');
-Route::post('/login', [\App\Http\Controllers\Auth\LoginController::class, 'store'])
-    ->name('login.store');
+ Route::middleware('guest')->group(function () {
 
-// Register (basic info + multi-step macros wizard)
-Route::get('/register', [\App\Http\Controllers\Auth\RegisterController::class, 'showStep1'])
-    ->name('register');
-Route::post('/register', [\App\Http\Controllers\Auth\RegisterController::class, 'storeStep1'])
-    ->name('register.store.step1');
+    // Login
+    Route::get('/login', [LoginController::class, 'show'])->name('login');
+    Route::post('/login', [LoginController::class, 'store'])->name('login.store');
 
-Route::get('/register/macros', [\App\Http\Controllers\Auth\RegisterController::class, 'showMacros'])
-    ->name('register.macros');
-Route::post('/register/macros', [\App\Http\Controllers\Auth\RegisterController::class, 'storeMacros'])
-    ->name('register.store.macros');
+    // Register (basic info + multi-step macros wizard)
+    Route::get('/register', [RegisterController::class, 'showStep1'])->name('register');
+    Route::post('/register', [RegisterController::class, 'storeStep1'])->name('register.store.step1');
+
+    Route::get('/register/macros', [RegisterController::class, 'showMacros'])->name('register.macros');
+    Route::post('/register/macros', [RegisterController::class, 'storeMacros'])->name('register.store.macros');
+
+    // Forgot Password
+    Route::get('/forgot-password', [ForgotPasswordController::class, 'show'])
+        ->name('password.request');
+    Route::post('/forgot-password', [ForgotPasswordController::class, 'send'])
+        ->name('password.email');
+
+    // Reset Password (user arrives here from email link)
+    Route::get('/reset-password/{token}', [ResetPasswordController::class, 'show'])
+        ->name('password.reset');
+    Route::post('/reset-password', [ResetPasswordController::class, 'update'])
+        ->name('password.update');
+});
 
 // Logout (auth-only)
-Route::post('/logout', [\App\Http\Controllers\Auth\LoginController::class, 'destroy'])
+Route::post('/logout', [LoginController::class, 'destroy'])
     ->middleware('auth')
     ->name('logout');
-
+    
 // App (Logged in users)
 Route::middleware(['auth'])->group(function () {
 
