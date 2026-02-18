@@ -89,7 +89,17 @@
           {{-- Optional controls (we can use later; keep for now) --}}
           <div class="grid-2" style="margin-top: 10px;">
             <div class="field">
-              <label class="field-label" for="fat_percent">FAT % OF CALORIES (20–35)</label>
+              <label class="field-label" for="fat_percent">
+                FAT % OF CALORIES (20–35)
+                <span class="help-badge" tabindex="0">?</span>
+
+                <span class="help-tooltip">
+                  Most lifters do best with 20–35% of calories from fat.
+                  A simple default is 30%. If you feel low energy/hormones, go higher (30–35%).
+                  If you prefer more carbs, go lower (20–25%).
+                </span>
+              </label>
+
               <input
                 class="field-input @error('fat_percent') is-invalid @enderror"
                 id="fat_percent"
@@ -101,13 +111,25 @@
                 placeholder="Default: 30"
                 value="{{ old('fat_percent', $data['fat_percent'] ?? '') }}"
               />
+
               @error('fat_percent')
                 <p class="field-error">{{ $message }}</p>
               @enderror
             </div>
 
             <div class="field">
-              <label class="field-label" for="protein_g_per_kg">PROTEIN (g/kg)</label>
+              <label class="field-label" for="protein_g_per_kg">
+                PROTEIN (g/kg)
+                <span class="help-badge" tabindex="0">?</span>
+
+                <span class="help-tooltip">
+                  Protein depends on your goal:
+                  • Bulk/Recomp: 1.6–2.2 g/kg
+                  • Cut: 1.8–2.7 g/kg
+                  If unsure, use 1.8 (bulk/recomp) or 2.2 (cut).
+                </span>
+              </label>
+
               <input
                 class="field-input @error('protein_g_per_kg') is-invalid @enderror"
                 id="protein_g_per_kg"
@@ -119,11 +141,11 @@
                 placeholder="Auto default by goal"
                 value="{{ old('protein_g_per_kg', $data['protein_g_per_kg'] ?? '') }}"
               />
+
               @error('protein_g_per_kg')
                 <p class="field-error">{{ $message }}</p>
               @enderror
             </div>
-          </div>
 
           {{-- Preview (if controller passes it) --}}
           @if(!empty($macros_preview))

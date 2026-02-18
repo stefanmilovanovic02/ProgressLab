@@ -20,6 +20,7 @@
         </p>
       </header>
 
+      
       <div class="auth-panel">
         {{-- Stepper --}}
         <div class="stepper" aria-label="Registration steps">

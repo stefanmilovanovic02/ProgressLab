@@ -121,13 +121,13 @@
             @php $actVal = (string) old('activity', $data['activity_multiplier'] ?? $data['activity'] ?? '') @endphp
             <select class="field-input field-select @error('activity') is-invalid @enderror" id="activity" name="activity">
               <option value="" disabled {{ $actVal==='' ? 'selected' : '' }}>Select</option>
-              <option value="1.2"  {{ $actVal==='1.2'  ? 'selected' : '' }}>1.2 — Sedentary</option>
-              <option value="1.5"  {{ $actVal==='1.5'  ? 'selected' : '' }}>1.5 — Light (low activity)</option>
-              <option value="1.65" {{ $actVal==='1.65' ? 'selected' : '' }}>1.65 — Light/Moderate</option>
-              <option value="1.7"  {{ $actVal==='1.7'  ? 'selected' : '' }}>1.7 — Moderate (gym + 10k steps)</option>
-              <option value="1.8"  {{ $actVal==='1.8'  ? 'selected' : '' }}>1.8 — Moderate/High</option>
-              <option value="2.0"  {{ $actVal==='2.0'  ? 'selected' : '' }}>2.0 — Highly active</option>
-              <option value="2.2"  {{ $actVal==='2.2'  ? 'selected' : '' }}>2.2 — Very active</option>
+              <option value="1.2"  {{ $actVal==='1.2'  ? 'selected' : '' }}>1.2 — Sedentary (desk job, little movement)</option>
+              <option value="1.5"  {{ $actVal==='1.5'  ? 'selected' : '' }}>1.5 — Light (gym 1-3x/week OR regular walks)</option>
+              <option value="1.65" {{ $actVal==='1.65' ? 'selected' : '' }}>1.65 — Light/Moderate (gym 3-4x/week + decent steps)</option>
+              <option value="1.7"  {{ $actVal==='1.7'  ? 'selected' : '' }}>1.7 — Moderate (gym 4-5x/week + 10k steps/day)</option>
+              <option value="1.8"  {{ $actVal==='1.8'  ? 'selected' : '' }}>1.8 — Moderate/High (hard training + high daily activity)</option>
+              <option value="2.0"  {{ $actVal==='2.0'  ? 'selected' : '' }}>2.0 — Highly active (physical job + training)</option>
+              <option value="2.2"  {{ $actVal==='2.2'  ? 'selected' : '' }}>2.2 — Very active (intense sport + high activity)</option>
             </select>
             @error('activity')
               <p class="field-error">{{ $message }}</p>
