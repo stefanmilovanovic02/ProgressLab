@@ -142,6 +142,7 @@ class RegisterController extends Controller
     DB::transaction(function () use ($step1, $step2, $bmr, $tdee, $validated, $calories, $proteinG, $fatG, $carbG, $fatPercent, $proteinGPerKg) {
 
         $user = User::create([
+            'name' => $step1['full_name'],
             'full_name' => $step1['full_name'],
             'username'  => $step1['username'],
             'email'     => $step1['email'],
