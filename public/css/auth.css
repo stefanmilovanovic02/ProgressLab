@@ -679,3 +679,252 @@ body{
     flex-wrap: wrap;
   }
 }
+
+
+/* ============================
+   Profile page styles
+   ============================ */
+
+.pl-container{
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 28px 16px 60px;
+}
+
+.pl-pagehead{
+  text-align: center;
+  margin: 26px 0 22px;
+}
+
+.pl-pagehead__title{
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pl-pagehead__icon{
+  width: 46px;
+  height: 46px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.10);
+  display: grid;
+  place-items: center;
+  box-shadow: 0 18px 60px rgba(0,0,0,.45);
+}
+
+.pl-pagehead h1{
+  margin: 0;
+  font-size: 34px;
+  color: rgba(255,255,255,.95);
+  letter-spacing: .2px;
+}
+
+.pl-pagehead__sub{
+  margin: 10px 0 0;
+  color: rgba(155, 208, 255, .8);
+  font-size: 16px;
+}
+
+/* Cards */
+.pl-card{
+  border-radius: 14px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(12, 20, 36, .72);
+  box-shadow: 0 28px 90px rgba(0,0,0,.55);
+}
+
+/* Profile summary */
+.pl-profilecard{
+  padding: 28px;
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 22px;
+  margin-top: 18px;
+}
+
+.pl-profilecard__left{
+  display: flex;
+  align-items: center;
+  gap: 18px;
+}
+
+.pl-avatar{
+  width: 86px;
+  height: 86px;
+  border-radius: 999px;
+  overflow: hidden;
+  border: 3px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.06);
+  flex: 0 0 auto;
+}
+
+.pl-avatar img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.pl-profilecard__name{
+  margin: 0;
+  font-size: 30px;
+  font-weight: 800;
+  color: rgba(255,255,255,.96);
+}
+
+.pl-profilecard__handle{
+  margin-top: 6px;
+  font-size: 16px;
+  color: rgba(155, 208, 255, .85);
+}
+
+.pl-profilecard__badges{
+  margin-top: 12px;
+}
+
+.pl-pill{
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.16);
+  color: rgba(255,255,255,.92);
+  font-size: 14px;
+}
+
+.pl-pill__ic{
+  opacity: .95;
+}
+
+.pl-pill__num{
+  color: rgba(255, 177, 80, .98);
+  font-weight: 800;
+}
+
+.pl-profilecard__since{
+  margin-top: 14px;
+  color: rgba(175, 200, 230, .75);
+  font-size: 16px;
+}
+
+/* Button */
+.pl-btn{
+  border: 0;
+  cursor: pointer;
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.pl-btn--light{
+  background: rgba(255,255,255,.94);
+  color: rgba(0,0,0,.85);
+}
+
+.pl-btn--light:disabled{
+  opacity: .9;
+  cursor: not-allowed;
+}
+
+.pl-btn__ic{
+  opacity: .8;
+}
+
+/* Info card */
+.pl-infocard{
+  margin-top: 22px;
+  padding: 18px 18px 20px;
+}
+
+.pl-card__head{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.pl-card__head-left{
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pl-card__icon{
+  width: 38px;
+  height: 38px;
+  border-radius: 12px;
+  background: rgba(44, 120, 255, .16);
+  border: 1px solid rgba(44, 120, 255, .18);
+  display: grid;
+  place-items: center;
+}
+
+.pl-card__title{
+  margin: 0;
+  color: rgba(255,255,255,.94);
+  font-size: 18px;
+}
+
+/* Form grid */
+.pl-formgrid{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px 18px;
+  margin-top: 12px;
+}
+
+.pl-field{
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.pl-label{
+  font-size: 13px;
+  font-weight: 700;
+  color: rgba(255,255,255,.90);
+}
+
+.pl-input{
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.08);
+  background: rgba(255,255,255,.04);
+  padding: 14px 14px;
+  color: rgba(255,255,255,.92);
+  font-size: 15px;
+}
+
+/* Responsive */
+@media (max-width: 900px){
+  .pl-profilecard{
+    padding: 20px;
+  }
+  .pl-profilecard__name{
+    font-size: 24px;
+  }
+}
+
+@media (max-width: 720px){
+  .pl-profilecard{
+    flex-direction: column;
+    align-items: stretch;
+    gap: 16px;
+  }
+  .pl-profilecard__right{
+    display: flex;
+    justify-content: flex-end;
+  }
+  .pl-formgrid{
+    grid-template-columns: 1fr;
+  }
+  .pl-pagehead h1{
+    font-size: 28px;
+  }
+}
