@@ -928,3 +928,94 @@ body{
     font-size: 28px;
   }
 }
+/* ============================
+   Profile cover background
+   ============================ */
+
+.pl-profilecard{
+  position: relative;
+  overflow: hidden;
+}
+
+.pl-profilecard.has-cover::before{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: var(--cover-url);
+  background-size: cover;
+  background-position: center;
+  opacity: .22;
+  transform: scale(1.03);
+}
+
+.pl-profilecard.has-cover::after{
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(900px 240px at 30% 20%, rgba(0,140,255,.18), transparent 60%),
+              linear-gradient(180deg, rgba(0,0,0,.30), rgba(0,0,0,.55));
+}
+
+.pl-profilecard > *{
+  position: relative;
+  z-index: 1;
+}
+
+/* ============================
+   Profile edit helpers
+   ============================ */
+
+.pl-input--field{
+  width: 100%;
+  outline: none;
+}
+
+.pl-input--field:disabled{
+  opacity: .95;
+}
+
+.pl-form-actions{
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.pl-btn--ghost{
+  background: transparent;
+  border: 1px solid rgba(255,255,255,.14);
+  color: rgba(255,255,255,.85);
+}
+
+.pl-btn--ghost:hover{
+  background: rgba(255,255,255,.06);
+}
+
+.pl-alert{
+  max-width: 1100px;
+  margin: 0 auto 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(120, 255, 180, .22);
+  background: rgba(120, 255, 180, .10);
+  color: rgba(220, 255, 235, .92);
+  padding: 12px 14px;
+  font-weight: 600;
+}
+
+/* ============================
+   Profile media (avatar/cover) controls
+   ============================ */
+
+.pl-media-actions{
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+.pl-file{
+  display: none;
+}

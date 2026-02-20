@@ -147,6 +147,7 @@ class RegisterController extends Controller
             'username'  => $step1['username'],
             'email'     => $step1['email'],
             'password'  => $step1['password_hash'],
+            'gender'    => $step2['gender'] ?? null,
         ]);
 
         UserMetric::create([
