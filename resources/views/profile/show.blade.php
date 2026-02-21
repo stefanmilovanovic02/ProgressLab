@@ -93,15 +93,15 @@
     </section>
 
     <div class="cards-wrapper">
-<form action="{{ route('profile.update') }}" method="POST" class="pl-formgrid" data-profile-form>
-    {{-- Personal Info Card (editable) --}}
+<form action="{{ route('profile.update') }}" method="POST" data-profile-form>
+    @csrf
+        @method('PUT')
+
+{{-- Personal Info Card (editable) --}}
     <section class="pl-card pl-infocard">
       <h3 class="pl-card__title">Personal Information</h3>
 
-      
-        @csrf
-        @method('PUT')
-
+        <div class="pl-formgrid">
         <div class="pl-field">
           <label class="pl-label" for="full_name">Full Name</label>
           <input
@@ -158,24 +158,21 @@
         </div>
 
         <div class="pl-field">
-  <label class="pl-label" for="gender">Gender</label>
-
-  <select
-    class="pl-input pl-input--field @error('gender') is-invalid @enderror"
-    id="gender"
-    name="gender"
-    disabled
-  >
-    <option value="">Select gender</option>
-    <option value="male" {{ old('gender', $user->gender) === 'male' ? 'selected' : '' }}>Male</option>
-    <option value="female" {{ old('gender', $user->gender) === 'female' ? 'selected' : '' }}>Female</option>
-  </select>
-
-  @error('gender')
-    <p class="field-error">{{ $message }}</p>
-  @enderror
-</div>
-
+          <label class="pl-label" for="gender">Gender</label>
+          <select
+            class="pl-input pl-input--field @error('gender') is-invalid @enderror"
+            id="gender"
+            name="gender"
+            disabled
+            >
+              <option value="">Select gender</option>
+              <option value="male" {{ old('gender', $user->gender) === 'male' ? 'selected' : '' }}>Male</option>
+              <option value="female" {{ old('gender', $user->gender) === 'female' ? 'selected' : '' }}>Female</option>
+          </select>
+            @error('gender')
+              <p class="field-error">{{ $message }}</p>
+            @enderror
+          </div>
 
         <div class="pl-field">
           <label class="pl-label" for="location">Location</label>
@@ -190,10 +187,10 @@
           />
           @error('location') <p class="field-error">{{ $message }}</p> @enderror
         </div>
-
-        
-      
+      </div> 
     </section>
+
+
     {{-- Fitness Info Card --}}
 <section class="pl-card pl-infocard" style="margin-top: 22px;">
   <div class="pl-card__head">
@@ -236,11 +233,11 @@
     </div>
 
     <div class="pl-field">
-      <label class="pl-label" for="activity_level">Activity Level</label>
+      <label class="pl-label" for="activity_multiplier">Activity Multiplier</label>
       <select
         class="pl-input pl-input--field"
-        id="activity_level"
-        name="activity_level"
+        id="activity_,multiplier"
+        name="activity_multiplier"
         disabled
       >
         <option value="">Select</option>
@@ -269,11 +266,11 @@
 
     {{-- Macros --}}
     <div class="pl-field">
-      <label class="pl-label" for="calories">Calories (kcal)</label>
+      <label class="pl-label" for="calorie_target">Calories (kcal)</label>
       <input
         class="pl-input pl-input--field"
-        id="calories"
-        name="calories"
+        id="calorie_target"
+        name="calorie_target"
         type="number"
         min="800"
         max="8000"
@@ -361,6 +358,9 @@
       />
     </div>
   </div>
+  </section>
+
+
   {{-- Save button (hidden until edit mode) --}}
         <div class="pl-form-actions">
           <button class="pl-btn pl-btn--light" type="submit" data-save-btn style="display:none;">
@@ -370,10 +370,10 @@
             Cancel
           </button>
         </div>
-  </form>
 
+  </form>
 </div>
-</section>
+
 
   </main>
 

@@ -11,7 +11,7 @@ class NutritionGoal extends Model
         'goal',
         'calorie_target','protein_g','fat_g','carbs_g',
         'fat_percent','protein_g_per_kg',
-        'bulk_type','cut_type',
+        'bulk_type','cut_type', 'water_l','creatine_g'
     ];
 
     public function user()

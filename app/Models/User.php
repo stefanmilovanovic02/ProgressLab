@@ -41,14 +41,14 @@ class User extends Authenticatable
         'remember_token',
     ];
 
-    public function metrics()
+    public function metric()
     {
-        return $this->hasOne(\App\Models\UserMetrics::class);
+        return $this->hasOne(\App\Models\UserMetric::class);
     }
 
-    public function nutritionGoals()
+    public function nutritionGoal()
     {
-        return $this->hasOne(\App\Models\NutritionGoals::class);
+        return $this->hasOne(\App\Models\NutritionGoal::class);
     }
     /**
      * Get the attributes that should be cast.

@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\DB;
 
 class ProfileController extends Controller
 {
@@ -14,28 +15,44 @@ class ProfileController extends Controller
     }
 
      public function update(Request $request)
-    {
-        $user = $request->user();
+{
+    $user = $request->user();
 
-        $validated = $request->validate([
-            'full_name' => ['required', 'string', 'min:3', 'max:80'],
-            'username'  => [
-                'required', 'string', 'min:3', 'max:30',
-                'regex:/^[a-zA-Z0-9_]+$/',
-                Rule::unique('users', 'username')->ignore($user->id),
-            ],
-            'email'     => [
-                'required', 'email', 'max:255',
-                Rule::unique('users', 'email')->ignore($user->id),
-            ],
-            'date_of_birth' => ['nullable', 'date', 'before:today'],
-            'location'      => ['nullable', 'string', 'max:80'],
-            'gender'        => ['nullable', 'string', 'in:male,female']
-        ], [
-            'username.regex' => 'Username can contain only letters, numbers, and underscores.',
-        ]);
+    $validated = $request->validate([
+        // Personal info
+        'full_name' => ['required', 'string', 'min:3', 'max:80'],
+        'username'  => [
+            'required', 'string', 'min:3', 'max:30',
+            'regex:/^[a-zA-Z0-9_]+$/',
+            Rule::unique('users', 'username')->ignore($user->id),
+        ],
+        'email'     => [
+            'required', 'email', 'max:255',
+            Rule::unique('users', 'email')->ignore($user->id),
+        ],
+        'date_of_birth' => ['nullable', 'date', 'before:today'],
+        'location'      => ['nullable', 'string', 'max:80'],
+        'gender'        => ['nullable', 'in:male,female'],
 
-        // Keep Laravel’s `name` in sync with full_name
+        // Fitness info (metrics)
+        'height_cm' => ['nullable', 'integer', 'min:120', 'max:230'],
+        'weight_kg' => ['nullable', 'numeric', 'min:35', 'max:250'],
+        'activity_multiplier' => ['nullable', 'numeric', 'min:1.2', 'max:2.2'],
+
+        // Fitness info (goal + macros)
+        'goal' => ['nullable', 'in:bulk,cut,recomp'],
+        'calorie_target' => ['nullable', 'integer', 'min:800', 'max:8000'],
+        'protein_g' => ['nullable', 'integer', 'min:0', 'max:500'],
+        'fat_g'     => ['nullable', 'integer', 'min:0', 'max:400'],
+        'carbs_g'   => ['nullable', 'integer', 'min:0', 'max:1200'],
+        'water_l'   => ['nullable', 'numeric', 'min:0', 'max:10'],
+        'creatine_g'=> ['nullable', 'numeric', 'min:0', 'max:20'],
+    ], [
+        'username.regex' => 'Username can contain only letters, numbers, and underscores.',
+    ]);
+
+    DB::transaction(function () use ($user, $validated) {
+
         $user->fill([
             'name' => $validated['full_name'],
             'full_name' => $validated['full_name'],
@@ -45,11 +62,34 @@ class ProfileController extends Controller
             'location' => $validated['location'] ?? null,
             'gender' => $validated['gender'] ?? null,
         ]);
-
         $user->save();
 
-        return redirect()->route('profile.show')->with('status', 'Profile updated successfully.');
-    }
+        // Create metric row if missing
+        $metric = $user->metric()->firstOrCreate(['user_id' => $user->id]);
+        $metric->fill([
+            'height_cm' => $validated['height_cm'] ?? $metric->height_cm,
+            'weight_kg' => $validated['weight_kg'] ?? $metric->weight_kg,
+            'activity_multiplier' => $validated['activity_multiplier'] ?? $metric->activity_multiplier,
+        ]);
+        $metric->save();
+
+        // Create goal row if missing
+        $goal = $user->nutritionGoal()->firstOrCreate(['user_id' => $user->id]);
+        $goal->fill([
+            'goal' => $validated['goal'] ?? $goal->goal,
+            'calorie_target' => $validated['calorie_target'] ?? $goal->calorie_target,
+            'protein_g' => $validated['protein_g'] ?? $goal->protein_g,
+            'fat_g' => $validated['fat_g'] ?? $goal->fat_g,
+            'carbs_g' => $validated['carbs_g'] ?? $goal->carbs_g,
+            'water_l' => $validated['water_l'] ?? $goal->water_l,
+            'creatine_g' => $validated['creatine_g'] ?? $goal->creatine_g,
+        ]);
+        $goal->save();
+    });
+
+    return redirect()->route('profile.show')->with('status', 'Profile updated successfully.');
+}
+
 
     public function updatePhoto(Request $request)
 {

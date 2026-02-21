@@ -172,6 +172,8 @@ class RegisterController extends Controller
             'protein_g_per_kg' => $proteinGPerKg,
             'bulk_type' => $validated['bulk_type'] ?? null,
             'cut_type' => $validated['cut_type'] ?? null,
+            'water_l' => 3.0,
+            'creatine_g' => 5.0,
         ]);
     });
 
