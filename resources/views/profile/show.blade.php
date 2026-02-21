@@ -92,11 +92,13 @@
       </div>
     </section>
 
+    <div class="cards-wrapper">
+<form action="{{ route('profile.update') }}" method="POST" class="pl-formgrid" data-profile-form>
     {{-- Personal Info Card (editable) --}}
     <section class="pl-card pl-infocard">
       <h3 class="pl-card__title">Personal Information</h3>
 
-      <form action="{{ route('profile.update') }}" method="POST" class="pl-formgrid" data-profile-form>
+      
         @csrf
         @method('PUT')
 
@@ -189,7 +191,177 @@
           @error('location') <p class="field-error">{{ $message }}</p> @enderror
         </div>
 
-        {{-- Save button (hidden until edit mode) --}}
+        
+      
+    </section>
+    {{-- Fitness Info Card --}}
+<section class="pl-card pl-infocard" style="margin-top: 22px;">
+  <div class="pl-card__head">
+    <div class="pl-card__head-left">
+      <div class="pl-card__icon" aria-hidden="true">🏋️</div>
+      <h3 class="pl-card__title">Fitness Information</h3>
+    </div>
+  </div>
+
+  <div class="pl-formgrid">
+    <div class="pl-field">
+      <label class="pl-label" for="height_cm">Height (cm)</label>
+      <input
+        class="pl-input pl-input--field"
+        id="height_cm"
+        name="height_cm"
+        type="number"
+        min="120"
+        max="230"
+        placeholder="e.g. 185"
+        value=""
+        disabled
+      />
+    </div>
+
+    <div class="pl-field">
+      <label class="pl-label" for="weight_kg">Weight (kg)</label>
+      <input
+        class="pl-input pl-input--field"
+        id="weight_kg"
+        name="weight_kg"
+        type="number"
+        min="35"
+        max="250"
+        step="0.1"
+        placeholder="e.g. 80"
+        value=""
+        disabled
+      />
+    </div>
+
+    <div class="pl-field">
+      <label class="pl-label" for="activity_level">Activity Level</label>
+      <select
+        class="pl-input pl-input--field"
+        id="activity_level"
+        name="activity_level"
+        disabled
+      >
+        <option value="">Select</option>
+        <option value="1.2">Sedentary (1.2)</option>
+        <option value="1.55">Light (1.55)</option>
+        <option value="1.7">Moderate (1.7)</option>
+        <option value="2.0">Very Active (2.0)</option>
+        <option value="2.2">Athlete (2.2)</option>
+      </select>
+    </div>
+
+    <div class="pl-field">
+      <label class="pl-label" for="goal">Fitness Goal</label>
+      <select
+        class="pl-input pl-input--field"
+        id="goal"
+        name="goal"
+        disabled
+      >
+        <option value="">Select</option>
+        <option value="bulk">Bulk (Build Muscle)</option>
+        <option value="cut">Cut (Lose Fat)</option>
+        <option value="recomp">Recomp (Maintain)</option>
+      </select>
+    </div>
+
+    {{-- Macros --}}
+    <div class="pl-field">
+      <label class="pl-label" for="calories">Calories (kcal)</label>
+      <input
+        class="pl-input pl-input--field"
+        id="calories"
+        name="calories"
+        type="number"
+        min="800"
+        max="8000"
+        placeholder="e.g. 2800"
+        value=""
+        disabled
+      />
+    </div>
+
+    <div class="pl-field">
+      <label class="pl-label" for="protein_g">Protein (g)</label>
+      <input
+        class="pl-input pl-input--field"
+        id="protein_g"
+        name="protein_g"
+        type="number"
+        min="0"
+        max="400"
+        placeholder="e.g. 160"
+        value=""
+        disabled
+      />
+    </div>
+
+    <div class="pl-field">
+      <label class="pl-label" for="fat_g">Fat (g)</label>
+      <input
+        class="pl-input pl-input--field"
+        id="fat_g"
+        name="fat_g"
+        type="number"
+        min="0"
+        max="300"
+        placeholder="e.g. 70"
+        value=""
+        disabled
+      />
+    </div>
+
+    <div class="pl-field">
+      <label class="pl-label" for="carbs_g">Carbs (g)</label>
+      <input
+        class="pl-input pl-input--field"
+        id="carbs_g"
+        name="carbs_g"
+        type="number"
+        min="0"
+        max="900"
+        placeholder="e.g. 320"
+        value=""
+        disabled
+      />
+    </div>
+
+    {{-- Supplements / hydration --}}
+    <div class="pl-field">
+      <label class="pl-label" for="water_l">Water (L/day)</label>
+      <input
+        class="pl-input pl-input--field"
+        id="water_l"
+        name="water_l"
+        type="number"
+        min="0"
+        max="10"
+        step="0.1"
+        placeholder="e.g. 3.0"
+        value=""
+        disabled
+      />
+    </div>
+
+    <div class="pl-field">
+      <label class="pl-label" for="creatine_g">Creatine (g/day)</label>
+      <input
+        class="pl-input pl-input--field"
+        id="creatine_g"
+        name="creatine_g"
+        type="number"
+        min="0"
+        max="20"
+        step="0.5"
+        placeholder="e.g. 5"
+        value=""
+        disabled
+      />
+    </div>
+  </div>
+  {{-- Save button (hidden until edit mode) --}}
         <div class="pl-form-actions">
           <button class="pl-btn pl-btn--light" type="submit" data-save-btn style="display:none;">
             Save Changes
@@ -198,8 +370,10 @@
             Cancel
           </button>
         </div>
-      </form>
-    </section>
+  </form>
+
+</div>
+</section>
 
   </main>
 
