@@ -1039,3 +1039,183 @@ select.pl-input--field option{
   background-color: #1b1f2a;   /* dark dropdown */
   color: #fff;                 /* white text */
 }
+
+/* ============================
+   Security & Settings card
+   ============================ */
+
+  .pl-securitycard{
+    padding: 18px 18px 20px;
+  }
+
+.pl-securitycard__head{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+}
+
+.pl-securitycard__titlewrap{
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.pl-securitycard__icon{
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+  background: rgba(140, 80, 255, .14);
+  border: 1px solid rgba(140, 80, 255, .18);
+  font-size: 18px;
+}
+
+.pl-securitycard__title{
+  font-size: 20px;
+  font-weight: 800;
+  margin: 0;
+}
+
+.pl-securitycard__subhead{
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255,255,255,.08);
+}
+
+.pl-securitycard__subicon{
+  font-size: 16px;
+  opacity: .9;
+}
+
+.pl-securitycard__subtitle{
+  font-weight: 700;
+  color: rgba(255,255,255,.9);
+}
+
+.pl-securityrow{
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 14px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.06);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.pl-securityrow__label{
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.pl-securityrow__hint{
+  color: rgba(255,255,255,.65);
+  font-size: 14px;
+}
+
+.pl-securityrow__muted{
+  color: rgba(255,255,255,.8);
+}
+
+@media (max-width: 720px){
+  .pl-securityrow{
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .pl-securityrow__right{
+    width: 100%;
+  }
+  .pl-securityrow__right .pl-btn{
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+/* ============================
+   Security & Settings card
+   ============================ */
+  
+   /* Danger card */
+
+   .pl-dangercard{
+    padding: 18px 18px 20px;
+   }
+   
+.pl-dangercard__head{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  color:#ff4d4f;
+}
+
+.pl-dangercard__dot{
+  width:12px;
+  height:12px;
+  background:#ff4d4f;
+  border-radius:50%;
+}
+
+.pl-dangerbox{
+  margin-top:14px;
+  padding:18px;
+  border-radius:14px;
+  background:rgba(255,0,0,.08);
+  border:1px solid rgba(255,0,0,.3);
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:16px;
+}
+
+.pl-btn--danger{
+  background:#ff2e2e;
+  color:#fff;
+  border:none;
+}
+
+.pl-btn--danger:hover{
+  background:#e60000;
+}
+
+/* Modal */
+.pl-modal{
+  position:fixed;
+  inset:0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  z-index:999;
+}
+
+.pl-modal.is-active{
+  display:flex;
+}
+
+.pl-modal__backdrop{
+  position:absolute;
+  inset:0;
+  background:rgba(0,0,0,.7);
+}
+
+.pl-modal__content{
+  position:relative;
+  background:#111827;
+  padding:28px;
+  border-radius:16px;
+  width:100%;
+  max-width:480px;
+  z-index:2;
+}
+
+.pl-modal__actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:12px;
+  margin-top:20px;
+}

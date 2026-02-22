@@ -12,6 +12,8 @@
 
   @php
     $user = auth()->user();
+    $metric = $user->metric;
+    $goalRow = $user->nutritionGoal;
 
     $avatarUrl = $user->avatar_path ? asset($user->avatar_path) : 'https://i.pravatar.cc/140?img=12';
     $coverUrl  = $user->cover_path ? asset($user->cover_path) : null;
@@ -93,9 +95,9 @@
     </section>
 
     <div class="cards-wrapper">
-<form action="{{ route('profile.update') }}" method="POST" data-profile-form>
-    @csrf
-        @method('PUT')
+      <form action="{{ route('profile.update') }}" method="POST" data-profile-form>
+        @csrf
+            @method('PUT')
 
 {{-- Personal Info Card (editable) --}}
     <section class="pl-card pl-infocard">
@@ -211,7 +213,7 @@
         min="120"
         max="230"
         placeholder="e.g. 185"
-        value=""
+        value="{{ old('height_cm', $metric->height_cm ?? '') }}"
         disabled
       />
     </div>
@@ -227,7 +229,7 @@
         max="250"
         step="0.1"
         placeholder="e.g. 80"
-        value=""
+        value="{{ old('weight_kg', $metric->weight_kg ?? '') }}"
         disabled
       />
     </div>
@@ -241,12 +243,13 @@
         disabled
       >
         <option value="">Select</option>
-        <option value="1.2">Sedentary (1.2)</option>
-        <option value="1.55">Light (1.55)</option>
-        <option value="1.7">Moderate (1.7)</option>
-        <option value="2.0">Very Active (2.0)</option>
-        <option value="2.2">Athlete (2.2)</option>
-      </select>
+         @foreach([1.2, 1.55, 1.7, 2.0, 2.2] as $m)
+    <option value="{{ $m }}"
+      {{ (string) old('activity_multiplier', $metric->activity_multiplier ?? '') === (string) $m ? 'selected' : '' }}>
+      {{ $m == 1.2 ? 'Sedentary' : ($m == 1.55 ? 'Light' : ($m == 1.7 ? 'Moderate' : ($m == 2.0 ? 'Very Active' : 'Athlete'))) }} ({{ $m }})
+    </option>
+  @endforeach
+</select>
     </div>
 
     <div class="pl-field">
@@ -258,9 +261,9 @@
         disabled
       >
         <option value="">Select</option>
-        <option value="bulk">Bulk (Build Muscle)</option>
-        <option value="cut">Cut (Lose Fat)</option>
-        <option value="recomp">Recomp (Maintain)</option>
+        <option value="bulk"  {{ old('goal', $goalRow->goal ?? '') === 'bulk' ? 'selected' : '' }}>Bulk</option>
+  <option value="cut"   {{ old('goal', $goalRow->goal ?? '') === 'cut' ? 'selected' : '' }}>Cut</option>
+  <option value="recomp"{{ old('goal', $goalRow->goal ?? '') === 'recomp' ? 'selected' : '' }}>Recomp</option>
       </select>
     </div>
 
@@ -275,7 +278,7 @@
         min="800"
         max="8000"
         placeholder="e.g. 2800"
-        value=""
+        value="{{ old('calorie_target', $goalRow->calorie_target ?? '') }}"
         disabled
       />
     </div>
@@ -290,7 +293,7 @@
         min="0"
         max="400"
         placeholder="e.g. 160"
-        value=""
+        value="{{ old('protein_g', $goalRow->protein_g ?? '') }}"
         disabled
       />
     </div>
@@ -305,7 +308,7 @@
         min="0"
         max="300"
         placeholder="e.g. 70"
-        value=""
+        value="{{ old('fat_g', $goalRow->fat_g ?? '') }}"
         disabled
       />
     </div>
@@ -320,7 +323,7 @@
         min="0"
         max="900"
         placeholder="e.g. 320"
-        value=""
+        value="{{ old('carbs_g', $goalRow->carbs_g ?? '') }}"
         disabled
       />
     </div>
@@ -337,7 +340,7 @@
         max="10"
         step="0.1"
         placeholder="e.g. 3.0"
-        value=""
+        value="{{ old('water_l', $goalRow->water_l ?? '') }}"
         disabled
       />
     </div>
@@ -353,7 +356,7 @@
         max="20"
         step="0.5"
         placeholder="e.g. 5"
-        value=""
+        value="{{ old('creatine_g', $goalRow->creatine_g ?? '') }}"
         disabled
       />
     </div>
@@ -372,10 +375,92 @@
         </div>
 
   </form>
+
+    {{-- Security & Settings --}}
+<section class="pl-card pl-securitycard">
+  <div class="pl-securitycard__head">
+    <div class="pl-securitycard__titlewrap">
+      <div class="pl-securitycard__icon" aria-hidden="true">🛡️</div>
+      <h3 class="pl-securitycard__title">Security &amp; Settings</h3>
+    </div>
+  </div>
+
+  <div class="pl-securitycard__subhead">
+    <div class="pl-securitycard__subicon" aria-hidden="true">🔑</div>
+    <div class="pl-securitycard__subtitle">Security</div>
+  </div>
+
+  <div class="pl-securityrow">
+    <div class="pl-securityrow__left">
+      <div class="pl-securityrow__label">Password</div>
+      <div class="pl-securityrow__hint">Last changed <span class="pl-securityrow__muted">—</span></div>
+    </div>
+
+    <div class="pl-securityrow__right">
+      <a class="pl-btn pl-btn--light" style="text-decoration: none;" href="{{ route('password.edit') }}">
+        Change Password
+      </a>
+    </div>
+  </div>
+</section>
+
+{{-- Danger Zone --}}
+<section class="pl-card pl-dangercard">
+  <div class="pl-dangercard__head">
+    <span class="pl-dangercard__dot"></span>
+    <h3>Danger Zone</h3>
+  </div>
+
+  <div class="pl-dangerbox">
+    <div>
+      <div class="pl-dangerbox__title">Delete Account</div>
+      <div class="pl-dangerbox__desc">
+        Permanently delete your account and all data.
+      </div>
+    </div>
+
+    <button class="pl-btn pl-btn--danger" type="button" data-open-delete>
+      Delete Account
+    </button>
+  </div>
+</section>
+
+
+
+</div>
+  </main>
+  <div class="pl-modal" data-delete-modal>
+  <div class="pl-modal__backdrop"></div>
+
+  <div class="pl-modal__content">
+    <h3>Are you absolutely sure?</h3>
+    <p>
+      This action cannot be undone. This will permanently delete your account
+      and remove all of your data.
+    </p>
+
+    <form action="{{ route('profile.destroy') }}" method="POST">
+      @csrf
+      @method('DELETE')
+
+      <div class="pl-field">
+        <label class="pl-label">Enter your password to confirm</label>
+        <input type="password" name="password" class="pl-input pl-input--field" required>
+      </div>
+
+      <div class="pl-modal__actions">
+        <button type="button" class="pl-btn pl-btn--ghost" data-close-delete>
+          Cancel
+        </button>
+
+        <button type="submit" class="pl-btn pl-btn--danger">
+          Yes, Delete My Account
+        </button>
+      </div>
+    </form>
+  </div>
 </div>
 
-
-  </main>
 
   <script>
     (function () {
@@ -466,6 +551,32 @@
       const hasErrors = {{ $errors->any() ? 'true' : 'false' }};
       if (hasErrors) setEditMode(true);
     })();
+
+  (function () {
+    const openBtn = document.querySelector('[data-open-delete]');
+    const modal = document.querySelector('[data-delete-modal]');
+    const closeBtn = document.querySelector('[data-close-delete]');
+    const backdrop = modal?.querySelector('.pl-modal__backdrop');
+
+    if (!openBtn || !modal) return;
+
+    openBtn.addEventListener('click', () => {
+      modal.classList.add('is-active');
+    });
+
+    closeBtn?.addEventListener('click', () => {
+      modal.classList.remove('is-active');
+    });
+
+    backdrop?.addEventListener('click', () => {
+      modal.classList.remove('is-active');
+    });
+  })();
+
+
+
+
+
   </script>
 
 </body>

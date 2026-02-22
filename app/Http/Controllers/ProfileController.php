@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 
 class ProfileController extends Controller
 {
@@ -140,5 +141,29 @@ public function updateCover(Request $request)
     return redirect()->route('profile.show')->with('status', 'Cover image updated.');
 }
 
+public function destroy(Request $request)
+{
+    $user = $request->user();
+
+    // Optional: require password confirmation
+    $request->validate([
+        'password' => ['required']
+    ]);
+
+    if (!\Hash::check($request->password, $user->password)) {
+        return back()->withErrors([
+            'password' => 'Password is incorrect.'
+        ]);
+    }
+
+    Auth::logout();
+
+    $user->delete(); // This will also delete related rows if you used cascadeOnDelete()
+
+    $request->session()->invalidate();
+    $request->session()->regenerateToken();
+
+    return redirect('/')->with('status', 'Account deleted successfully.');
+}
 
 }

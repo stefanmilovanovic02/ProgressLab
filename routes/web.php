@@ -104,5 +104,8 @@ Route::middleware(['auth'])->group(function () {
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/photo', [ProfileController::class, 'updatePhoto'])->name('profile.photo.update');
     Route::put('/profile/cover', [ProfileController::class, 'updateCover'])->name('profile.cover.update');
+    Route::get('/profile/password', [\App\Http\Controllers\PasswordController::class, 'edit'])->name('password.edit');
+    Route::put('/profile/password', [\App\Http\Controllers\PasswordController::class, 'update'])->name('profile.password.update');
+    Route::delete('/profile', [\App\Http\Controllers\ProfileController::class, 'destroy'])->name('profile.destroy');
 
 });
