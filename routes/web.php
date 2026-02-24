@@ -70,9 +70,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/workouts/create', [WorkoutController::class, 'create'])->name('workouts.create');
     Route::post('/workouts', [WorkoutController::class, 'store'])->name('workouts.store');
     Route::get('/workouts/{workout}', [WorkoutController::class, 'show'])->name('workouts.show');
-    Route::get('/workouts/{workout}/edit', [WorkoutController::class, 'edit'])->name('workouts.edit');
+    Route::get('/workouts/{workout}/edit-data', [WorkoutController::class, 'editData'])->name('workouts.editData');
     Route::put('/workouts/{workout}', [WorkoutController::class, 'update'])->name('workouts.update');
     Route::delete('/workouts/{workout}', [WorkoutController::class, 'destroy'])->name('workouts.destroy');
+    Route::get('/exercises/search', [WorkoutController::class, 'searchExercises'])->name('exercises.search');
 
     // (optional) favorites/exercises helpers
     Route::post('/exercises/{exercise}/favorite', [WorkoutController::class, 'favorite'])->name('exercises.favorite');

@@ -1046,6 +1046,7 @@ select.pl-input--field option{
 
   .pl-securitycard{
     padding: 18px 18px 20px;
+    margin-top: 20px;
   }
 
 .pl-securitycard__head{
@@ -1144,9 +1145,10 @@ select.pl-input--field option{
    /* Danger card */
 
    .pl-dangercard{
+     margin-top: 20px;
     padding: 18px 18px 20px;
    }
-   
+
 .pl-dangercard__head{
   display:flex;
   align-items:center;
@@ -1218,4 +1220,458 @@ select.pl-input--field option{
   justify-content:flex-end;
   gap:12px;
   margin-top:20px;
+}
+
+@media (max-width: 425px){
+  .pl-dangerbox{
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .pl-btn.pl-btn--danger{
+    width: 100%;
+    justify-content: center;
+  }
+}
+
+
+/* ============================
+   Workouts page
+   ============================ */
+
+.pl-pagehead__title--center{
+  justify-content: center;
+  text-align: center;
+}
+.pl-pagehead__sub--center{
+  text-align: center;
+}
+
+/* Grid */
+.wo-grid{
+  width: 100%;
+  max-width: 1180px;
+  margin: 26px auto 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 22px;
+}
+
+/* Card */
+.wo-card{
+  border-radius: 16px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+  overflow: hidden;
+  padding: 18px 18px 16px;
+  min-height: 310px;
+  display: flex;
+  flex-direction: column;
+}
+
+.wo-card__head{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.wo-card__titlewrap{
+  display:flex;
+  align-items:center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.wo-icon{
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  display:grid;
+  place-items:center;
+  background: rgba(140, 80, 255, .14);
+  border: 1px solid rgba(140, 80, 255, .18);
+  flex: 0 0 auto;
+}
+
+.wo-card__title{
+  margin: 0;
+  font-size: 18px;
+  font-weight: 800;
+  color: rgba(255,255,255,.95);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wo-iconbtn{
+  border: 0;
+  background: transparent;
+  color: rgba(255,255,255,.55);
+  cursor: pointer;
+  padding: 6px 8px;
+  border-radius: 10px;
+}
+.wo-iconbtn:hover{
+  background: rgba(255,255,255,.06);
+  color: rgba(255,255,255,.85);
+}
+
+.wo-card__body{
+  margin-top: 6px;
+  flex: 1 1 auto;
+}
+
+.wo-label{
+  font-weight: 700;
+  font-size: 13px;
+  color: rgba(255,255,255,.75);
+  margin-bottom: 10px;
+}
+
+.wo-list{
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+
+.wo-row{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.wo-row__name{
+  color: rgba(255,255,255,.90);
+  font-size: 14px;
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.wo-chip{
+  font-size: 12px;
+  color: rgba(255,255,255,.70);
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.08);
+  padding: 4px 10px;
+  border-radius: 10px;
+  flex: 0 0 auto;
+}
+
+.wo-more{
+  margin-top: 12px;
+  font-size: 13px;
+  color: rgba(155, 200, 255, .8);
+}
+
+.wo-card__foot{
+  margin-top: 18px;
+}
+
+.wo-footline{
+  height: 1px;
+  background: rgba(255,255,255,.08);
+  margin-bottom: 14px;
+}
+
+.wo-total{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+}
+
+.wo-total__label{
+  color: rgba(155, 200, 255, .8);
+  font-size: 13px;
+}
+.wo-total__value{
+  font-weight: 800;
+  color: rgba(255,255,255,.95);
+}
+
+/* Add card */
+.wo-add{
+  border-radius: 16px;
+  background: rgba(255,255,255,.03);
+  border: 2px dashed rgba(155, 200, 255, .28);
+  min-height: 220px;
+  cursor: pointer;
+  padding: 0;
+}
+.wo-add:hover{
+  background: rgba(255,255,255,.05);
+  border-color: rgba(155, 200, 255, .42);
+}
+
+.wo-add__inner{
+  height: 100%;
+  display:flex;
+  flex-direction: column;
+  align-items:center;
+  justify-content:center;
+  gap: 12px;
+  color: rgba(155, 200, 255, .9);
+}
+
+.wo-add__plus{
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display:grid;
+  place-items:center;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+  font-size: 24px;
+  color: rgba(255,255,255,.9);
+}
+
+.wo-add__text{
+  font-size: 14px;
+  font-weight: 700;
+}
+
+/* Empty state */
+.wo-empty{
+  grid-column: 1 / -1;
+  padding: 14px 4px 0;
+  text-align: left;
+  color: rgba(255,255,255,.75);
+}
+.wo-empty__title{
+  font-weight: 800;
+  color: rgba(255,255,255,.92);
+  margin-bottom: 4px;
+}
+.wo-empty__sub{
+  color: rgba(255,255,255,.65);
+  font-size: 14px;
+}
+
+/* Modal shell (UI only for now) */
+.wo-modal{
+  position: fixed;
+  inset: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+.wo-modal.is-active{
+  display: flex;
+}
+.wo-modal__backdrop{
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.7);
+}
+.wo-modal__panel{
+  position: relative;
+  width: 92%;
+  max-width: 520px;
+  border-radius: 16px;
+  background: rgba(18, 25, 38, .98);
+  border: 1px solid rgba(255,255,255,.10);
+  padding: 22px;
+  z-index: 2;
+  max-height: min(88vh, 720px);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.wo-modal__title{
+  font-size: 18px;
+  font-weight: 900;
+  color: rgba(255,255,255,.95);
+}
+.wo-modal__sub{
+  margin-top: 6px;
+  color: rgba(255,255,255,.65);
+  font-size: 14px;
+}
+.wo-modal__actions{
+  display:flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 18px;
+  position: sticky;
+  bottom: 0;
+  background: rgba(18, 25, 38, .98);
+  padding-top: 12px;
+}
+
+/* Responsive */
+@media (max-width: 1080px){
+  .wo-grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 720px){
+  .wo-grid{ grid-template-columns: 1fr; }
+  .wo-card{ min-height: 0; }
+}
+
+/* Workouts modal (create) */
+.wo-modal__top{
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 14px;
+}
+.wo-modal__titlewrap{ display:flex; align-items:center; gap: 12px; }
+.wo-modal__x{
+  border: 0;
+  background: transparent;
+  color: rgba(255,255,255,.7);
+  cursor: pointer;
+  padding: 6px 10px;
+  border-radius: 10px;
+}
+.wo-modal__x:hover{ background: rgba(255,255,255,.06); color: rgba(255,255,255,.95); }
+
+.wo-field{ margin-top: 10px; }
+.wo-label2{ font-weight: 800; color: rgba(255,255,255,.85); font-size: 13px; }
+.wo-input{
+  width: 100%;
+  margin-top: 10px;
+  padding: 12px 12px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.05);
+  color: #fff;
+}
+
+.wo-exhead{
+  margin-top: 18px;
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.wo-addbtn{
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.06);
+  color: rgba(255,255,255,.92);
+  padding: 10px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.wo-addbtn:hover{ background: rgba(255,255,255,.08); }
+
+.wo-exlist{
+   margin-top: 12px; 
+   display: grid; gap: 12px; 
+   max-height: 38vh;
+   overflow-y: auto;
+   padding-right: 6px;
+  }
+
+  /* Optional: nicer scrollbar */
+    .wo-exlist::-webkit-scrollbar { width: 8px; }
+    .wo-exlist::-webkit-scrollbar-thumb {
+      background: rgba(255,255,255,.12);
+      border-radius: 999px;
+    }
+
+    .wo-exlist::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+.wo-exrow{ display:flex; gap: 10px; align-items: flex-start; }
+
+.wo-excard{
+  flex: 1 1 auto;
+  border-radius: 14px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+  padding: 12px;
+}
+.wo-exinputwrap{ position: relative; }
+.wo-select{ margin-top: 10px; }
+
+.wo-trash{
+  border: 0;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.10);
+  color: rgba(255,255,255,.75);
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+.wo-trash:hover{ background: rgba(255,255,255,.07); color: rgba(255,255,255,.95); }
+
+/* Suggestions dropdown */
+.wo-suggest{
+  position:absolute;
+  left: 0;
+  right: 0;
+  top: calc(100% + 8px);
+
+  background: rgba(18, 25, 38, .98);
+  border: 1px solid rgba(255,255,255,.10);
+  border-radius: 16px;
+
+  padding: 10px;
+
+  /* 👇 Bigger height */
+  max-height: 380px;      /* was 220px */
+  overflow-y: auto;
+
+  display: grid;
+  gap: 8px;
+
+  z-index: 9999;
+}
+
+.wo-suggest[hidden]{
+  display: none !important;
+}
+
+/* Optional: nicer scrollbar */
+.wo-exlist::-webkit-scrollbar { width: 8px; }
+.wo-exlist::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,.12);
+  border-radius: 999px;
+}
+
+.wo-suggest__item{
+  border: 0;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+  color: #fff;
+  padding: 14px 14px;
+  border-radius: 14px;
+  cursor: pointer;
+  text-align: left;
+}
+.wo-suggest__item:hover{ background: rgba(255,255,255,.07); }
+
+.wo-suggest__name{ font-weight: 800; font-size: 13px; }
+.wo-suggest__meta{ margin-top: 2px; font-size: 12px; color: rgba(255,255,255,.65); }
+
+.wo-exrow { position: relative; }
+.wo-excard { overflow: visible; }
+.wo-modal__panel { overflow: visible; }
+.wo-suggest {z-index: 9999;}
+
+#createWorkoutForm{
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.icons-wrapper{
+  display: flex;
+  gap: 12px;
+
+}
+
+@media (max-width: 560px){
+  .wo-exrow{ flex-direction: column; }
+  .wo-trash{ width: 100%; height: 44px; }
 }
