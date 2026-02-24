@@ -64,6 +64,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/add-today', [AddTodayController::class, 'index'])->name('add-today');
     Route::post('/add-today/nutrition', [AddTodayController::class, 'storeNutrition'])->name('add-today.nutrition.store');
     Route::post('/add-today/workout', [AddTodayController::class, 'storeWorkout'])->name('add-today.workout.store');
+    Route::get('/add-today/workout/today', [AddTodayController::class, 'getTodayWorkout'])->name('add-today.workout.today');
+    Route::post('/add-today/workout/save', [AddTodayController::class, 'saveTodayWorkout'])->name('add-today.workout.save');
 
     // 5) Workouts (create workouts from favorite exercises)
     Route::get('/workouts', [WorkoutController::class, 'index'])->name('workouts.index');
