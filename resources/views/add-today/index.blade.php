@@ -304,126 +304,256 @@
         </script>
 
     <script>
-      // JS for Workout Selection
-        (function () {
-          // Mock workouts from Blade -> JS
-          const workouts = @json($workoutsForJs);
+      (function () {
+        const workouts = @json($workoutsForJs);
 
-          const select = document.getElementById('wsWorkoutSelect');
-          const empty = document.querySelector('[data-ws-empty]');
-          const content = document.querySelector('[data-ws-content]');
-          const title = document.querySelector('[data-ws-title]');
-          const list = document.querySelector('[data-ws-list]');
+        const select  = document.getElementById('wsWorkoutSelect');
+        const empty   = document.querySelector('[data-ws-empty]');
+        const content = document.querySelector('[data-ws-content]');
+        const title   = document.querySelector('[data-ws-title]');
+        const list    = document.querySelector('[data-ws-list]');
 
-          if (!select || !empty || !content || !title || !list) return;
+        if (!select || !empty || !content || !title || !list) return;
 
-          function esc(s){ return String(s).replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m])); }
+        const SAVE_URL = "{{ route('add-today.workout.save') }}";
+        const LOAD_URL = "{{ route('add-today.workout.today') }}";
+        const CSRF     = "{{ csrf_token() }}";
 
-          function buildExerciseCard(ex) {
-            const wrap = document.createElement('div');
-            wrap.className = 'ws-ex';
-            wrap.dataset.exerciseId = ex.id;
+        function esc(s){
+          return String(s).replace(/[&<>"']/g, m => ({
+            '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+          }[m]));
+        }
 
-            wrap.innerHTML = `
-              <button type="button" class="ws-ex__head" aria-expanded="false">
-                <div class="ws-ex__left">
-                  <div class="ws-ex__mini">🏋️</div>
-                  <div>
-                    <span class="ws-ex__name">${esc(ex.name)}</span>
-                    <span class="ws-ex__sets">(${ex.default_sets} sets)</span>
-                  </div>
+        // =========
+        // AUTOSAVE
+        // =========
+        let saveTimer = null;
+        function scheduleSave(){
+          clearTimeout(saveTimer);
+          saveTimer = setTimeout(saveNow, 450);
+        }
+
+        function buildPayload(){
+          const workoutId = select.value;
+          if (!workoutId) return null;
+
+          const exercises = Array.from(list.querySelectorAll('.ws-ex')).map(exCard => {
+            const exerciseId = Number(exCard.dataset.exerciseId);
+
+            const rows = Array.from(exCard.querySelectorAll('.ws-sets .ws-row')).map((row, idx) => {
+              const inputs = row.querySelectorAll('input.ws-in');
+              const repsVal = inputs[0]?.value ?? '';
+              const wVal    = inputs[1]?.value ?? '';
+
+              return {
+                set_number: idx + 1,
+                reps: repsVal === '' ? null : Number(repsVal),
+                weight_kg: wVal === '' ? null : Number(wVal),
+              };
+            });
+
+            return { exercise_id: exerciseId, sets: rows };
+          });
+
+          return { workout_id: Number(workoutId), exercises };
+        }
+
+        async function saveNow(){
+          const payload = buildPayload();
+          if (!payload) return;
+
+          try{
+            const res = await fetch(SAVE_URL, {
+              method: 'POST',
+              headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': CSRF
+              },
+              body: JSON.stringify(payload)
+            });
+
+            // Optional: debug errors
+            if (!res.ok) {
+              const txt = await res.text();
+              console.error('Save failed:', res.status, txt);
+            }
+          } catch(e){
+            console.error(e);
+          }
+        }
+
+        // Close: when user changes select, we save (after render)
+        select.addEventListener('change', () => {
+          renderWorkout(select.value, null);
+          scheduleSave();
+        });
+
+        // Save on typing reps/weight
+        document.addEventListener('input', (e) => {
+          if (e.target.closest('.ws-card') && e.target.classList.contains('ws-in')) {
+            scheduleSave();
+          }
+        });
+
+        // Save on add/remove set
+        document.addEventListener('click', (e) => {
+          if (e.target.closest('.ws-card') && (e.target.closest('.ws-addset') || e.target.closest('.ws-remove'))) {
+            scheduleSave();
+          }
+        });
+
+        // =========
+        // UI BUILD
+        // =========
+        function buildExerciseCard(ex, savedSets = null) {
+          const wrap = document.createElement('div');
+          wrap.className = 'ws-ex';
+          wrap.dataset.exerciseId = ex.id;
+
+          wrap.innerHTML = `
+            <button type="button" class="ws-ex__head" aria-expanded="false">
+              <div class="ws-ex__left">
+                <div class="ws-ex__mini">🏋️</div>
+                <div>
+                  <span class="ws-ex__name">${esc(ex.name)}</span>
+                  <span class="ws-ex__sets">(${savedSets ? savedSets.length : (ex.default_sets || 3)} sets)</span>
                 </div>
-                <div class="ws-ex__chev">⌄</div>
+              </div>
+              <div class="ws-ex__chev">⌄</div>
+            </button>
+
+            <div class="ws-ex__body">
+              <div class="ws-row ws-th">
+                <div>Set</div>
+                <div>Reps</div>
+                <div>Weight (kg)</div>
+                <div>Actions</div>
+              </div>
+
+              <div class="ws-sets"></div>
+
+              <button type="button" class="ws-addset">
+                <span class="ws-addset__inner">
+                  <span class="ws-addset__plus">＋</span>
+                  <span>Add Set</span>
+                </span>
               </button>
+            </div>
+          `;
 
-              <div class="ws-ex__body">
-                <div class="ws-row ws-th">
-                  <div>Set</div>
-                  <div>Reps</div>
-                  <div>Weight (kg)</div>
-                  <div>Actions</div>
-                </div>
+          const head     = wrap.querySelector('.ws-ex__head');
+          const setsWrap = wrap.querySelector('.ws-sets');
+          const addSetBtn= wrap.querySelector('.ws-addset');
 
-                <div class="ws-sets"></div>
+          function renumber(){
+            Array.from(setsWrap.querySelectorAll('.ws-row')).forEach((r, idx) => {
+              const n = r.querySelector('.ws-setnum');
+              if (n) n.textContent = String(idx + 1);
+            });
+          }
 
-                <button type="button" class="ws-addset">
-                  <span class="ws-addset__inner">
-                    <span class="ws-addset__plus">＋</span>
-                    <span>Add Set</span>
-                  </span>
-                </button>
+          function addSet(prefill = {}) {
+            const setIndex = setsWrap.querySelectorAll('.ws-row').length + 1;
+
+            const row = document.createElement('div');
+            row.className = 'ws-row';
+            row.innerHTML = `
+              <div class="ws-setnum">${setIndex}</div>
+              <div><input class="ws-in" type="number" min="0" placeholder="12" value="${prefill.reps ?? ''}"></div>
+              <div><input class="ws-in" type="number" min="0" step="0.5" placeholder="80" value="${prefill.weight_kg ?? ''}"></div>
+              <div class="ws-act">
+                <button type="button" class="ws-remove" title="Remove set" aria-label="Remove set">–</button>
               </div>
             `;
 
-            const head = wrap.querySelector('.ws-ex__head');
-            const body = wrap.querySelector('.ws-ex__body');
-            const setsWrap = wrap.querySelector('.ws-sets');
-            const addSetBtn = wrap.querySelector('.ws-addset');
-
-            function addSet(prefill = {}) {
-              const setIndex = setsWrap.querySelectorAll('.ws-row').length + 1;
-
-              const row = document.createElement('div');
-              row.className = 'ws-row';
-              row.innerHTML = `
-                <div class="ws-setnum">${setIndex}</div>
-                <div><input class="ws-in" type="number" min="0" placeholder="12" value="${prefill.reps ?? ''}"></div>
-                <div><input class="ws-in" type="number" min="0" step="0.5" placeholder="80" value="${prefill.weight ?? ''}"></div>
-                <div class="ws-act">
-                  <button type="button" class="ws-remove" title="Remove set" aria-label="Remove set">–</button>
-                </div>
-              `;
-
-              row.querySelector('.ws-remove').addEventListener('click', () => {
-                row.remove();
-                // renumber sets
-                Array.from(setsWrap.querySelectorAll('.ws-row')).forEach((r, idx) => {
-                  const n = r.querySelector('.ws-setnum');
-                  if (n) n.textContent = String(idx + 1);
-                });
-              });
-
-              setsWrap.appendChild(row);
-            }
-
-            // Create default sets
-            for (let i = 0; i < (ex.default_sets || 3); i++) addSet();
-
-            // Toggle accordion
-            head.addEventListener('click', () => {
-              const open = wrap.classList.toggle('is-open');
-              head.setAttribute('aria-expanded', open ? 'true' : 'false');
+            row.querySelector('.ws-remove').addEventListener('click', () => {
+              row.remove();
+              renumber();
+              scheduleSave();
             });
 
-            // Add set
-            addSetBtn.addEventListener('click', () => addSet());
-
-            return wrap;
+            setsWrap.appendChild(row);
           }
 
-          function renderWorkout(workoutId) {
-            list.innerHTML = '';
-
-            const w = workouts.find(x => String(x.id) === String(workoutId));
-            if (!w) {
-              content.hidden = true;
-              empty.hidden = false;
-              return;
-            }
-
-            title.textContent = `${w.name} Exercises`;
-            (w.exercises || []).forEach(ex => list.appendChild(buildExerciseCard(ex)));
-
-            empty.hidden = true;
-            content.hidden = false;
+          // Prefill sets if saved, else create defaults
+          if (savedSets && savedSets.length) {
+            savedSets.forEach(s => addSet(s));
+          } else {
+            for (let i = 0; i < (ex.default_sets || 3); i++) addSet();
           }
 
-          select.addEventListener('change', () => {
-            renderWorkout(select.value);
+          // Toggle accordion
+          head.addEventListener('click', () => {
+            const open = wrap.classList.toggle('is-open');
+            head.setAttribute('aria-expanded', open ? 'true' : 'false');
           });
 
-        })();
-        </script>  
+          // Add set
+          addSetBtn.addEventListener('click', () => {
+            addSet();
+            scheduleSave();
+          });
+
+          return wrap;
+        }
+
+        function renderWorkout(workoutId, savedLog) {
+          list.innerHTML = '';
+
+          const w = workouts.find(x => String(x.id) === String(workoutId));
+          if (!w) {
+            content.hidden = true;
+            empty.hidden = false;
+            return;
+          }
+
+          title.textContent = `${w.name} Exercises`;
+
+          // Create map of saved sets by exercise_id (if savedLog exists)
+          const savedMap = new Map();
+          if (savedLog && Array.isArray(savedLog.exercises)) {
+            savedLog.exercises.forEach(ex => {
+              savedMap.set(String(ex.exercise_id), ex.sets || []);
+            });
+          }
+
+          (w.exercises || []).forEach(ex => {
+            const savedSets = savedMap.get(String(ex.id)) || null;
+            list.appendChild(buildExerciseCard(ex, savedSets));
+          });
+
+          empty.hidden = true;
+          content.hidden = false;
+        }
+
+        // =========
+        // LOAD TODAY LOG (prefill)
+        // =========
+        async function loadToday() {
+          try {
+            const res = await fetch(LOAD_URL, { headers: { 'Accept': 'application/json' }});
+            if (!res.ok) return;
+
+            const data = await res.json();
+            if (!data || !data.log) return;
+
+            // set dropdown
+            select.value = String(data.log.workout_id || '');
+            if (select.value) {
+              renderWorkout(select.value, data.log);
+            }
+          } catch (e) {
+            console.error(e);
+          }
+        }
+
+        // Start with saved log if exists
+        loadToday();
+
+      })();
+      </script>
 
 </body>
 </html>
