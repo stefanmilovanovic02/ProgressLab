@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Add Today • GymTracker</title>
+  <title>Add Today • ProgressLab</title>
   <link rel="stylesheet" href="{{ asset('css/auth.css') }}">
 </head>
 <body class="auth-body">

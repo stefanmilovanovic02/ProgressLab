@@ -2014,3 +2014,216 @@ select.pl-input--field option{
   }
   .ws-act{ justify-content: flex-start; }
 }
+
+/* =========================
+   Charts Page
+   ========================= */
+.ch-card{ padding: 22px; }
+.ch-head{ display:flex; align-items:center; justify-content:space-between; gap: 12px; }
+.ch-head__left{ display:flex; align-items:center; gap: 12px; }
+.ch-icon{
+  width: 38px; height: 38px; border-radius: 12px;
+  display:grid; place-items:center;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+}
+.ch-title{ font-size: 18px; font-weight: 900; color: rgba(255,255,255,.95); }
+
+.ch-controls{
+  margin-top: 18px;
+  display:grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: 18px;
+  align-items: center;
+}
+
+.ch-label{
+  display:block;
+  font-weight: 800;
+  font-size: 13px;
+  color: rgba(255,255,255,.85);
+  margin-bottom: 10px;
+}
+
+.ch-selectwrap{
+  position: relative;
+  display:flex;
+  align-items:center;
+  gap: 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.10);
+  background: rgba(255,255,255,.05);
+  padding: 10px 12px;
+}
+
+.ch-dot{
+  width: 10px; height: 10px;
+  border-radius: 999px;
+  background: #ff4d4d;
+  flex: 0 0 auto;
+}
+.ch-select{
+  width: 100%;
+  background: transparent;
+  border: 0;
+  color: #fff;
+  outline: none;
+  appearance: none;
+  font-weight: 700;
+  background-color: #1b1f2a;
+}
+.ch-chevron{
+  color: rgba(255,255,255,.65);
+  pointer-events: none;
+}
+
+.ch-seg{
+  display:flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.ch-segbtn{
+  border-radius: 10px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.06);
+  color: rgba(255,255,255,.88);
+  cursor: pointer;
+  font-weight: 800;
+  font-size: 13px;
+  min-width: 120px;
+}
+.ch-segbtn:hover{ background: rgba(255,255,255,.09); }
+.ch-segbtn.is-active{
+  background: rgba(255,255,255,.95);
+  color: rgba(10, 14, 20, 1);
+  border-color: rgba(255,255,255,.95);
+}
+
+.ch-chartwrap{
+  margin-top: 18px;
+  height: 360px;
+  border-radius: 14px;
+  background: rgba(0,0,0,.10);
+  border: 1px solid rgba(255,255,255,.06);
+  padding: 12px;
+}
+
+.ch-footer{
+  margin-top: 18px;
+  border-radius: 12px;
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.08);
+  padding: 14px;
+  display:flex;
+  align-items:center;
+  justify-content: space-between;
+  gap: 14px;
+  color: rgba(255,255,255,.85);
+}
+.ch-legend{ display:flex; align-items:center; gap: 10px; font-weight: 800; }
+.ch-dot--legend{ width: 10px; height: 10px; }
+.ch-meta{ color: rgba(155, 200, 255, .8); font-weight: 800; font-size: 13px; }
+
+.ch-placeholder{
+  margin-top: 14px;
+  color: rgba(255,255,255,.65);
+  font-weight: 700;
+  padding: 10px 2px;
+}
+
+/* Responsive */
+@media (max-width: 860px){
+  .ch-controls{ grid-template-columns: 1fr; }
+  .ch-segbtn{ min-width: 0; flex: 1 1 auto; }
+  .ch-chartwrap{ height: 320px; }
+}
+@media (max-width: 520px){
+  .ch-footer{ flex-direction: column; align-items:flex-start; }
+  .ch-chartwrap{ height: 280px; }
+}
+
+/* =========================
+   Exercise Progress additions
+   (keep your existing macro CSS as-is)
+   ========================= */
+
+/* a bit taller like the design */
+.ch-chartwrap--exercise{
+  height: 420px;
+}
+
+/* checkbox row */
+.ch-toggles{
+  margin-top: 14px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  flex-wrap: wrap;
+}
+
+/* Custom checkbox */
+.ch-check{
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 900;
+  color: rgba(255,255,255,.92);
+  cursor: pointer;
+  user-select: none;
+}
+.ch-check input{
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+.ch-check__box{
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  border: 1px solid rgba(255,255,255,.18);
+  background: rgba(255,255,255,.06);
+  display: grid;
+  place-items: center;
+}
+.ch-check__box::after{
+  content: "✓";
+  font-size: 12px;
+  line-height: 1;
+  opacity: 0;
+  color: #0b1220;
+  font-weight: 900;
+}
+
+/* reps green */
+.ch-check.is-reps .ch-check__text{ color: rgba(34,197,94,1); }
+.ch-check.is-reps input:checked + .ch-check__box{
+  background: rgba(34,197,94,1);
+  border-color: rgba(34,197,94,1);
+}
+.ch-check.is-reps input:checked + .ch-check__box::after{ opacity: 1; }
+
+/* weight blue */
+.ch-check.is-weight .ch-check__text{ color: rgba(59,130,246,1); }
+.ch-check.is-weight input:checked + .ch-check__box{
+  background: rgba(59,130,246,1);
+  border-color: rgba(59,130,246,1);
+}
+.ch-check.is-weight input:checked + .ch-check__box::after{ opacity: 1; }
+
+/* legend dots */
+.ch-dot--green{ background: rgba(34,197,94,1); }
+.ch-dot--blue{ background: rgba(59,130,246,1); }
+
+/* legend spacing like screenshot */
+.ch-legend--multi{
+  gap: 14px;
+}
+
+/* Responsive */
+@media (max-width: 860px){
+  .ch-chartwrap--exercise{ height: 360px; }
+}
+@media (max-width: 520px){
+  .ch-chartwrap--exercise{ height: 320px; }
+}

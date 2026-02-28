@@ -81,10 +81,10 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/exercises/{exercise}/favorite', [WorkoutController::class, 'favorite'])->name('exercises.favorite');
     Route::delete('/exercises/{exercise}/favorite', [WorkoutController::class, 'unfavorite'])->name('exercises.unfavorite');
 
-    // 6) Charts (nutrition + workouts)
+    // 6) Charts (macros + workouts)
     Route::get('/charts', [ChartsController::class, 'index'])->name('charts.index');
-    Route::get('/charts/nutrition', [ChartsController::class, 'nutrition'])->name('charts.nutrition');
-    Route::get('/charts/workouts', [ChartsController::class, 'workouts'])->name('charts.workouts');
+    Route::get('/charts/macros', [ChartsController::class, 'macros'])->name('charts.macros');
+    Route::get('/charts/exercise-data', [ChartsController::class, 'exerciseData'])->name('charts.exercise-data');
 
     // 7) Streaks
     Route::get('/streaks', [StreaksController::class, 'index'])->name('streaks.index');
