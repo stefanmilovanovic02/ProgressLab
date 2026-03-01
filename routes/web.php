@@ -91,6 +91,7 @@ Route::middleware(['auth', 'track.daily.login'])->group(function () {
 
     // 8) Achievements
     Route::get('/achievements', [AchievementsController::class, 'index'])->name('achievements.index');
+    Route::get('/achievements/notifications', [\App\Http\Controllers\AchievementsController::class, 'notifications'])->name('achievements.notifications');
 
     // 9) Friends (list, add/remove, profiles, compare)
     Route::get('/friends', [FriendsController::class, 'index'])->name('friends.index');

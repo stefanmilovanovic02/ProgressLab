@@ -57,12 +57,12 @@ class AddTodayController extends Controller
         $today = now()->toDateString();
 
         $validated = $request->validate([
-            'calories' => ['nullable', 'integer', 'min:0', 'max: 50000'],
-            'protein_g' => ['nullable', 'integer', 'min:0', 'max: 1000'],
-            'carbs_g' => ['nullable', 'integer', 'min:0', 'max: 2000'],
-            'fat_g' => ['nullable', 'integer', 'min:0', 'max: 1000'],
-            'creatine_g' => ['nullable', 'integer', 'min:0', 'max: 100'],
-            'water_ml' => ['nullable', 'integer', 'min:0', 'max: 10000']
+            'calories' => ['nullable', 'integer', 'min:0', 'max:50000'],
+            'protein_g' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'carbs_g' => ['nullable', 'integer', 'min:0', 'max:2000'],
+            'fat_g' => ['nullable', 'integer', 'min:0', 'max:1000'],
+            'creatine_g' => ['nullable', 'integer', 'min:0', 'max:100'],
+            'water_ml' => ['nullable', 'integer', 'min:0', 'max:10000']
         ]);
 
         $entry = NutritionEntry::updateOrCreate(
@@ -76,11 +76,11 @@ class AddTodayController extends Controller
                 'water_ml' => (int) ($validated['water_ml'] ?? 0),
             ]
         );
-
-        // For AJAX
-        if ($request->wantsJson()) {
-            return response()->json(['success' => true, 'entry' => $entry]);
-        }
+            // For Achievement and AJAX
+            $unlocked = app(\App\Services\AchievementService::class)->evaluate($user);
+            if ($request->wantsJson()) {
+                return response()->json(['success' => true, 'entry' => $entry, 'unlocked' => $unlocked]);
+            }
 
         return back()->with('success', 'Nutrition entry updated successfully!');
     }
@@ -180,6 +180,10 @@ class AddTodayController extends Controller
                 }
             });
 
-            return response()->json(['ok' => true]);
-            }
+            // For Achievement
+        $unlocked = app(\App\Services\AchievementService::class)->evaluate($user);
+        if ($request->wantsJson()) {
+            return response()->json(['ok' => true, 'unlocked' => $unlocked]);
+        }
+    }
 }
