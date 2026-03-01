@@ -55,7 +55,7 @@ Route::post('/logout', [LoginController::class, 'destroy'])
     ->name('logout');
 
 // App (Logged in users)
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'track.daily.login'])->group(function () {
 
     // 3) Home
     Route::get('/', [HomeController::class, 'index'])->name('home');
