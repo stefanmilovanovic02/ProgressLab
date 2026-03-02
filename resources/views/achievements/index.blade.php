@@ -72,15 +72,22 @@
           data-rarity="{{ $a['rarity'] }}"
           data-status="{{ $a['unlocked'] ? 'unlocked' : 'locked' }}"
           data-title="{{ strtolower($a['title']) }}"
-          data-desc="{{ strtolower($a['desc']) }}"
+          data-desc="{{ strtolower($a['desc'] ?? '') }}"
         >
           <div class="ach-card__top">
-            <div class="ach-badge" aria-hidden="true">{{ $a['icon'] }}</div>
+            {{-- image (db) --}}
+            <div class="ach-img">
+              <img src="{{ $a['image_path'] }}" alt="{{ $a['title'] }}">
+            </div>
+
+            {{-- badge/icon --}}
+            {{-- <div class="ach-badge" aria-hidden="true">{{ $a['icon'] }}</div> --}}
           </div>
 
           <h3 class="ach-card__title">{{ $a['title'] }}</h3>
 
           <div class="ach-card__meta">
+            <span class="ach-cat-icon" aria-hidden="true">{{ $a['category_icon'] }}</span>
             <span class="ach-dot"></span>
             <span>{{ $a['category'] }}</span>
           </div>
@@ -93,6 +100,16 @@
             </span>
           </div>
 
+          {{-- Hover tooltip --}}
+          <div class="ach-tip">
+            <div class="ach-tip__row"><strong>Status:</strong> {{ $a['unlocked'] ? 'Unlocked' : 'Locked' }}</div>
+            <div class="ach-tip__row">
+              <strong>Unlocked at:</strong>
+              {{ $a['unlocked_at'] ? \Carbon\Carbon::parse($a['unlocked_at'])->format('M j, Y') : '—' }}
+            </div>
+            <div class="ach-tip__row"><strong>Users:</strong> {{ $a['unlocked_users'] }} ({{ $a['percent'] }}%)</div>
+          </div>
+
           @if(!$a['unlocked'])
             <div class="ach-lockedOverlay" aria-hidden="true">
               <div class="ach-lock">🔒</div>
@@ -103,6 +120,10 @@
     </section>
 
   </main>
+
+  <script>
+    window.__unlocked = @json(session('unlocked', []));
+  </script>
 
   {{-- UI-only filter logic --}}
   <script>
@@ -143,44 +164,54 @@
     })();
   </script>
 
+ {{-- Toast Script --}}
   <script>
-(function(){
-  const audio = new Audio('/sfx/achievement.mp3');
+    (function(){
+      const audio = new Audio('/sfx/achievement.mp3');
 
-  function toast(item){
-    const el = document.createElement('div');
-    el.className = 'ach-toast';
-    el.innerHTML = 
-      <div class="ach-toast__title">Achievement Unlocked!</div>
-      <div class="ach-toast__name">${item.title}</div>
-      <div class="ach-toast__desc">${item.description ?? ''}</div>
-    ;
-    document.body.appendChild(el);
+      function esc(s){
+        return String(s ?? '').replace(/[&<>"']/g, m => ({
+          '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+        }[m]));
+      }
 
-    // play sound
-    audio.currentTime = 0;
-    audio.play().catch(()=>{});
+      function toast(item){
+        const el = document.createElement('div');
+        el.className = 'ach-toast';
+        el.innerHTML = `
+          <div class="ach-toast__title">Achievement Unlocked!</div>
+          <div class="ach-toast__name">${esc(item.title)}</div>
+          <div class="ach-toast__desc">${esc(item.description)}</div>
+        `;
+        document.body.appendChild(el);
 
-    requestAnimationFrame(()=> el.classList.add('is-in'));
-    setTimeout(()=>{
-      el.classList.remove('is-in');
-      setTimeout(()=> el.remove(), 250);
-    }, 3500);
-  }
+        audio.currentTime = 0;
+        audio.play().catch(()=>{});
 
-  async function poll(){
-    try{
-      const res = await fetch("{{ route('achievements.notifications') }}", { headers: { 'Accept':'application/json' }});
-      if(!res.ok) return;
-      const data = await res.json();
-      (data.items || []).forEach(toast);
-    }catch(e){}
-  }
+        requestAnimationFrame(()=> el.classList.add('is-in'));
+        setTimeout(()=>{
+          el.classList.remove('is-in');
+          setTimeout(()=> el.remove(), 250);
+        }, 3500);
+      }
 
-  poll();
-  setInterval(poll, 10000);
-})();
-</script>
+      async function poll(){
+        try{
+          const res = await fetch("{{ route('achievements.notifications') }}", {
+            headers: { 'Accept':'application/json' }
+          });
+          if(!res.ok) return;
+          const data = await res.json();
+          (data.items || []).forEach(toast);
+        }catch(e){}
+      }
+
+      poll();
+      setInterval(poll, 10000);
+    })();
+
+    (window.__unlocked || []).forEach(toast);
+      </script>
 
 </body>
 </html>

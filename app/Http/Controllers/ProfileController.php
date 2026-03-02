@@ -88,7 +88,8 @@ class ProfileController extends Controller
         $goal->save();
     });
 
-    return redirect()->route('profile.show')->with('status', 'Profile updated successfully.');
+    $unlocked = app(\App\Services\AchievementService::class)->evaluate($request->user());
+    return redirect()->route('profile.show')->with('status', 'Profile updated successfully.')->with('unlocked', $unlocked);
 }
 
 
@@ -114,7 +115,8 @@ class ProfileController extends Controller
     $user->avatar_path = 'storage/' . $path;
     $user->save();
 
-    return redirect()->route('profile.show')->with('status', 'Profile photo updated.');
+    $unlocked = app(\App\Services\AchievementService::class)->evaluate($request->user());
+    return redirect()->route('profile.show')->with('status', 'Profile photo updated.')->with('unlocked', $unlocked);
 }
 
 public function updateCover(Request $request)
@@ -138,7 +140,8 @@ public function updateCover(Request $request)
     $user->cover_path = 'storage/' . $path;
     $user->save();
 
-    return redirect()->route('profile.show')->with('status', 'Cover image updated.');
+    $unlocked = app(\App\Services\AchievementService::class)->evaluate($request->user());
+    return redirect()->route('profile.show')->with('status', 'Cover image updated.')->with('unlocked', $unlocked);
 }
 
 public function destroy(Request $request)

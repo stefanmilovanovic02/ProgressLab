@@ -63,7 +63,8 @@ class WorkoutController extends Controller
       $workout->exercises()->attach($attach);
     });
 
-    return redirect()->route('workouts.index')->with('status', 'Workout created.');
+    $unlocked = app(\App\Services\AchievementService::class)->evaluate($request->user());
+    return redirect()->route('workouts.index')->with('status', 'Workout created.')->with('unlocked', $unlocked);
   }
 
   // optional delete (for the trash icon later)

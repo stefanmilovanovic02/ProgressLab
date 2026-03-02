@@ -247,6 +247,6 @@
       render();
     })();
   </script>
-
+  <x-achievement-toasts />
 </body>
 </html>

@@ -180,6 +180,7 @@ class RegisterController extends Controller
     // Clear the registration session data
     $request->session()->forget('register');
 
+    $unlocked = app(\App\Services\AchievementService::class)->evaluate($request->user());
     return redirect()->route('login')->with('status', 'Account created. Please sign in.');
 }
 
