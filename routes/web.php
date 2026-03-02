@@ -94,15 +94,18 @@ Route::middleware(['auth', 'track.daily.login'])->group(function () {
     Route::get('/achievements/notifications', [\App\Http\Controllers\AchievementsController::class, 'notifications'])->name('achievements.notifications');
 
     // 9) Friends (list, add/remove, profiles, compare)
-    Route::get('/friends', [FriendsController::class, 'index'])->name('friends.index');
-    Route::post('/friends/request', [FriendsController::class, 'sendRequest'])->name('friends.request.send');
-    Route::post('/friends/request/{request}/accept', [FriendsController::class, 'acceptRequest'])->name('friends.request.accept');
-    Route::delete('/friends/request/{request}/decline', [FriendsController::class, 'declineRequest'])->name('friends.request.decline');
-    Route::delete('/friends/{friend}', [FriendsController::class, 'remove'])->name('friends.remove');
-
-    Route::get('/friends/{user}', [FriendsController::class, 'showProfile'])->name('friends.profile');
-    Route::get('/compare/{user}', [FriendsController::class, 'compare'])->name('friends.compare');
-
+    Route::middleware('auth')->group(function () {
+        Route::get('/friends', [\App\Http\Controllers\FriendsController::class, 'index'])->name('friends.index');
+    
+    Route::get('/friends/search', [\App\Http\Controllers\FriendsController::class, 'search'])->name('friends.search');
+    Route::post('/friends/request', [\App\Http\Controllers\FriendsController::class, 'request'])->name('friends.request');
+    Route::post('/friends/accept', [\App\Http\Controllers\FriendsController::class, 'accept'])->name('friends.accept');
+    Route::post('/friends/decline', [\App\Http\Controllers\FriendsController::class, 'decline'])->name('friends.decline');
+    
+    Route::get('/friends/{user}/summary', [\App\Http\Controllers\FriendsController::class, 'summary'])->name('friends.summary');
+        
+    });
+    
     // 10) Profile (view + update)
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
