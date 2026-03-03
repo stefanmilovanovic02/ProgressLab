@@ -15,8 +15,8 @@
     $metric = $user->metric;
     $goalRow = $user->nutritionGoal;
 
-    $avatarUrl = $user->avatar_path ? asset($user->avatar_path) : 'https://i.pravatar.cc/140?img=12';
-    $coverUrl  = $user->cover_path ? asset($user->cover_path) : null;
+    $avatarUrl = $user->avatar_url;
+    $coverUrl  = $user->cover_url;
 
     $memberSince = $user->created_at ? $user->created_at->format('F Y') : '—';
     $usernameText = '@' . ($user->username ?? 'username');

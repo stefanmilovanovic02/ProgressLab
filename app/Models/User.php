@@ -6,6 +6,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Storage;
 
 class User extends Authenticatable
 {
@@ -62,4 +63,54 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+    public function friends()
+    {
+        return $this->belongsToMany(User::class, 'friends', 'user_id', 'friend_id')
+            ->withTimestamps();
+    }
+
+    public function sentFriendRequests()
+    {
+        return $this->hasMany(\App\Models\FriendRequest::class, 'sender_id');
+    }
+
+    public function receivedFriendRequests()
+    {
+        return $this->hasMany(\App\Models\FriendRequest::class, 'receiver_id');
+    }
+
+    public function getAvatarUrlAttribute(): string
+        {
+            if (!$this->avatar_path) {
+                return asset('images/default-avatar.png');
+            }
+
+            $p = $this->avatar_path;
+
+            // full URL
+            if (str_starts_with($p, 'http://') || str_starts_with($p, 'https://')) {
+                return $p;
+            }
+
+            // your current DB format: "storage/avatars/..."
+            if (str_starts_with($p, 'storage/')) {
+                return asset($p); // => /storage/avatars/...
+            }
+
+            // if you ever switch to "avatars/..." later
+            return Storage::url($p); // => /storage/avatars/...
+        }
+
+        public function getCoverUrlAttribute(): ?string
+            {
+                if (!$this->cover_path) return null;
+
+                $p = $this->cover_path;
+
+                if (str_starts_with($p, 'http://') || str_starts_with($p, 'https://')) return $p;
+                if (str_starts_with($p, 'storage/')) return asset($p);
+
+                return Storage::url($p);
+            }
 }

@@ -94,13 +94,13 @@ Route::middleware(['auth', 'track.daily.login'])->group(function () {
     Route::get('/achievements/notifications', [\App\Http\Controllers\AchievementsController::class, 'notifications'])->name('achievements.notifications');
 
     // 9) Friends (list, add/remove, profiles, compare)
-    Route::middleware('auth')->group(function () {
-        Route::get('/friends', [\App\Http\Controllers\FriendsController::class, 'index'])->name('friends.index');
-    
-    Route::get('/friends/search', [\App\Http\Controllers\FriendsController::class, 'search'])->name('friends.search');
-    Route::post('/friends/request', [\App\Http\Controllers\FriendsController::class, 'request'])->name('friends.request');
-    Route::post('/friends/accept', [\App\Http\Controllers\FriendsController::class, 'accept'])->name('friends.accept');
-    Route::post('/friends/decline', [\App\Http\Controllers\FriendsController::class, 'decline'])->name('friends.decline');
+    Route::middleware(['auth'])->group(function () {
+    Route::get('/friends', [FriendsController::class, 'index'])->name('friends.index');
+
+    Route::get('/friends/search', [FriendsController::class, 'search'])->name('friends.search');
+    Route::post('/friends/request', [FriendsController::class, 'sendRequest'])->name('friends.request');
+    Route::post('/friends/requests/{friendRequest}/accept', [FriendsController::class, 'accept'])->name('friends.requests.accept');
+    Route::post('/friends/requests/{friendRequest}/decline', [FriendsController::class, 'decline'])->name('friends.requests.decline');
     
     Route::get('/friends/{user}/summary', [\App\Http\Controllers\FriendsController::class, 'summary'])->name('friends.summary');
         
