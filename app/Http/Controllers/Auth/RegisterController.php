@@ -9,6 +9,8 @@ use App\Models\NutritionGoal;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Validation\Rule;
 
 class RegisterController extends Controller
 {
@@ -181,6 +183,9 @@ class RegisterController extends Controller
     $request->session()->forget('register');
 
     $unlocked = app(\App\Services\AchievementService::class)->evaluate($request->user());
+            if (!empty($unlocked)) {
+                session()->flash('unlocked', $unlocked);
+            }
     return redirect()->route('login')->with('status', 'Account created. Please sign in.');
 }
 

@@ -77,9 +77,9 @@ class AddTodayController extends Controller
             ]
         );
             // For Achievement and AJAX
-            $unlocked = app(\App\Services\AchievementService::class)->evaluate($user);
-            if ($request->wantsJson()) {
-                return response()->json(['success' => true, 'entry' => $entry, 'unlocked' => $unlocked]);
+            $unlocked = app(\App\Services\AchievementService::class)->evaluate($request->user());
+            if (!empty($unlocked)) {
+                session()->flash('unlocked', $unlocked);
             }
 
         return back()->with('success', 'Nutrition entry updated successfully!');
@@ -185,5 +185,6 @@ class AddTodayController extends Controller
         if ($request->wantsJson()) {
             return response()->json(['ok' => true, 'unlocked' => $unlocked]);
         }
+        return back()->with('status', 'Workout saved.')->with('unlocked', $unlocked);
     }
 }

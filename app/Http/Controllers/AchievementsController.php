@@ -6,6 +6,7 @@ use Illuminate\Http\Request;
 use App\Models\Achievement;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
+use App\Models\UserAchievement;
 
 class AchievementsController extends Controller
 {
@@ -109,5 +110,39 @@ class AchievementsController extends Controller
             'unlockedCount',
             'totalCount'
         ));
+    }
+
+    public function notifications(Request $request)
+    {
+        $user = $request->user();
+
+        $items = DB::table('user_achievements as ua')
+            ->join('achievements as a', 'a.id', '=', 'ua.achievement_id')
+            ->where('ua.user_id', $user->id)
+            ->whereNotNull('ua.unlocked_at')
+            ->whereNull('ua.notified_at')
+            ->orderBy('ua.unlocked_at', 'asc')
+            ->limit(5)
+            ->get([
+                'ua.id as ua_id',
+                'a.id',
+                'a.title',
+                'a.description',
+                'a.rarity',
+            ]);
+
+        if ($items->isNotEmpty()) {
+            UserAchievement::whereIn('id', $items->pluck('ua_id'))
+                ->update(['notified_at' => now()]);
+        }
+
+        return response()->json([
+            'items' => $items->map(fn($x) => [
+                'id' => $x->id,
+                'title' => $x->title,
+                'description' => $x->description,
+                'rarity' => $x->rarity,
+            ])->values(),
+        ]);
     }
 }

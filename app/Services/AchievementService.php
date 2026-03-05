@@ -30,7 +30,7 @@ class AchievementService
       if ($this->meetsCriteria($user, $a)) {
         $ua = UserAchievement::updateOrCreate(
           ['user_id' => $user->id, 'achievement_id' => $a->id],
-          ['unlocked_at' => now()]
+          ['unlocked_at' => now(), 'notified_at' => null]
         );
 
         $newlyUnlocked[] = [

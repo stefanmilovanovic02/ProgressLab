@@ -24,12 +24,18 @@ class LoginController extends Controller
 
         if (Auth::attempt($credentials, $remember)) {
             $request->session()->regenerate();
+            
+        $unlocked = app(\App\Services\AchievementService::class)->evaluate($request->user());
+            if (!empty($unlocked)) {
+                session()->flash('unlocked', $unlocked);
+            }
             return redirect()->intended(route('home'));
         }
 
         return back()->withErrors([
             'email' => 'The provided credentials are incorrect.',
         ])->onlyInput('email');
+
     }
 
     public function destroy(Request $request)

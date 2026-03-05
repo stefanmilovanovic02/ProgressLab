@@ -64,6 +64,9 @@ class WorkoutController extends Controller
     });
 
     $unlocked = app(\App\Services\AchievementService::class)->evaluate($request->user());
+            if (!empty($unlocked)) {
+                session()->flash('unlocked', $unlocked);
+            }
     return redirect()->route('workouts.index')->with('status', 'Workout created.')->with('unlocked', $unlocked);
   }
 
