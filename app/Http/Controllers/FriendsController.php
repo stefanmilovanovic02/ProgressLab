@@ -7,6 +7,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class FriendsController extends Controller
 {
@@ -14,7 +15,55 @@ class FriendsController extends Controller
     {
         $user = $request->user();
 
+        $friends = $user->friends()
+        ->select('users.id', 'users.name', 'users.username', 'users.email', 'users.avatar_path')
+        ->get();
+
         $friendsCount = $user->friends()->count();
+
+        // Grab last login timestamp per friend (adjust table/column if different)
+    $lastLogins = DB::table('login_logs')
+    ->select('user_id', DB::raw('MAX(updated_at) as last_seen'))
+    ->whereIn('user_id', $friends->pluck('id'))
+    ->groupBy('user_id')
+    ->pluck('last_seen', 'user_id');
+
+    // Compute login streak per friend (simple consecutive-day streak based on login_logs)
+    $friendsCards = $friends->map(function ($f) use ($lastLogins) {
+        $lastSeen = $lastLogins[$f->id] ?? null;
+
+        // Status thresholds (tweak later)
+        $status = 'Offline';
+        $dot = 'offline';
+
+        if ($lastSeen) {
+            $secs = now()->diffInSeconds(\Carbon\Carbon::parse($lastSeen));
+
+            if ($secs <= 60) {          
+                $status = 'Online';
+                $dot = 'online';
+            } elseif ($secs <= 7200) {
+                $status = 'Recently Active';
+                $dot = 'recent';
+            } else {
+                $status = 'Offline';
+                $dot = 'offline';
+            }
+        }
+
+        // login streak (consecutive days with at least one login)
+        $streak = $this->loginStreakForUser($f->id);
+
+        return [
+            'id' => $f->id,
+            'name' => $f->name,
+            'avatar_url' => $this->publicImageUrl($f->avatar_path),
+            'status' => $status,
+            'dot' => $dot,
+            'streak' => $streak,
+            'last_seen' => $this->humanLastSeen($lastSeen),
+        ];
+    });
 
         // Outgoing pending (you sent)
         $pendingSent = FriendRequest::query()
@@ -34,10 +83,69 @@ class FriendsController extends Controller
 
         return view('friends.index', [
             'friendsCount' => $friendsCount,
+            'friendsCards' => $friendsCards,
             'pendingSent' => $pendingSent,
             'incomingRequests' => $incomingRequests,
         ]);
     }
+
+    /**
+ * Streak = consecutive days up to today where the user logged in at least once.
+ * Adjust if your streaks logic differs.
+ */
+private function loginStreakForUser(int $userId): int
+{
+    $days = DB::table('login_logs')
+        ->where('user_id', $userId)
+        ->orderByDesc('login_date')
+        ->pluck('login_date')
+        ->map(fn ($d) => \Carbon\Carbon::parse($d)->toDateString())
+        ->unique()
+        ->values();
+
+    if ($days->isEmpty()) return 0;
+
+    $streak = 0;
+    $cursor = now()->toDateString();
+
+    // If the latest login is not today, allow streak to continue if last login was yesterday?
+    // We'll count from today if present, else from yesterday.
+    if (!$days->contains($cursor)) {
+        $yesterday = now()->subDay()->toDateString();
+        if ($days->contains($yesterday)) {
+            $cursor = $yesterday;
+        } else {
+            return 0;
+        }
+    }
+
+    while ($days->contains($cursor)) {
+        $streak++;
+        $cursor = \Carbon\Carbon::parse($cursor)->subDay()->toDateString();
+    }
+
+    return $streak;
+}
+
+private function humanLastSeen($timestamp): string
+{
+    if (!$timestamp) return '—';
+
+    $dt = \Carbon\Carbon::parse($timestamp);
+    $secs = $dt->diffInSeconds(now());
+
+    if ($secs <= 5) return 'Active now';
+    if ($secs < 60) return 'Last seen ' . $secs . ' seconds ago';
+
+    $mins = intdiv($secs, 60);
+    if ($mins < 60) return 'Last seen ' . $mins . ' minutes ago';
+
+    $hours = intdiv($mins, 60);
+    if ($hours < 24) return 'Last seen ' . $hours . ' hours ago';
+
+    $days = intdiv($hours, 24);
+    return 'Last seen ' . $days . ' days ago';
+}
 
     public function search(Request $request)
     {
@@ -88,7 +196,7 @@ class FriendsController extends Controller
             }
 
             // IMPORTANT: make correct URL for stored avatar
-           $avatarUrl = $u->avatar_url;
+           $avatarUrl = $this->publicImageUrl($u->avatar_path);
 
             return [
                 'id' => $u->id,
@@ -177,4 +285,233 @@ class FriendsController extends Controller
 
         return response()->json(['ok' => true]);
     }
+
+    private function publicImageUrl(?string $path): string
+        {
+            if (!$path) return asset('images/default-avatar.png');
+
+            // already a full URL
+            if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) {
+                return $path;
+            }
+
+            // if stored like "storage/avatars/xxx.jpg"
+            if (str_starts_with($path, 'storage/')) {
+                return asset($path); // -> /storage/avatars/xxx.jpg
+            }
+
+            // if stored like "/storage/avatars/xxx.jpg"
+            if (str_starts_with($path, '/storage/')) {
+                return asset(ltrim($path, '/')); // -> /storage/avatars/xxx.jpg
+            }
+
+            // if stored like "avatars/xxx.jpg" (relative to disk 'public')
+            // map to /storage/avatars/xxx.jpg
+            return asset('storage/' . ltrim($path, '/'));
+        }
+
+        private function humanLastSeenSeconds($timestamp): string
+        {
+            if (!$timestamp) return '—';
+
+            $dt = \Carbon\Carbon::parse($timestamp);
+            $secs = $dt->diffInSeconds(now());
+
+            if ($secs <= 5) return 'Just now';
+            if ($secs < 60) return $secs . ' seconds ago';
+
+            $mins = intdiv($secs, 60);
+            if ($mins < 60) return $mins . ' minutes ago';
+
+            $hours = intdiv($mins, 60);
+            if ($hours < 24) return $hours . ' hours ago';
+
+            $days = intdiv($hours, 24);
+            return $days . ' days ago';
+        }
+
+        // workout streak (expects workout_logs table with date column OR created_at)
+        private function workoutStreakForUser(int $userId): int
+        {
+            if (!Schema::hasTable('workout_logs')) return 0;
+
+            $query = DB::table('workout_logs')->where('user_id', $userId);
+
+            // if you have a date column like "log_date" use it, else fallback to created_at
+            $col = Schema::hasColumn('workout_logs', 'log_date') ? 'log_date' : 'created_at';
+
+            $days = $query->orderByDesc($col)->pluck($col)
+                ->map(fn ($d) => \Carbon\Carbon::parse($d)->toDateString())
+                ->unique()
+                ->values();
+
+            if ($days->isEmpty()) return 0;
+
+            $streak = 0;
+            $cursor = now()->toDateString();
+
+            if (!$days->contains($cursor)) {
+                $y = now()->subDay()->toDateString();
+                if ($days->contains($y)) $cursor = $y;
+                else return 0;
+            }
+
+            while ($days->contains($cursor)) {
+                $streak++;
+                $cursor = \Carbon\Carbon::parse($cursor)->subDay()->toDateString();
+            }
+
+            return $streak;
+        }
+
+public function summary(Request $request, User $user)
+{
+    $auth = $request->user();
+
+    $isFriend = $auth->friends()->where('users.id', $user->id)->exists();
+    if (!$isFriend && $auth->id !== $user->id) abort(403);
+
+    // LAST ACTIVE (your login_logs are per-day; updated_at is newest activity)
+    $lastActive = DB::table('login_logs')
+        ->where('user_id', $user->id)
+        ->max('updated_at'); // ✅ this fixes “20 min ago but logged 20 sec ago”
+
+    // Status thresholds
+    $status = 'Offline';
+    $dot = 'offline';
+    if ($lastActive) {
+        $secs = \Carbon\Carbon::parse($lastActive)->diffInSeconds(now());
+        if ($secs <= 60) { $status = 'Online'; $dot = 'online'; }
+        elseif ($secs <= 7200) { $status = 'Recently Active'; $dot = 'recent'; }
+    }
+
+    // QUICK STATS
+    $workoutsLogged = DB::table('workout_logs')
+        ->where('user_id', $user->id)
+        ->count();
+
+    $daysThisMonth = DB::table('login_logs')
+        ->where('user_id', $user->id)
+        ->whereBetween('login_date', [
+            now()->startOfMonth()->toDateString(),
+            now()->endOfMonth()->toDateString()
+        ])
+        ->count(); // one row per day ✅
+
+    $friendsCount = DB::table('friends')
+        ->where('user_id', $user->id)
+        ->count();
+
+    // STREAKS
+    $loginDates = DB::table('login_logs')
+        ->where('user_id', $user->id)
+        ->orderByDesc('login_date')
+        ->pluck('login_date')
+        ->all();
+    $loginStreak = $this->consecutiveDaysStreak($loginDates);
+
+    $workoutDates = DB::table('workout_logs')
+        ->where('user_id', $user->id)
+        ->orderByDesc('entry_date')
+        ->pluck('entry_date')
+        ->all();
+    $workoutStreak = $this->consecutiveDaysStreak($workoutDates);
+
+    // Third streak: WATER (days with water_ml > 0)
+    $waterDates = DB::table('nutrition_entries')
+        ->where('user_id', $user->id)
+        ->where('water_ml', '>', 0)
+        ->orderByDesc('entry_date')
+        ->pluck('entry_date')
+        ->all();
+    $waterStreak = $this->consecutiveDaysStreak($waterDates);
+
+    // ACHIEVEMENTS (top 3 unlocked)
+    $achievements = [];
+    $achUnlockedCount = 0;
+
+    if (Schema::hasTable('user_achievements') && Schema::hasTable('achievements')) {
+        $achUnlockedCount = DB::table('user_achievements')
+            ->where('user_id', $user->id)
+            ->whereNotNull('unlocked_at')
+            ->count();
+
+        $achievements = DB::table('user_achievements')
+            ->join('achievements', 'achievements.id', '=', 'user_achievements.achievement_id')
+            ->where('user_achievements.user_id', $user->id)
+            ->whereNotNull('user_achievements.unlocked_at')
+            ->orderByDesc('user_achievements.unlocked_at')
+            ->limit(3)
+            ->get([
+                'achievements.title',
+                'achievements.image_path',
+                'achievements.rarity',
+                'achievements.category',
+            ])
+            ->map(fn($a) => [
+                'title' => $a->title,
+                'image_url' => $a->image_path ? asset($a->image_path) : null,
+                'rarity' => $a->rarity,
+                'category' => $a->category,
+            ])
+            ->values()
+            ->all();
+    }
+
+    return response()->json([
+        'user' => [
+            'id' => $user->id,
+            'name' => $user->full_name ?? $user->name ?? 'User',
+            'username' => $user->username ?? '',
+            'email' => $user->email ?? '',
+            'avatar_url' => $this->publicImageUrl($user->avatar_path) ?? asset('images/default-avatar.png'),
+            'cover_url' => $this->publicImageUrl($user->cover_path), // ex: storage/covers/...
+            'joined_full' => $user->created_at ? $user->created_at->format('F j, Y') : '—',
+            'joined_short' => $user->created_at ? $user->created_at->format('F j') : '—',
+            'status' => $status,
+            'dot' => $dot,
+            'last_active' => $lastActive ? $this->humanLastSeenSeconds($lastActive) : '—',
+        ],
+        'quick' => [
+            'workouts_logged' => $workoutsLogged,
+            'days_this_month' => $daysThisMonth,
+            'friends' => $friendsCount,
+            'joined' => $user->created_at ? $user->created_at->format('F j') : '—',
+        ],
+        'streaks' => [
+            ['label' => 'Login Streak', 'value' => $loginStreak, 'icon' => '🔥'],
+            ['label' => 'Workout Streak', 'value' => $workoutStreak, 'icon' => '💪'],
+            ['label' => 'Water Streak', 'value' => $waterStreak, 'icon' => '💧'],
+        ],
+        'achievements' => $achievements,
+        'achievements_unlocked' => $achUnlockedCount,
+    ]);
 }
+
+    private function consecutiveDaysStreak(array $dateStrings): int
+    {
+        $days = collect($dateStrings)
+            ->map(fn($d) => \Carbon\Carbon::parse($d)->toDateString())
+            ->unique()
+            ->values();
+
+        if ($days->isEmpty()) return 0;
+
+        $streak = 0;
+        $cursor = now()->toDateString();
+
+        // allow continuing streak from yesterday if today not present
+        if (!$days->contains($cursor)) {
+            $y = now()->subDay()->toDateString();
+            if ($days->contains($y)) $cursor = $y;
+            else return 0;
+        }
+
+        while ($days->contains($cursor)) {
+            $streak++;
+            $cursor = \Carbon\Carbon::parse($cursor)->subDay()->toDateString();
+        }
+
+        return $streak;
+    }
+    }
