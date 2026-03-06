@@ -24,25 +24,25 @@ class RegisterController extends Controller
 
     // Step 1 store (hash password immediately + unique checks)
     public function storeStep1(Request $request)
-{
-    $validated = $request->validate([
-        'full_name' => ['required', 'string', 'min:3', 'max:80'],
-        'username'  => ['required', 'string', 'min:3', 'max:30', 'regex:/^[a-zA-Z0-9_]+$/', 'unique:users,username'],
-        'email'     => ['required', 'email', 'max:255', 'unique:users,email'],
-        'password'  => ['required', 'string', 'min:8', 'confirmed'],
-    ], [
-        'username.regex' => 'Username can contain only letters, numbers, and underscores.',
-    ]);
+    {
+        $validated = $request->validate([
+            'full_name' => ['required', 'string', 'min:3', 'max:80'],
+            'username'  => ['required', 'string', 'min:3', 'max:30', 'regex:/^[a-zA-Z0-9_]+$/', 'unique:users,username'],
+            'email'     => ['required', 'email', 'max:255', 'unique:users,email'],
+            'password'  => ['required', 'string', 'min:8', 'confirmed'],
+        ], [
+            'username.regex' => 'Username can contain only letters, numbers, and underscores.',
+        ]);
 
-    $request->session()->put('register.step1', [
-        'full_name' => $validated['full_name'],
-        'username'  => $validated['username'],
-        'email'     => $validated['email'],
-        'password_hash' => Hash::make($validated['password']),
-    ]);
+        $request->session()->put('register.step1', [
+            'full_name' => $validated['full_name'],
+            'username'  => $validated['username'],
+            'email'     => $validated['email'],
+            'password_hash' => Hash::make($validated['password']),
+        ]);
 
-    return redirect()->route('register.macros');
-}
+        return redirect()->route('register.macros');
+    }
 
     // Step 2 show + store (macros + metrics)
 
@@ -57,42 +57,42 @@ class RegisterController extends Controller
     }
 
     public function storeMacros(Request $request)
-{
-    $this->requireStep1($request);
+    {
+        $this->requireStep1($request);
 
-    $validated = $request->validate([
-        'gender'   => ['required', 'in:male,female'],
-        'age'      => ['required', 'integer', 'min:13', 'max:90'],
-        'height'   => ['required', 'integer', 'min:120', 'max:230'], // cm
-        'weight'   => ['required', 'numeric', 'min:35', 'max:250'],  // kg
-        'activity' => ['required', 'numeric', 'min:1.2', 'max:2.2'],
-    ]);
+        $validated = $request->validate([
+            'gender'   => ['required', 'in:male,female'],
+            'age'      => ['required', 'integer', 'min:13', 'max:90'],
+            'height'   => ['required', 'integer', 'min:120', 'max:230'], // cm
+            'weight'   => ['required', 'numeric', 'min:35', 'max:250'],  // kg
+            'activity' => ['required', 'numeric', 'min:1.2', 'max:2.2'],
+        ]);
 
-    $bmr = $this->calculateBmr(
-        $validated['gender'],
-        (float) $validated['weight'],
-        (float) $validated['height'],
-        (int) $validated['age']
-    );
+        $bmr = $this->calculateBmr(
+            $validated['gender'],
+            (float) $validated['weight'],
+            (float) $validated['height'],
+            (int) $validated['age']
+        );
 
-    $tdee = $bmr * (float) $validated['activity'];
+        $tdee = $bmr * (float) $validated['activity'];
 
-    $request->session()->put('register.step2', [
-        'gender' => $validated['gender'],
-        'age' => (int) $validated['age'],
-        'height_cm' => (int) $validated['height'],
-        'weight_kg' => (float) $validated['weight'],
-        'activity_multiplier' => (float) $validated['activity'],
-    ]);
+        $request->session()->put('register.step2', [
+            'gender' => $validated['gender'],
+            'age' => (int) $validated['age'],
+            'height_cm' => (int) $validated['height'],
+            'weight_kg' => (float) $validated['weight'],
+            'activity_multiplier' => (float) $validated['activity'],
+        ]);
 
-    $request->session()->put('register.bmr', round($bmr, 2));
-    $request->session()->put('register.tdee', (int) round($tdee));
+        $request->session()->put('register.bmr', round($bmr, 2));
+        $request->session()->put('register.tdee', (int) round($tdee));
 
-    return redirect()->route('register.goal');
-}
+        return redirect()->route('register.goal');
+    }
 
     //Step 3 show + store (compute macros + save everything to DB)
-      public function showGoal(Request $request)
+    public function showGoal(Request $request)
     {
         $this->requireStep1($request);
         $this->requireTdee($request);
@@ -106,90 +106,99 @@ class RegisterController extends Controller
     }
 
     public function storeGoal(Request $request)
-{
-    $this->requireStep1($request);
-    $this->requireTdee($request);
+    {
+        $this->requireStep1($request);
+        $this->requireTdee($request);
 
-    $validated = $request->validate([
-        'goal' => ['required', 'in:bulk,cut,recomp'],
-        'bulk_type' => ['nullable', 'in:lean,standard'],
-        'cut_type'  => ['nullable', 'in:moderate,aggressive'],
-        'fat_percent' => ['nullable', 'numeric', 'min:20', 'max:35'],
-        'protein_g_per_kg' => ['nullable', 'numeric', 'min:1.6', 'max:2.7'],
-    ]);
-
-    $step1 = $request->session()->get('register.step1');
-    $step2 = $request->session()->get('register.step2');
-    $bmr   = (float) $request->session()->get('register.bmr');
-    $tdee  = (int) $request->session()->get('register.tdee');
-
-    $weightKg = (float) $step2['weight_kg'];
-    $fatPercent = isset($validated['fat_percent']) ? (float) $validated['fat_percent'] : 30.0;
-
-    $calories = $this->calculateGoalCalories($tdee, $validated);
-    $proteinGPerKg = !empty($validated['protein_g_per_kg'])
-        ? (float) $validated['protein_g_per_kg']
-        : $this->defaultProteinGPerKg($validated['goal']);
-
-    $proteinG = (int) round($weightKg * $proteinGPerKg);
-
-    $fatCals = $calories * ($fatPercent / 100);
-    $fatG = (int) round($fatCals / 9);
-
-    $proteinCals = $proteinG * 4;
-    $fatCalsRounded = $fatG * 9;
-    $carbCals = max(0, $calories - ($proteinCals + $fatCalsRounded));
-    $carbG = (int) round($carbCals / 4);
-
-    DB::transaction(function () use ($step1, $step2, $bmr, $tdee, $validated, $calories, $proteinG, $fatG, $carbG, $fatPercent, $proteinGPerKg) {
-
-        $user = User::create([
-            'name' => $step1['full_name'],
-            'full_name' => $step1['full_name'],
-            'username'  => $step1['username'],
-            'email'     => $step1['email'],
-            'password'  => $step1['password_hash'],
-            'gender'    => $step2['gender'] ?? null,
+        $validated = $request->validate([
+            'goal' => ['required', 'in:bulk,cut,recomp'],
+            'bulk_type' => ['nullable', 'in:lean,standard'],
+            'cut_type'  => ['nullable', 'in:moderate,aggressive'],
+            'fat_percent' => ['nullable', 'numeric', 'min:20', 'max:35'],
+            'protein_g_per_kg' => ['nullable', 'numeric', 'min:1.6', 'max:2.7'],
         ]);
 
-        UserMetric::create([
-            'user_id' => $user->id,
-            'gender' => $step2['gender'],
-            'age' => $step2['age'],
-            'height_cm' => $step2['height_cm'],
-            'weight_kg' => $step2['weight_kg'],
-            'activity_multiplier' => $step2['activity_multiplier'],
-            'bmr' => $bmr,
-            'tdee' => $tdee,
-        ]);
+        $step1 = $request->session()->get('register.step1');
+        $step2 = $request->session()->get('register.step2');
+        $bmr   = (float) $request->session()->get('register.bmr');
+        $tdee  = (int) $request->session()->get('register.tdee');
 
-        NutritionGoal::create([
-            'user_id' => $user->id,
-            'goal' => $validated['goal'],
-            'calorie_target' => (int) $calories,
-            'protein_g' => $proteinG,
-            'fat_g' => $fatG,
-            'carbs_g' => $carbG,
-            'fat_percent' => $fatPercent,
-            'protein_g_per_kg' => $proteinGPerKg,
-            'bulk_type' => $validated['bulk_type'] ?? null,
-            'cut_type' => $validated['cut_type'] ?? null,
-            'water_l' => 3.0,
-            'creatine_g' => 5.0,
-        ]);
-    });
+        $weightKg = (float) $step2['weight_kg'];
+        $fatPercent = isset($validated['fat_percent']) ? (float) $validated['fat_percent'] : 30.0;
 
-    // Clear the registration session data
-    $request->session()->forget('register');
+        $calories = $this->calculateGoalCalories($tdee, $validated);
+        $proteinGPerKg = !empty($validated['protein_g_per_kg'])
+            ? (float) $validated['protein_g_per_kg']
+            : $this->defaultProteinGPerKg($validated['goal']);
 
-    $unlocked = app(\App\Services\AchievementService::class)->evaluate($request->user());
-            if (!empty($unlocked)) {
-                session()->flash('unlocked', $unlocked);
-            }
-    return redirect()->route('login')->with('status', 'Account created. Please sign in.');
-}
+        $proteinG = (int) round($weightKg * $proteinGPerKg);
 
-   // Helpers
+        $fatCals = $calories * ($fatPercent / 100);
+        $fatG = (int) round($fatCals / 9);
+
+        $proteinCals = $proteinG * 4;
+        $fatCalsRounded = $fatG * 9;
+        $carbCals = max(0, $calories - ($proteinCals + $fatCalsRounded));
+        $carbG = (int) round($carbCals / 4);
+
+        $user = null;
+
+        DB::transaction(function () use (&$user, $step1, $step2, $bmr, $tdee, $validated, $calories, $proteinG, $fatG, $carbG, $fatPercent, $proteinGPerKg) {
+
+            $user = User::create([
+                'name' => $step1['full_name'],
+                'full_name' => $step1['full_name'],
+                'username'  => $step1['username'],
+                'email'     => $step1['email'],
+                'password'  => $step1['password_hash'],
+                'gender'    => $step2['gender'] ?? null,
+            ]);
+
+            UserMetric::create([
+                'user_id' => $user->id,
+                'gender' => $step2['gender'],
+                'age' => $step2['age'],
+                'height_cm' => $step2['height_cm'],
+                'weight_kg' => $step2['weight_kg'],
+                'activity_multiplier' => $step2['activity_multiplier'],
+                'bmr' => $bmr,
+                'tdee' => $tdee,
+            ]);
+
+            NutritionGoal::create([
+                'user_id' => $user->id,
+                'goal' => $validated['goal'],
+                'calorie_target' => (int) $calories,
+                'protein_g' => $proteinG,
+                'fat_g' => $fatG,
+                'carbs_g' => $carbG,
+                'fat_percent' => $fatPercent,
+                'protein_g_per_kg' => $proteinGPerKg,
+                'bulk_type' => $validated['bulk_type'] ?? null,
+                'cut_type' => $validated['cut_type'] ?? null,
+                'water_l' => 3.0,
+                'creatine_g' => 5.0,
+            ]);
+        });
+
+        if (!$user) {
+            return redirect()->route('register')->withErrors([
+                'register' => 'Account could not be created. Please try again.',
+            ]);
+        }
+
+        // Clear the registration session data
+        $request->session()->forget('register');
+
+        $unlocked = app(\App\Services\AchievementService::class)->evaluate($user);
+        if (!empty($unlocked)) {
+            session()->flash('unlocked', $unlocked);
+        }
+
+        return redirect()->route('login')->with('status', 'Account created. Please sign in.')->with('unlocked', $unlocked);
+    }
+
+    // Helpers
     // ---------------------------
     private function requireStep1(Request $request): void
     {
