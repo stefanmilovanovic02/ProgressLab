@@ -23,15 +23,21 @@
   }
 
   function toast(item) {
+    const image = item.image_path || '/images/achievements/default.png';
+
     const el = document.createElement('div');
     el.className = 'ach-toast';
     el.innerHTML = `
-      <div class="ach-toast__top">
-        <div class="ach-toast__label">Achievement Unlocked!</div>
-        <div class="ach-toast__rarity">${esc(item.rarity ?? '')}</div>
+      <div class="ach-toast__media">
+        <img src="${esc(image)}" alt="${esc(item.title)}">
       </div>
-      <div class="ach-toast__name">${esc(item.title)}</div>
-      <div class="ach-toast__desc">${esc(item.description)}</div>
+      <div class="ach-toast__content">
+        <div class="ach-toast__title">${esc(item.title)}</div>
+        <div class="ach-toast__desc">${esc(item.description)}</div>
+        <div class="ach-toast__meta">
+          ${esc(item.rarity ?? '')}
+        </div>
+      </div>
     `;
     stack.appendChild(el);
 
@@ -43,13 +49,11 @@
     setTimeout(() => {
       el.classList.remove('is-in');
       setTimeout(() => el.remove(), 250);
-    }, 3500);
+    }, 4000);
   }
 
-  // 1) Show any flash achievements (redirect flow)
   (window.ACHIEVEMENT_UNLOCKED || []).forEach(toast);
 
-  // 2) Allow any page JS/AJAX to trigger toasts
   window.showAchievementToasts = function(items) {
     (items || []).forEach(toast);
   };

@@ -8,6 +8,7 @@ use App\Models\UserAchievement;
 use App\Models\Workout;
 use App\Models\WorkoutLog;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 
@@ -25,18 +26,21 @@ class AchievementService
             ->where('is_active', true)
             ->get();
 
-        foreach ($achievements as $a) {
+        foreach ($achievements as $achievement) {
             $ua = UserAchievement::where('user_id', $user->id)
-                ->where('achievement_id', $a->id)
+                ->where('achievement_id', $achievement->id)
                 ->first();
 
             if ($ua && $ua->unlocked_at) {
                 continue;
             }
 
-            if ($this->meetsCriteria($user, $a)) {
+            if ($this->meetsCriteria($user, $achievement)) {
                 UserAchievement::updateOrCreate(
-                    ['user_id' => $user->id, 'achievement_id' => $a->id],
+                    [
+                        'user_id' => $user->id,
+                        'achievement_id' => $achievement->id,
+                    ],
                     [
                         'unlocked_at' => now(),
                         'notified_at' => null,
@@ -44,10 +48,11 @@ class AchievementService
                 );
 
                 $newlyUnlocked[] = [
-                    'id' => $a->id,
-                    'title' => $a->title,
-                    'description' => $a->description,
-                    'rarity' => $a->rarity,
+                    'id' => $achievement->id,
+                    'title' => $achievement->title,
+                    'description' => $achievement->description,
+                    'rarity' => $achievement->rarity,
+                    'image_path' => $achievement->image_path ? asset($achievement->image_path) : asset('images/achievements/default.png'),
                 ];
             }
         }
@@ -55,36 +60,41 @@ class AchievementService
         return $newlyUnlocked;
     }
 
-    private function meetsCriteria($user, Achievement $a): bool
+    private function meetsCriteria($user, Achievement $achievement): bool
     {
-        $c = $a->criteria ?? null;
+        $criteria = $achievement->criteria ?? null;
 
-        if (!$c || empty($c['metric'])) {
+        if (!$criteria || empty($criteria['metric'])) {
             return false;
         }
 
-        $metric = $c['metric'];
-        $target = (int) ($c['target'] ?? 1);
-        $tolerance = (float) ($c['tolerance'] ?? 10);
+        $metric = (string) $criteria['metric'];
+        $target = (int) ($criteria['target'] ?? 1);
+        $tolerance = (float) ($criteria['tolerance'] ?? 10);
 
         return match ($metric) {
-            // milestone basics
+            // basics
             'account_created' => true,
             'profile_complete' => $this->profileComplete($user),
             'bmr_tdee_generated' => $this->bmrTdeeGenerated($user),
             'nutrition_goals_set' => $this->nutritionGoalsSet($user),
             'workouts_created' => $this->workoutsCreated($user->id) >= $target,
             'workout_plan_edited' => $this->workoutPlanEdited($user->id),
+            'structured_workout_plans_followed' => $this->structuredWorkoutPlansFollowed($user->id) >= $target,
 
-            // total days / totals
+            // totals
             'nutrition_days' => $this->nutritionDays($user->id) >= $target,
             'workout_days' => $this->workoutDays($user->id) >= $target,
             'app_days_total' => $this->appDaysTotal($user->id) >= $target,
             'activity_days_total' => $this->activityDaysTotal($user->id) >= $target,
+            'active_months_total' => $this->activeMonthsTotal($user->id) >= $target,
+            'nutrition_active_months_total' => $this->nutritionActiveMonthsTotal($user->id) >= $target,
             'total_sets_lifetime' => $this->totalSetsLifetime($user->id) >= $target,
             'unique_exercises_added' => $this->uniqueExercisesAdded($user->id) >= $target,
             'water_days' => $this->waterDays($user->id) >= $target,
             'protein_goal_total_days' => $this->proteinGoalTotalDays($user) >= $target,
+            'calorie_target_total_days' => $this->calorieTargetTotalDays($user, $tolerance) >= $target,
+            'achievements_unlock_percent' => $this->achievementUnlockPercent($user->id) >= $target,
 
             // streaks
             'login_streak' => $this->loginStreak($user->id) >= $target,
@@ -93,9 +103,13 @@ class AchievementService
             'activity_streak' => $this->activityStreak($user->id) >= $target,
             'protein_goal_streak' => $this->proteinGoalStreak($user) >= $target,
             'cut_streak' => $this->cutStreak($user) >= $target,
+            'bulk_streak' => $this->bulkStreak($user) >= $target,
             'under_calorie_limit_streak' => $this->underCalorieLimitStreak($user) >= $target,
+            'all_macro_targets_streak' => $this->allMacroTargetsStreak($user, $target, $tolerance) >= $target,
+            'calorie_precision_streak' => $this->caloriePrecisionStreak($user, $tolerance) >= $target,
+            'active_year_month_streak' => $this->activeMonthStreak($user->id) >= $target,
 
-            // goals met / day conditions
+            // day conditions
             'protein_goal_met' => $this->macroGoalMetToday($user, 'protein_g'),
             'carbs_goal_met' => $this->macroGoalMetToday($user, 'carbs_g'),
             'fat_goal_met' => $this->macroGoalMetToday($user, 'fat_g'),
@@ -106,36 +120,32 @@ class AchievementService
             'cut_day' => $this->cutDay($user),
             'under_calorie_limit_day' => $this->underCalorieLimitDay($user),
 
-            // precision / balanced nutrition
+            // precision / macro consistency
             'macro_balanced_day' => $this->macroBalancedDay($user, 10),
-            'calorie_precision_days' => $this->caloriePrecisionDays($user, $target, $tolerance),
-            'all_macro_targets_times' => $this->allMacroTargetsTimes($user, $target, 10),
-            'macro_split_correct_days' => $this->macroSplitCorrectDays($user, $target, 10),
+            'calorie_precision_days' => $this->caloriePrecisionDays($user, $tolerance) >= $target,
+            'calorie_precision_days_in_month' => $this->maxCaloriePrecisionDaysInAnyMonth($user, $tolerance) >= $target,
+            'all_macro_targets_times' => $this->allMacroTargetsTimes($user, 10) >= $target,
+            'macro_split_correct_days' => $this->macroSplitCorrectDays($user, 10) >= $target,
 
-            // same-day / same-week cross logging
+            // mixed tracking
             'workout_and_nutrition_same_day' => $this->workoutAndNutritionSameDayCount($user->id) >= $target,
-            'workout_and_nutrition_same_week' => $this->workoutAndNutritionSameDayCount($user->id) >= $target,
+            'workout_and_nutrition_same_week' => $this->workoutAndNutritionSameWeekCount($user->id) >= $target,
+            'dual_tracker_totals' => $this->workoutDays($user->id) >= (int) ($criteria['workout_target'] ?? 10)
+                && $this->nutritionDays($user->id) >= (int) ($criteria['nutrition_target'] ?? 10),
 
-            // workout frequency / week / month
+            // workout frequency
             'workouts_in_week' => $this->maxWorkoutsInAnyWeek($user->id) >= $target,
             'workouts_in_month' => $this->maxWorkoutsInAnyMonth($user->id) >= $target,
-            'weeks_with_two_workouts' => $this->consecutiveWeeksWithAtLeastTwoWorkouts($user->id) >= $target,
+            'weeks_with_two_workouts' => $this->consecutiveWeeksWithAtLeastNWorkouts($user->id, 2) >= $target,
+            'weeks_with_three_workouts' => $this->consecutiveWeeksWithAtLeastNWorkouts($user->id, 3) >= $target,
+            'weeks_with_four_workouts' => $this->consecutiveWeeksWithAtLeastNWorkouts($user->id, 4) >= $target,
 
-            // workout categories
-            'push_workout_completed' => $this->workoutCategoryCount($user->id, 'push') >= $target,
-            'pull_workout_completed' => $this->workoutCategoryCount($user->id, 'pull') >= $target,
-            'leg_workout_completed' => $this->workoutCategoryCount($user->id, 'legs') >= $target,
-            'leg_workout_completed_total' => $this->workoutCategoryCount($user->id, 'legs') >= $target,
-            'cardio_session_logged' => $this->workoutCategoryCount($user->id, 'cardio') >= $target,
-            'cardio_sessions_in_week' => $this->maxCategoryInAnyWeek($user->id, 'cardio') >= $target,
-            'push_pull_balanced_totals' => $this->workoutCategoryCount($user->id, 'push') >= (int)($c['push_target'] ?? 5)
-                && $this->workoutCategoryCount($user->id, 'pull') >= (int)($c['pull_target'] ?? 5),
-             'dual_tracker_totals' => $this->workoutDays($user->id) >= (int)($c['workout_target'] ?? 10)
-              && $this->nutritionDays($user->id) >= (int)($c['nutrition_target'] ?? 10),   
-            'dual_tracker_totals' => $this->workoutDays($user->id) >= (int)($c['workout_target'] ?? 10)
-              && $this->nutritionDays($user->id) >= (int)($c['nutrition_target'] ?? 10),
+            // cardio only
+            'cardio_session_logged' => $this->cardioSessionsTotal($user->id) >= $target,
+            'cardio_sessions_in_week' => $this->maxCardioSessionsInAnyWeek($user->id) >= $target,
+            'cardio_sessions_total' => $this->cardioSessionsTotal($user->id) >= $target,
 
-            // exercise / progress
+            // strength / progression
             'exercise_weight_increase' => $this->exerciseImprovementEvents($user->id) >= $target,
             'exercise_weight_increase_distinct' => $this->distinctExercisesImproved($user->id) >= $target,
             'same_exercise_improvements' => $this->exerciseImprovementEvents($user->id) >= $target,
@@ -147,15 +157,12 @@ class AchievementService
             'progress_graph_views' => $this->eventCount($user->id, 'progress_graph_viewed') >= $target,
             'goal_updated_and_tracked_days' => $this->goalUpdatedAndTrackedDays($user) >= $target,
 
-            // meal-count based
-            'meals_logged_in_day' => $this->maxMealsLoggedInDay($user->id) >= $target,
-
             default => false,
         };
     }
 
     // ---------------------------
-    // Basic profile / setup
+    // Basics
     // ---------------------------
 
     private function profileComplete($user): bool
@@ -181,7 +188,7 @@ class AchievementService
     private function bmrTdeeGenerated($user): bool
     {
         $metric = $user->metric;
-        return $metric && (float)($metric->bmr ?? 0) > 0 && (float)($metric->tdee ?? 0) > 0;
+        return $metric && (float) ($metric->bmr ?? 0) > 0 && (float) ($metric->tdee ?? 0) > 0;
     }
 
     private function nutritionGoalsSet($user): bool
@@ -189,10 +196,10 @@ class AchievementService
         $goal = $user->nutritionGoal;
         return $goal
             && !empty($goal->goal)
-            && (int)($goal->calorie_target ?? 0) > 0
-            && (int)($goal->protein_g ?? 0) > 0
-            && (int)($goal->fat_g ?? 0) > 0
-            && (int)($goal->carbs_g ?? 0) > 0;
+            && (int) ($goal->calorie_target ?? 0) > 0
+            && (int) ($goal->protein_g ?? 0) > 0
+            && (int) ($goal->fat_g ?? 0) > 0
+            && (int) ($goal->carbs_g ?? 0) > 0;
     }
 
     private function workoutsCreated(int $userId): int
@@ -216,6 +223,20 @@ class AchievementService
             ->exists();
     }
 
+    private function structuredWorkoutPlansFollowed(int $userId): int
+    {
+        if (!Schema::hasTable('workouts') || !Schema::hasTable('workout_logs')) {
+            return 0;
+        }
+
+        return DB::table('workout_logs as wl')
+            ->join('workouts as w', 'w.id', '=', 'wl.workout_id')
+            ->where('wl.user_id', $userId)
+            ->where('w.user_id', $userId)
+            ->distinct()
+            ->count('wl.workout_id');
+    }
+
     // ---------------------------
     // Totals
     // ---------------------------
@@ -225,11 +246,11 @@ class AchievementService
         return NutritionEntry::where('user_id', $userId)
             ->where(function ($q) {
                 $q->where('calories', '>', 0)
-                  ->orWhere('protein_g', '>', 0)
-                  ->orWhere('carbs_g', '>', 0)
-                  ->orWhere('fat_g', '>', 0)
-                  ->orWhere('creatine_g', '>', 0)
-                  ->orWhere('water_ml', '>', 0);
+                    ->orWhere('protein_g', '>', 0)
+                    ->orWhere('carbs_g', '>', 0)
+                    ->orWhere('fat_g', '>', 0)
+                    ->orWhere('creatine_g', '>', 0)
+                    ->orWhere('water_ml', '>', 0);
             })
             ->get()
             ->pluck('entry_date')
@@ -269,6 +290,32 @@ class AchievementService
     private function activityDaysTotal(int $userId): int
     {
         return $this->activityDates($userId)->count();
+    }
+
+    private function activeMonthsTotal(int $userId): int
+    {
+        return $this->activityDates($userId)
+            ->map(fn ($d) => Carbon::parse($d)->format('Y-m'))
+            ->unique()
+            ->count();
+    }
+
+    private function nutritionActiveMonthsTotal(int $userId): int
+    {
+        return NutritionEntry::where('user_id', $userId)
+            ->where(function ($q) {
+                $q->where('calories', '>', 0)
+                    ->orWhere('protein_g', '>', 0)
+                    ->orWhere('carbs_g', '>', 0)
+                    ->orWhere('fat_g', '>', 0)
+                    ->orWhere('creatine_g', '>', 0)
+                    ->orWhere('water_ml', '>', 0);
+            })
+            ->get()
+            ->pluck('entry_date')
+            ->map(fn ($d) => Carbon::parse($d)->format('Y-m'))
+            ->unique()
+            ->count();
     }
 
     private function totalSetsLifetime(int $userId): int
@@ -320,17 +367,51 @@ class AchievementService
     private function proteinGoalTotalDays($user): int
     {
         $goal = $user->nutritionGoal;
-        if (!$goal || (int)($goal->protein_g ?? 0) <= 0) {
+        if (!$goal || (int) ($goal->protein_g ?? 0) <= 0) {
             return 0;
         }
 
         return NutritionEntry::where('user_id', $user->id)
-            ->where('protein_g', '>=', (int)$goal->protein_g)
+            ->where('protein_g', '>=', (int) $goal->protein_g)
             ->get()
             ->pluck('entry_date')
             ->map(fn ($d) => Carbon::parse($d)->toDateString())
             ->unique()
             ->count();
+    }
+
+    private function calorieTargetTotalDays($user, float $tolerance = 0): int
+    {
+        $goal = $user->nutritionGoal;
+        if (!$goal || (int) ($goal->calorie_target ?? 0) <= 0) {
+            return 0;
+        }
+
+        return NutritionEntry::where('user_id', $user->id)
+            ->get()
+            ->filter(fn ($entry) => $this->withinTolerance(
+                (int) ($entry->calories ?? 0),
+                (int) ($goal->calorie_target ?? 0),
+                $tolerance
+            ))
+            ->pluck('entry_date')
+            ->map(fn ($d) => Carbon::parse($d)->toDateString())
+            ->unique()
+            ->count();
+    }
+
+    private function achievementUnlockPercent(int $userId): float
+    {
+        $total = Achievement::where('is_active', true)->count();
+        if ($total <= 0) {
+            return 0;
+        }
+
+        $unlocked = UserAchievement::where('user_id', $userId)
+            ->whereNotNull('unlocked_at')
+            ->count();
+
+        return ($unlocked / $total) * 100;
     }
 
     // ---------------------------
@@ -377,11 +458,11 @@ class AchievementService
             ->where('user_id', $userId)
             ->where(function ($q) {
                 $q->where('calories', '>', 0)
-                  ->orWhere('protein_g', '>', 0)
-                  ->orWhere('carbs_g', '>', 0)
-                  ->orWhere('fat_g', '>', 0)
-                  ->orWhere('creatine_g', '>', 0)
-                  ->orWhere('water_ml', '>', 0);
+                    ->orWhere('protein_g', '>', 0)
+                    ->orWhere('carbs_g', '>', 0)
+                    ->orWhere('fat_g', '>', 0)
+                    ->orWhere('creatine_g', '>', 0)
+                    ->orWhere('water_ml', '>', 0);
             })
             ->orderByDesc('entry_date')
             ->pluck('entry_date')
@@ -398,12 +479,12 @@ class AchievementService
     private function proteinGoalStreak($user): int
     {
         $goal = $user->nutritionGoal;
-        if (!$goal || (int)($goal->protein_g ?? 0) <= 0) {
+        if (!$goal || (int) ($goal->protein_g ?? 0) <= 0) {
             return 0;
         }
 
         $dates = NutritionEntry::where('user_id', $user->id)
-            ->where('protein_g', '>=', (int)$goal->protein_g)
+            ->where('protein_g', '>=', (int) $goal->protein_g)
             ->orderByDesc('entry_date')
             ->pluck('entry_date')
             ->all();
@@ -413,13 +494,30 @@ class AchievementService
 
     private function cutStreak($user): int
     {
-        if (($user->nutritionGoal->goal ?? null) !== 'cut') {
+        $goal = $user->nutritionGoal;
+        if (($goal->goal ?? null) !== 'cut' || (int) ($goal->calorie_target ?? 0) <= 0) {
             return 0;
         }
 
         $dates = NutritionEntry::where('user_id', $user->id)
             ->get()
-            ->filter(fn ($e) => (int)($e->calories ?? 0) > 0 && (int)$e->calories < (int)($user->nutritionGoal->calorie_target ?? 0))
+            ->filter(fn ($e) => (int) ($e->calories ?? 0) > 0 && (int) $e->calories < (int) $goal->calorie_target)
+            ->pluck('entry_date')
+            ->all();
+
+        return $this->consecutiveDaysStreak($dates);
+    }
+
+    private function bulkStreak($user): int
+    {
+        $goal = $user->nutritionGoal;
+        if (($goal->goal ?? null) !== 'bulk' || (int) ($goal->calorie_target ?? 0) <= 0) {
+            return 0;
+        }
+
+        $dates = NutritionEntry::where('user_id', $user->id)
+            ->get()
+            ->filter(fn ($e) => (int) ($e->calories ?? 0) > (int) $goal->calorie_target)
             ->pluck('entry_date')
             ->all();
 
@@ -429,13 +527,13 @@ class AchievementService
     private function underCalorieLimitStreak($user): int
     {
         $goal = $user->nutritionGoal;
-        if (!$goal || (int)($goal->calorie_target ?? 0) <= 0) {
+        if (!$goal || (int) ($goal->calorie_target ?? 0) <= 0) {
             return 0;
         }
 
         $dates = NutritionEntry::where('user_id', $user->id)
             ->where('calories', '>', 0)
-            ->where('calories', '<=', (int)$goal->calorie_target)
+            ->where('calories', '<=', (int) $goal->calorie_target)
             ->orderByDesc('entry_date')
             ->pluck('entry_date')
             ->all();
@@ -443,8 +541,68 @@ class AchievementService
         return $this->consecutiveDaysStreak($dates);
     }
 
+    private function allMacroTargetsStreak($user, int $target, float $tolerance): int
+    {
+        $dates = NutritionEntry::where('user_id', $user->id)
+            ->get()
+            ->filter(fn ($entry) => $this->isBalancedEntry($user, $entry, $tolerance, true))
+            ->pluck('entry_date')
+            ->all();
+
+        return $this->consecutiveDaysStreak($dates);
+    }
+
+    private function caloriePrecisionStreak($user, float $tolerance): int
+    {
+        $goal = $user->nutritionGoal;
+        if (!$goal || (int) ($goal->calorie_target ?? 0) <= 0) {
+            return 0;
+        }
+
+        $dates = NutritionEntry::where('user_id', $user->id)
+            ->get()
+            ->filter(fn ($entry) => $this->withinTolerance(
+                (int) ($entry->calories ?? 0),
+                (int) ($goal->calorie_target ?? 0),
+                $tolerance
+            ))
+            ->pluck('entry_date')
+            ->all();
+
+        return $this->consecutiveDaysStreak($dates);
+    }
+
+    private function activeMonthStreak(int $userId): int
+    {
+        $months = $this->activityDates($userId)
+            ->map(fn ($d) => Carbon::parse($d)->format('Y-m'))
+            ->unique()
+            ->values();
+
+        if ($months->isEmpty()) {
+            return 0;
+        }
+
+        $streak = 0;
+        $cursor = now()->startOfMonth();
+
+        if (!$months->contains($cursor->format('Y-m'))) {
+            $cursor->subMonth();
+            if (!$months->contains($cursor->format('Y-m'))) {
+                return 0;
+            }
+        }
+
+        while ($months->contains($cursor->format('Y-m'))) {
+            $streak++;
+            $cursor->subMonth();
+        }
+
+        return $streak;
+    }
+
     // ---------------------------
-    // Daily conditions / goals
+    // Daily conditions
     // ---------------------------
 
     private function macroGoalMetToday($user, string $field): bool
@@ -465,11 +623,11 @@ class AchievementService
         }
 
         $target = match ($field) {
-            'calories' => (int)($goal->calorie_target ?? 0),
-            'protein_g' => (int)($goal->protein_g ?? 0),
-            'carbs_g' => (int)($goal->carbs_g ?? 0),
-            'fat_g' => (int)($goal->fat_g ?? 0),
-            'creatine_g' => (int)($goal->creatine_g ?? 0),
+            'calories' => (int) ($goal->calorie_target ?? 0),
+            'protein_g' => (int) ($goal->protein_g ?? 0),
+            'carbs_g' => (int) ($goal->carbs_g ?? 0),
+            'fat_g' => (int) ($goal->fat_g ?? 0),
+            'creatine_g' => (int) ($goal->creatine_g ?? 0),
             'water_ml' => $goal->water_l ? (int) round($goal->water_l * 1000) : 0,
             default => 0,
         };
@@ -478,43 +636,46 @@ class AchievementService
             return false;
         }
 
-        return (int)($entry->{$field} ?? 0) >= $target;
+        return (int) ($entry->{$field} ?? 0) >= $target;
     }
 
     private function bulkDay($user): bool
     {
-        if (($user->nutritionGoal->goal ?? null) !== 'bulk') {
+        $goal = $user->nutritionGoal;
+        if (($goal->goal ?? null) !== 'bulk') {
             return false;
         }
 
         $entry = $this->todayNutritionEntry($user->id);
-        $target = (int)($user->nutritionGoal->calorie_target ?? 0);
+        $target = (int) ($goal->calorie_target ?? 0);
 
-        return $entry && $target > 0 && (int)$entry->calories > $target;
+        return $entry && $target > 0 && (int) $entry->calories > $target;
     }
 
     private function cutDay($user): bool
     {
-        if (($user->nutritionGoal->goal ?? null) !== 'cut') {
+        $goal = $user->nutritionGoal;
+        if (($goal->goal ?? null) !== 'cut') {
             return false;
         }
 
         $entry = $this->todayNutritionEntry($user->id);
-        $target = (int)($user->nutritionGoal->calorie_target ?? 0);
+        $target = (int) ($goal->calorie_target ?? 0);
 
-        return $entry && $target > 0 && (int)$entry->calories < $target;
+        return $entry && $target > 0 && (int) $entry->calories < $target;
     }
 
     private function underCalorieLimitDay($user): bool
     {
+        $goal = $user->nutritionGoal;
         $entry = $this->todayNutritionEntry($user->id);
-        $target = (int)($user->nutritionGoal->calorie_target ?? 0);
+        $target = (int) ($goal->calorie_target ?? 0);
 
-        return $entry && $target > 0 && (int)$entry->calories > 0 && (int)$entry->calories <= $target;
+        return $entry && $target > 0 && (int) $entry->calories > 0 && (int) $entry->calories <= $target;
     }
 
     // ---------------------------
-    // Precision / balanced nutrition
+    // Precision / macro consistency
     // ---------------------------
 
     private function macroBalancedDay($user, float $tolerance = 10): bool
@@ -523,38 +684,67 @@ class AchievementService
         return $this->isBalancedDay($user, $today, $tolerance, true);
     }
 
-    private function caloriePrecisionDays($user, int $targetDays, float $tolerance): int
+    private function caloriePrecisionDays($user, float $tolerance): int
     {
         $goal = $user->nutritionGoal;
-        if (!$goal || (int)($goal->calorie_target ?? 0) <= 0) {
+        if (!$goal || (int) ($goal->calorie_target ?? 0) <= 0) {
             return 0;
         }
 
         return NutritionEntry::where('user_id', $user->id)
             ->get()
-            ->filter(fn ($e) => $this->withinTolerance((int)$e->calories, (int)$goal->calorie_target, $tolerance))
+            ->filter(fn ($entry) => $this->withinTolerance(
+                (int) ($entry->calories ?? 0),
+                (int) ($goal->calorie_target ?? 0),
+                $tolerance
+            ))
             ->pluck('entry_date')
             ->map(fn ($d) => Carbon::parse($d)->toDateString())
             ->unique()
             ->count();
     }
 
-    private function allMacroTargetsTimes($user, int $targetDays, float $tolerance): int
+    private function maxCaloriePrecisionDaysInAnyMonth($user, float $tolerance): int
+    {
+        $goal = $user->nutritionGoal;
+        if (!$goal || (int) ($goal->calorie_target ?? 0) <= 0) {
+            return 0;
+        }
+
+        $months = NutritionEntry::where('user_id', $user->id)
+            ->get()
+            ->filter(fn ($entry) => $this->withinTolerance(
+                (int) ($entry->calories ?? 0),
+                (int) ($goal->calorie_target ?? 0),
+                $tolerance
+            ))
+            ->groupBy(fn ($entry) => Carbon::parse($entry->entry_date)->format('Y-m'))
+            ->map(function ($entries) {
+                return $entries->pluck('entry_date')
+                    ->map(fn ($d) => Carbon::parse($d)->toDateString())
+                    ->unique()
+                    ->count();
+            });
+
+        return $months->max() ?? 0;
+    }
+
+    private function allMacroTargetsTimes($user, float $tolerance = 10): int
     {
         return NutritionEntry::where('user_id', $user->id)
             ->get()
-            ->filter(fn ($e) => $this->isBalancedEntry($user, $e, $tolerance, true))
+            ->filter(fn ($entry) => $this->isBalancedEntry($user, $entry, $tolerance, true))
             ->pluck('entry_date')
             ->map(fn ($d) => Carbon::parse($d)->toDateString())
             ->unique()
             ->count();
     }
 
-    private function macroSplitCorrectDays($user, int $targetDays, float $tolerance): int
+    private function macroSplitCorrectDays($user, float $tolerance = 10): int
     {
         return NutritionEntry::where('user_id', $user->id)
             ->get()
-            ->filter(fn ($e) => $this->isBalancedEntry($user, $e, $tolerance, false))
+            ->filter(fn ($entry) => $this->isBalancedEntry($user, $entry, $tolerance, false))
             ->pluck('entry_date')
             ->map(fn ($d) => Carbon::parse($d)->toDateString())
             ->unique()
@@ -562,24 +752,65 @@ class AchievementService
     }
 
     // ---------------------------
-    // Cross logging
+    // Mixed tracking
     // ---------------------------
 
     private function workoutAndNutritionSameDayCount(int $userId): int
     {
         $workoutDays = Schema::hasTable('workout_logs')
-            ? DB::table('workout_logs')->where('user_id', $userId)->pluck('entry_date')->map(fn($d) => Carbon::parse($d)->toDateString())->unique()
+            ? DB::table('workout_logs')->where('user_id', $userId)->pluck('entry_date')->map(fn ($d) => Carbon::parse($d)->toDateString())->unique()
             : collect();
 
         $nutritionDays = Schema::hasTable('nutrition_entries')
-            ? DB::table('nutrition_entries')->where('user_id', $userId)->pluck('entry_date')->map(fn($d) => Carbon::parse($d)->toDateString())->unique()
+            ? DB::table('nutrition_entries')
+                ->where('user_id', $userId)
+                ->where(function ($q) {
+                    $q->where('calories', '>', 0)
+                        ->orWhere('protein_g', '>', 0)
+                        ->orWhere('carbs_g', '>', 0)
+                        ->orWhere('fat_g', '>', 0)
+                        ->orWhere('creatine_g', '>', 0)
+                        ->orWhere('water_ml', '>', 0);
+                })
+                ->pluck('entry_date')
+                ->map(fn ($d) => Carbon::parse($d)->toDateString())
+                ->unique()
             : collect();
 
         return $workoutDays->intersect($nutritionDays)->count();
     }
 
+    private function workoutAndNutritionSameWeekCount(int $userId): int
+    {
+        $workoutWeeks = Schema::hasTable('workout_logs')
+            ? DB::table('workout_logs')
+                ->where('user_id', $userId)
+                ->pluck('entry_date')
+                ->map(fn ($d) => $this->yearWeek(Carbon::parse($d)))
+                ->unique()
+            : collect();
+
+        $nutritionWeeks = Schema::hasTable('nutrition_entries')
+            ? DB::table('nutrition_entries')
+                ->where('user_id', $userId)
+                ->where(function ($q) {
+                    $q->where('calories', '>', 0)
+                        ->orWhere('protein_g', '>', 0)
+                        ->orWhere('carbs_g', '>', 0)
+                        ->orWhere('fat_g', '>', 0)
+                        ->orWhere('creatine_g', '>', 0)
+                        ->orWhere('water_ml', '>', 0);
+                })
+                ->pluck('entry_date')
+                ->map(fn ($d) => $this->yearWeek(Carbon::parse($d)))
+                ->unique()
+            : collect();
+
+        return $workoutWeeks->intersect($nutritionWeeks)->count();
+    }
+
     // ---------------------------
-    // Weekly / monthly workout frequency
+    // Workout frequency
     // ---------------------------
 
     private function maxWorkoutsInAnyWeek(int $userId): int
@@ -591,16 +822,9 @@ class AchievementService
         $weeks = DB::table('workout_logs')
             ->where('user_id', $userId)
             ->pluck('entry_date')
-            ->map(function ($d) {
-                $c = Carbon::parse($d);
-                return $c->isoWeekYear . '-W' . str_pad((string)$c->isoWeek, 2, '0', STR_PAD_LEFT);
-            });
+            ->map(fn ($d) => $this->yearWeek(Carbon::parse($d)));
 
-        if ($weeks->isEmpty()) {
-            return 0;
-        }
-
-        return max($weeks->countBy()->all());
+        return $weeks->isEmpty() ? 0 : max($weeks->countBy()->all());
     }
 
     private function maxWorkoutsInAnyMonth(int $userId): int
@@ -614,58 +838,36 @@ class AchievementService
             ->pluck('entry_date')
             ->map(fn ($d) => Carbon::parse($d)->format('Y-m'));
 
-        if ($months->isEmpty()) {
-            return 0;
-        }
-
-        return max($months->countBy()->all());
+        return $months->isEmpty() ? 0 : max($months->countBy()->all());
     }
 
-    private function consecutiveWeeksWithAtLeastTwoWorkouts(int $userId): int
+    private function consecutiveWeeksWithAtLeastNWorkouts(int $userId, int $minimumPerWeek): int
     {
         if (!Schema::hasTable('workout_logs')) {
             return 0;
         }
 
-        $weeks = DB::table('workout_logs')
+        $weekCounts = DB::table('workout_logs')
             ->where('user_id', $userId)
             ->pluck('entry_date')
-            ->map(function ($d) {
-                $c = Carbon::parse($d);
-                return [
-                    'key' => $c->isoWeekYear . '-W' . str_pad((string)$c->isoWeek, 2, '0', STR_PAD_LEFT),
-                    'year' => $c->isoWeekYear,
-                    'week' => $c->isoWeek,
-                ];
-            });
+            ->map(fn ($d) => $this->yearWeek(Carbon::parse($d)))
+            ->countBy();
 
-        if ($weeks->isEmpty()) {
-            return 0;
-        }
-
-        $eligible = collect($weeks)
-            ->groupBy('key')
-            ->map(fn ($rows) => count($rows) >= 2 ? $rows[0] : null)
-            ->filter()
-            ->sortByDesc(fn ($r) => $r['year'] . str_pad((string)$r['week'], 2, '0', STR_PAD_LEFT))
-            ->values();
-
-        if ($eligible->isEmpty()) {
+        if ($weekCounts->isEmpty()) {
             return 0;
         }
 
         $streak = 0;
-        $cursor = Carbon::now()->startOfWeek(Carbon::MONDAY);
+        $cursor = now()->startOfWeek(Carbon::MONDAY);
 
-        // start from current week or previous week
-        if (!$this->weekExistsInCollection($eligible, $cursor)) {
+        if (($weekCounts[$this->yearWeek($cursor)] ?? 0) < $minimumPerWeek) {
             $cursor->subWeek();
-            if (!$this->weekExistsInCollection($eligible, $cursor)) {
+            if (($weekCounts[$this->yearWeek($cursor)] ?? 0) < $minimumPerWeek) {
                 return 0;
             }
         }
 
-        while ($this->weekExistsInCollection($eligible, $cursor)) {
+        while (($weekCounts[$this->yearWeek($cursor)] ?? 0) >= $minimumPerWeek) {
             $streak++;
             $cursor->subWeek();
         }
@@ -673,19 +875,11 @@ class AchievementService
         return $streak;
     }
 
-    private function weekExistsInCollection($collection, Carbon $date): bool
-    {
-        $year = $date->isoWeekYear;
-        $week = $date->isoWeek;
-
-        return $collection->contains(fn ($r) => (int)$r['year'] === $year && (int)$r['week'] === $week);
-    }
-
     // ---------------------------
-    // Workout categories
+    // Cardio
     // ---------------------------
 
-    private function workoutCategoryCount(int $userId, string $category): int
+    private function cardioSessionsTotal(int $userId): int
     {
         if (!Schema::hasTable('workout_logs') || !Schema::hasTable('workouts')) {
             return 0;
@@ -697,10 +891,10 @@ class AchievementService
             ->select('wl.id', 'wl.workout_id', 'wl.entry_date', 'w.name')
             ->get();
 
-        return $logs->filter(fn ($log) => $this->workoutMatchesCategory((array)$log, $category))->count();
+        return $logs->filter(fn ($log) => $this->isCardioWorkout((array) $log))->count();
     }
 
-    private function maxCategoryInAnyWeek(int $userId, string $category): int
+    private function maxCardioSessionsInAnyWeek(int $userId): int
     {
         if (!Schema::hasTable('workout_logs') || !Schema::hasTable('workouts')) {
             return 0;
@@ -711,31 +905,21 @@ class AchievementService
             ->where('wl.user_id', $userId)
             ->select('wl.id', 'wl.workout_id', 'wl.entry_date', 'w.name')
             ->get()
-            ->filter(fn ($log) => $this->workoutMatchesCategory((array)$log, $category));
+            ->filter(fn ($log) => $this->isCardioWorkout((array) $log));
 
         if ($logs->isEmpty()) {
             return 0;
         }
 
-        $weeks = $logs->map(function ($log) {
-            $c = Carbon::parse($log->entry_date);
-            return $c->isoWeekYear . '-W' . str_pad((string)$c->isoWeek, 2, '0', STR_PAD_LEFT);
-        });
+        $weeks = $logs->map(fn ($log) => $this->yearWeek(Carbon::parse($log->entry_date)));
 
         return max($weeks->countBy()->all());
     }
 
-    private function workoutMatchesCategory(array $log, string $category): bool
+    private function isCardioWorkout(array $log): bool
     {
-        $name = strtolower((string)($log['name'] ?? ''));
-
-        $keywords = match ($category) {
-            'push' => ['push', 'chest', 'shoulder', 'shoulders', 'triceps'],
-            'pull' => ['pull', 'back', 'biceps'],
-            'legs' => ['leg', 'legs', 'quad', 'quads', 'hamstring', 'glute', 'calf'],
-            'cardio' => ['cardio', 'run', 'running', 'walk', 'walking', 'bike', 'cycling', 'row', 'rowing', 'treadmill', 'stair'],
-            default => [],
-        };
+        $name = strtolower((string) ($log['name'] ?? ''));
+        $keywords = ['cardio', 'run', 'running', 'walk', 'walking', 'bike', 'cycling', 'row', 'rowing', 'treadmill', 'stair'];
 
         foreach ($keywords as $kw) {
             if (str_contains($name, $kw)) {
@@ -743,19 +927,17 @@ class AchievementService
             }
         }
 
-        // fallback: infer via workout's exercises + muscle_group
         if (Schema::hasTable('exercise_workout') && Schema::hasTable('exercises') && !empty($log['workout_id'])) {
             $muscles = DB::table('exercise_workout as ew')
                 ->join('exercises as ex', 'ex.id', '=', 'ew.exercise_id')
                 ->where('ew.workout_id', $log['workout_id'])
                 ->pluck('ex.muscle_group')
-                ->map(fn ($m) => strtolower((string)$m));
+                ->map(fn ($m) => strtolower((string) $m));
 
             foreach ($muscles as $muscle) {
-                if ($category === 'push' && in_array($muscle, ['chest', 'shoulders', 'triceps'])) return true;
-                if ($category === 'pull' && in_array($muscle, ['back', 'biceps'])) return true;
-                if ($category === 'legs' && in_array($muscle, ['legs', 'quads', 'hamstrings', 'glutes', 'calves'])) return true;
-                if ($category === 'cardio' && str_contains($muscle, 'cardio')) return true;
+                if (str_contains($muscle, 'cardio')) {
+                    return true;
+                }
             }
         }
 
@@ -763,7 +945,7 @@ class AchievementService
     }
 
     // ---------------------------
-    // Exercise improvements / PRs
+    // Strength / progression
     // ---------------------------
 
     private function exerciseImprovementEvents(int $userId): int
@@ -779,7 +961,7 @@ class AchievementService
             $best = null;
 
             foreach ($exerciseRows->sortBy('day') as $row) {
-                $weight = (float)$row->best_weight;
+                $weight = (float) $row->best_weight;
 
                 if ($best !== null && $weight > $best) {
                     $events++;
@@ -806,7 +988,7 @@ class AchievementService
             $hadImprovement = false;
 
             foreach ($exerciseRows->sortBy('day') as $row) {
-                $weight = (float)$row->best_weight;
+                $weight = (float) $row->best_weight;
 
                 if ($best !== null && $weight > $best) {
                     $hadImprovement = true;
@@ -824,7 +1006,7 @@ class AchievementService
         return $improved;
     }
 
-    private function exerciseDailyBestWeights(int $userId)
+    private function exerciseDailyBestWeights(int $userId): Collection
     {
         if (
             !Schema::hasTable('workout_log_sets') ||
@@ -838,13 +1020,13 @@ class AchievementService
             ->join('workout_log_exercises as e', 'e.id', '=', 's.workout_log_exercise_id')
             ->join('workout_logs as l', 'l.id', '=', 'e.workout_log_id')
             ->where('l.user_id', $userId)
-            ->where('s.weight', '>', 0)
+            ->where('s.weight_kg', '>', 0)
             ->select(
                 'e.exercise_id',
-                DB::raw("date(l.entry_date) as day"),
-                DB::raw("MAX(s.weight) as best_weight")
+                DB::raw('date(l.entry_date) as day'),
+                DB::raw('MAX(s.weight_kg) as best_weight')
             )
-            ->groupBy('e.exercise_id', DB::raw("date(l.entry_date)"))
+            ->groupBy('e.exercise_id', DB::raw('date(l.entry_date)'))
             ->get();
     }
 
@@ -875,10 +1057,7 @@ class AchievementService
             ->groupBy('workout_id')
             ->map(function ($rows) {
                 return $rows->pluck('entry_date')
-                    ->map(function ($d) {
-                        $c = Carbon::parse($d);
-                        return $c->isoWeekYear . '-W' . str_pad((string)$c->isoWeek, 2, '0', STR_PAD_LEFT);
-                    })
+                    ->map(fn ($d) => $this->yearWeek(Carbon::parse($d)))
                     ->unique()
                     ->count();
             });
@@ -887,7 +1066,7 @@ class AchievementService
     }
 
     // ---------------------------
-    // Events / graph views / goal chasing
+    // Analytics / events
     // ---------------------------
 
     private function eventCount(int $userId, string $event): int
@@ -909,30 +1088,14 @@ class AchievementService
             return 0;
         }
 
-        // require goal to have actually been edited at least once
         if (!$goal->updated_at || !$goal->created_at || $goal->updated_at->lte($goal->created_at)) {
             return 0;
         }
 
         $since = $goal->updated_at->toDateString();
-        $activity = $this->activityDates($user->id)->filter(fn ($d) => $d >= $since);
-
-        return $activity->count();
-    }
-
-    // ---------------------------
-    // Meal-count based
-    // ---------------------------
-
-    private function maxMealsLoggedInDay(int $userId): int
-    {
-        if (!Schema::hasTable('nutrition_entries') || !Schema::hasColumn('nutrition_entries', 'meals_logged')) {
-            return 0;
-        }
-
-        return (int) (DB::table('nutrition_entries')
-            ->where('user_id', $userId)
-            ->max('meals_logged') ?? 0);
+        return $this->activityDates($user->id)
+            ->filter(fn ($d) => $d >= $since)
+            ->count();
     }
 
     // ---------------------------
@@ -975,19 +1138,19 @@ class AchievementService
         }
 
         $checks = [
-            $this->withinTolerance((int)($entry->protein_g ?? 0), (int)($goal->protein_g ?? 0), $tolerance),
-            $this->withinTolerance((int)($entry->carbs_g ?? 0), (int)($goal->carbs_g ?? 0), $tolerance),
-            $this->withinTolerance((int)($entry->fat_g ?? 0), (int)($goal->fat_g ?? 0), $tolerance),
+            $this->withinTolerance((int) ($entry->protein_g ?? 0), (int) ($goal->protein_g ?? 0), $tolerance),
+            $this->withinTolerance((int) ($entry->carbs_g ?? 0), (int) ($goal->carbs_g ?? 0), $tolerance),
+            $this->withinTolerance((int) ($entry->fat_g ?? 0), (int) ($goal->fat_g ?? 0), $tolerance),
         ];
 
         if ($includeCalories) {
-            $checks[] = $this->withinTolerance((int)($entry->calories ?? 0), (int)($goal->calorie_target ?? 0), $tolerance);
+            $checks[] = $this->withinTolerance((int) ($entry->calories ?? 0), (int) ($goal->calorie_target ?? 0), $tolerance);
         }
 
         return !in_array(false, $checks, true);
     }
 
-    private function activityDates(int $userId)
+    private function activityDates(int $userId): Collection
     {
         $dates = collect();
 
@@ -1009,11 +1172,11 @@ class AchievementService
                     ->where('user_id', $userId)
                     ->where(function ($q) {
                         $q->where('calories', '>', 0)
-                          ->orWhere('protein_g', '>', 0)
-                          ->orWhere('carbs_g', '>', 0)
-                          ->orWhere('fat_g', '>', 0)
-                          ->orWhere('creatine_g', '>', 0)
-                          ->orWhere('water_ml', '>', 0);
+                            ->orWhere('protein_g', '>', 0)
+                            ->orWhere('carbs_g', '>', 0)
+                            ->orWhere('fat_g', '>', 0)
+                            ->orWhere('creatine_g', '>', 0)
+                            ->orWhere('water_ml', '>', 0);
                     })
                     ->pluck('entry_date')
             );
@@ -1055,5 +1218,10 @@ class AchievementService
         }
 
         return $streak;
+    }
+
+    private function yearWeek(Carbon $date): string
+    {
+        return $date->isoWeekYear . '-W' . str_pad((string) $date->isoWeek, 2, '0', STR_PAD_LEFT);
     }
 }

@@ -250,15 +250,27 @@
             });
 
             try {
-            await fetch(saveUrl, {
-                method: 'POST',
-                headers: {
+            const res = await fetch(saveUrl, {
+              method: 'POST',
+              headers: {
                 'Accept': 'application/json',
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': token
-                },
-                body: JSON.stringify(payload)
+              },
+              body: JSON.stringify(payload)
             });
+
+            if (!res.ok) {
+              const txt = await res.text();
+              console.error('Nutrition save failed:', res.status, txt);
+              return;
+            }
+
+            const data = await res.json();
+
+            if (window.showAchievementToasts) {
+              window.showAchievementToasts(data.unlocked || []);
+            }
             } catch (e) {
             // (optional) you can show a toast later
             console.error(e);
@@ -365,14 +377,26 @@
 
           try{
             const res = await fetch(SAVE_URL, {
-              method: 'POST',
-              headers: {
-                'Accept': 'application/json',
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': CSRF
-              },
-              body: JSON.stringify(payload)
-            });
+            method: 'POST',
+            headers: {
+              'Accept': 'application/json',
+              'Content-Type': 'application/json',
+              'X-CSRF-TOKEN': CSRF
+            },
+            body: JSON.stringify(payload)
+          });
+
+          if (!res.ok) {
+            const txt = await res.text();
+            console.error('Save failed:', res.status, txt);
+            return;
+          }
+
+          const data = await res.json();
+
+          if (window.showAchievementToasts) {
+            window.showAchievementToasts(data.unlocked || []);
+          }
 
             // Optional: debug errors
             if (!res.ok) {
@@ -555,5 +579,7 @@
       })();
       </script>
 
+
+<x-achievement-toasts />
 </body>
 </html>

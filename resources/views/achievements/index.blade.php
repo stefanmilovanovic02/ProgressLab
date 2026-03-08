@@ -164,54 +164,7 @@
     })();
   </script>
 
- {{-- Toast Script --}}
-  <script>
-    (function(){
-      const audio = new Audio('/sfx/achievement.mp3');
 
-      function esc(s){
-        return String(s ?? '').replace(/[&<>"']/g, m => ({
-          '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
-        }[m]));
-      }
-
-      function toast(item){
-        const el = document.createElement('div');
-        el.className = 'ach-toast';
-        el.innerHTML = `
-          <div class="ach-toast__title">Achievement Unlocked!</div>
-          <div class="ach-toast__name">${esc(item.title)}</div>
-          <div class="ach-toast__desc">${esc(item.description)}</div>
-        `;
-        document.body.appendChild(el);
-
-        audio.currentTime = 0;
-        audio.play().catch(()=>{});
-
-        requestAnimationFrame(()=> el.classList.add('is-in'));
-        setTimeout(()=>{
-          el.classList.remove('is-in');
-          setTimeout(()=> el.remove(), 250);
-        }, 3500);
-      }
-
-      async function poll(){
-        try{
-          const res = await fetch("{{ route('achievements.notifications') }}", {
-            headers: { 'Accept':'application/json' }
-          });
-          if(!res.ok) return;
-          const data = await res.json();
-          (data.items || []).forEach(toast);
-        }catch(e){}
-      }
-
-      poll();
-      setInterval(poll, 10000);
-    })();
-
-    (window.__unlocked || []).forEach(toast);
-      </script>
-
+<x-achievement-toasts />
 </body>
 </html>

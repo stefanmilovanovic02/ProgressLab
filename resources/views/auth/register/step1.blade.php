@@ -137,5 +137,6 @@
 
     </section>
   </main>
+  <x-achievement-toasts />
 </body>
 </html>

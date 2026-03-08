@@ -129,6 +129,7 @@ class AchievementsController extends Controller
                 'a.title',
                 'a.description',
                 'a.rarity',
+                'a.image_path',
             ]);
 
         if ($items->isNotEmpty()) {
@@ -142,6 +143,7 @@ class AchievementsController extends Controller
                 'title' => $x->title,
                 'description' => $x->description,
                 'rarity' => $x->rarity,
+                'image_path' => $achievement->image_path ? asset($achievement->image_path) : asset('images/achievements/default.png'),
             ])->values(),
         ]);
     }
