@@ -11,10 +11,20 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+
     ->withMiddleware(function (Middleware $middleware) {
-        $middleware->alias(['track.daily.login' => \App\Http\Middleware\TrackDailyLogin::class,]);
-        $middleware->trustProxies(at:'*', headers: Request::HEADER_X_FORWARDED_ALL);
+
+        // Custom middleware alias
+        $middleware->alias([
+            'track.daily.login' => \App\Http\Middleware\TrackDailyLogin::class,
+        ]);
+
+        // Trust ngrok / proxy headers
+        $middleware->trustProxies(at: '*');
     })
+
     ->withExceptions(function (Exceptions $exceptions): void {
         //
-    })->create();
+    })
+
+->create();
