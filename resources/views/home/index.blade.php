@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Home • GymTracker</title>
+    <title>Home • ProgressLab</title>
     <link rel="stylesheet" href="{{ asset('css/auth.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
@@ -275,5 +275,6 @@
     })();
     </script>
 <x-achievement-toasts />
+<x-footer />
 </body>
 </html>

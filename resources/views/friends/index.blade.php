@@ -678,5 +678,6 @@
 </script>
 
 <x-achievement-toasts />
+<x-footer />
 </body>
 </html>

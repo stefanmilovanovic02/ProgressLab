@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Streaks • GymTracker</title>
+  <title>Streaks • ProgressLab</title>
 
   <link rel="stylesheet" href="{{ asset('css/auth.css') }}">
 </head>
@@ -53,5 +53,6 @@
 
   </main>
 <x-achievement-toasts />
+<x-footer />
 </body>
 </html>

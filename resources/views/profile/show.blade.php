@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Profile • GymTracker</title>
+  <title>Profile • ProgressLab</title>
   <link rel="stylesheet" href="{{ asset('css/auth.css') }}">
 </head>
 <body class="auth-body">
@@ -76,7 +76,7 @@
           <div class="pl-profilecard__badges">
             <span class="pl-pill">
               <span aria-hidden="true">🔥</span>
-              <strong>23</strong>
+              <strong>{{ $loginStreak }}</strong>
               <span>day streak</span>
             </span>
           </div>
@@ -576,5 +576,6 @@
   </script>
 
 <x-achievement-toasts />
+<x-footer />
 </body>
 </html>
