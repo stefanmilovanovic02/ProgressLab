@@ -3983,3 +3983,65 @@ transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, b
 .hm-ach__rarity--rare{ color: #60a5fa; }
 .hm-ach__rarity--epic{ color: #c084fc; }
 .hm-ach__rarity--legendary{ color: #fbbf24; }
+
+.fr-compareControls{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:14px;
+  flex-wrap:wrap;
+  margin-bottom:14px;
+}
+
+.fr-compareSelect{
+  min-width:220px;
+  height:42px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.10);
+  background-color: #1b1f2a;
+  color:#fff;
+  padding:0 14px;
+  outline:none;
+}
+
+.fr-compareLegend{
+  display:flex;
+  gap:14px;
+  flex-wrap:wrap;
+}
+
+.fr-legendItem{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  font-size:13px;
+  color:rgba(255,255,255,.78);
+}
+
+.fr-legendDot{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  display:inline-block;
+}
+
+.fr-legendDot--me{ background:#3b82f6; }
+.fr-legendDot--friend{ background:#ef4444; }
+
+.fr-compareChartWrap{
+  height:260px;
+  position:relative;
+}
+
+.fr-compareEmpty{
+  margin-top:10px;
+  font-size:14px;
+  color:rgba(255,255,255,.58);
+}
+
+@media (max-width: 640px){
+  .fr-compareSelect{
+    width:100%;
+    min-width:0;
+  }
+}

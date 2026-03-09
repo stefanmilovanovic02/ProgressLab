@@ -109,6 +109,11 @@ Route::middleware(['auth', 'track.daily.login'])->group(function () {
     
     Route::get('/friends/{user}/summary', [\App\Http\Controllers\FriendsController::class, 'summary'])->name('friends.summary');
         
+    Route::get('/friends/{user}/comparison-exercises', [FriendsController::class, 'comparisonExercises'])
+    ->name('friends.comparison-exercises');
+
+    Route::get('/friends/{user}/exercise-comparison', [FriendsController::class, 'exerciseComparison'])
+        ->name('friends.exercise-comparison');
     });
     
     // 10) Profile (view + update)

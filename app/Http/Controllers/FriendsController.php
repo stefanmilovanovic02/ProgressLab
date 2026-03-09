@@ -514,4 +514,116 @@ public function summary(Request $request, User $user)
 
         return $streak;
     }
+
+
+    public function comparisonExercises(Request $request, User $user)
+        {
+            $auth = $request->user();
+
+            $isFriend = $auth->friends()->where('users.id', $user->id)->exists();
+            if (!$isFriend && $auth->id !== $user->id) {
+                abort(403);
+            }
+
+            $myExerciseIds = DB::table('workout_log_exercises as wle')
+                ->join('workout_logs as wl', 'wl.id', '=', 'wle.workout_log_id')
+                ->where('wl.user_id', $auth->id)
+                ->pluck('wle.exercise_id')
+                ->unique();
+
+            $friendExerciseIds = DB::table('workout_log_exercises as wle')
+                ->join('workout_logs as wl', 'wl.id', '=', 'wle.workout_log_id')
+                ->where('wl.user_id', $user->id)
+                ->pluck('wle.exercise_id')
+                ->unique();
+
+            $commonIds = $myExerciseIds->intersect($friendExerciseIds)->values();
+
+            $exercises = DB::table('exercises')
+                ->whereIn('id', $commonIds)
+                ->orderBy('name')
+                ->get(['id', 'name']);
+
+            return response()->json([
+                'items' => $exercises->map(fn($e) => [
+                    'id' => $e->id,
+                    'name' => $e->name,
+                ])->values(),
+            ]);
+        }
+
+        public function exerciseComparison(Request $request, User $user)
+        {
+            $auth = $request->user();
+
+            $isFriend = $auth->friends()->where('users.id', $user->id)->exists();
+            if (!$isFriend && $auth->id !== $user->id) {
+                abort(403);
+            }
+
+            $validated = $request->validate([
+                'exercise_id' => ['required', 'integer', 'exists:exercises,id'],
+                'period' => ['nullable', 'in:week,month,year,all'],
+            ]);
+
+            $exerciseId = (int) $validated['exercise_id'];
+            $period = $validated['period'] ?? 'all';
+
+            $to = now()->endOfDay();
+            $from = match ($period) {
+                'week' => now()->subDays(6)->startOfDay(),
+                'month' => now()->subDays(29)->startOfDay(),
+                'year' => now()->subDays(364)->startOfDay(),
+                default => null,
+            };
+
+            $mine = $this->comparisonSeriesForUser($auth->id, $exerciseId, $from, $to);
+            $friend = $this->comparisonSeriesForUser($user->id, $exerciseId, $from, $to);
+
+            $allDays = collect(array_merge(array_keys($mine), array_keys($friend)))
+                ->unique()
+                ->sort()
+                ->values();
+
+            $labels = $allDays->map(fn($d) => \Carbon\Carbon::parse($d)->format('M j'))->values()->all();
+            $myValues = $allDays->map(fn($d) => (float) ($mine[$d] ?? null))->values()->all();
+            $friendValues = $allDays->map(fn($d) => (float) ($friend[$d] ?? null))->values()->all();
+
+            $exerciseName = DB::table('exercises')->where('id', $exerciseId)->value('name');
+
+            return response()->json([
+                'exercise_name' => $exerciseName,
+                'labels' => $labels,
+                'user' => $myValues,
+                'friend' => $friendValues,
+                'user_name' => $auth->full_name ?? $auth->name ?? 'You',
+                'friend_name' => $user->full_name ?? $user->name ?? 'Friend',
+            ]);
+        }
+
+        private function comparisonSeriesForUser(int $userId, int $exerciseId, $from = null, $to = null): array
+        {
+            $q = DB::table('workout_log_sets as s')
+                ->join('workout_log_exercises as wle', 'wle.id', '=', 's.workout_log_exercise_id')
+                ->join('workout_logs as wl', 'wl.id', '=', 'wle.workout_log_id')
+                ->where('wl.user_id', $userId)
+                ->where('wle.exercise_id', $exerciseId)
+                ->whereNotNull('s.weight_kg')
+                ->selectRaw('date(wl.entry_date) as d')
+                ->selectRaw('MAX(s.weight_kg) as best_weight');
+
+            if ($from) {
+                $q->whereDate('wl.entry_date', '>=', $from->toDateString());
+            }
+            if ($to) {
+                $q->whereDate('wl.entry_date', '<=', $to->toDateString());
+            }
+
+            return $q
+                ->groupByRaw('date(wl.entry_date)')
+                ->orderBy('d')
+                ->pluck('best_weight', 'd')
+                ->map(fn($v) => (float) $v)
+                ->all();
+        }
     }
