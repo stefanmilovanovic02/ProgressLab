@@ -7,6 +7,7 @@ use App\Models\NutritionEntry;
 use App\Models\UserAchievement;
 use App\Models\Workout;
 use App\Models\WorkoutLog;
+use App\Models\FriendActivity;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -46,6 +47,12 @@ class AchievementService
                         'notified_at' => null,
                     ]
                 );
+
+                FriendActivity::create([
+                    'user_id' => $user->id,
+                    'type' => 'achievement',
+                    'text' => 'unlocked the achievement "' .$achievement->title . '".',
+                ]);
 
                 $newlyUnlocked[] = [
                     'id' => $achievement->id,

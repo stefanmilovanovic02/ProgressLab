@@ -58,7 +58,10 @@ Route::post('/logout', [LoginController::class, 'destroy'])
 Route::middleware(['auth', 'track.daily.login'])->group(function () {
 
     // 3) Home
+    // 3) Home
+    Route::middleware('auth')->group(function () {
     Route::get('/', [HomeController::class, 'index'])->name('home');
+});
 
     // 4) Add Today (nutrition + workout logs)
     Route::get('/add-today', [AddTodayController::class, 'index'])->name('add-today');

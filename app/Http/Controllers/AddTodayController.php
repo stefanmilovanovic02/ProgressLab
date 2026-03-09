@@ -8,7 +8,9 @@ use App\Models\Workout;
 use App\Models\WorkoutLog;
 use App\Models\WorkoutLogExercise;
 use App\Models\WorkoutLogSet;
+use App\Models\FriendActivity;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Carbon;
 
 
 
@@ -76,7 +78,18 @@ class AddTodayController extends Controller
                 'water_ml' => (int) ($validated['water_ml'] ?? 0),
             ]
         );
-            // For Achievement and AJAX
+            // For Achievement and AJAX and Friend Activity
+            if (
+                $entry->calories > 0 ||
+                $entry->protein_g > 0 ||
+                $entry->carbs_g > 0 ||
+                $entry->fat_g > 0 ||
+                $entry->creatine_g > 0 ||
+                $entry->water_ml > 0 
+            ) {
+                $this->syncNutritionActivity($user->id);
+            }
+
             $unlocked = app(\App\Services\AchievementService::class)->evaluate($request->user());
             if (!empty($unlocked)) {
                 session()->flash('unlocked', $unlocked);
@@ -180,11 +193,73 @@ class AddTodayController extends Controller
                 }
             });
 
-            // For Achievement
+            // For Achievement and friend activity
+            $workoutName = Workout::where('id', $workoutId)->value('name');
+            $this->syncWorkoutActivity($user->id, $workoutName);
+
         $unlocked = app(\App\Services\AchievementService::class)->evaluate($user);
         if ($request->wantsJson()) {
             return response()->json(['ok' => true, 'unlocked' => $unlocked]);
         }
         return back()->with('status', 'Workout saved.')->with('unlocked', $unlocked);
     }
+
+    // friend activity code
+    private function syncNutritionActivity(int $userId): void
+    {
+        $today = Carbon::today();
+
+        $existing = FriendActivity::query()
+            ->where('user_id', $userId)
+            ->where('type', 'nutrition')
+            ->whereDate('created_at', $today->toDateString())
+            ->first();
+
+        if ($existing) {
+            $existing->update([
+                'text' => 'logged nutrition for today.',
+                'updated_at' => now(),
+            ]);
+            return;
+        }
+
+        FriendActivity::create([
+            'user_id' => $userId,
+            'type' => 'nutrition',
+            'text' => 'logged nutrition for today.',
+            'meta' => ['date' => $today->toDateString()],
+        ]);
+    }
+
+    private function syncWorkoutActivity(int $userId, ?string $workoutName = null): void
+    {
+        $today = Carbon::today();
+
+        $existing = FriendActivity::query()
+            ->where('user_id', $userId)
+            ->where('type', 'workout')
+            ->whereDate('created_at', $today->toDateString())
+            ->first();
+
+        $text = $workoutName
+            ? 'completed "' . $workoutName . '" workout.'
+            : 'completed a workout.';
+
+        if ($existing) {
+            $existing->update([
+                'text' => $text,
+                'updated_at' => now(),
+            ]);
+            return;
+        }
+
+        FriendActivity::create([
+            'user_id' => $userId,
+            'type' => 'workout',
+            'text' => $text,
+            'meta' => ['date' => $today->toDateString()],
+        ]);
+    }
 }
+
+

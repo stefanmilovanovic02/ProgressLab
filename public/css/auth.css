@@ -3382,3 +3382,604 @@ transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, b
     font-size: 18px;
   }
 }
+
+/* =========================
+   Home Page
+   ========================= */
+
+.hm-wrap{
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 28px 18px 40px;
+}
+
+.hm-grid{
+  display: grid;
+  grid-template-columns: 315px minmax(0, 1fr) 315px;
+  gap: 26px;
+  align-items: start;
+}
+
+.hm-left,
+.hm-right,
+.hm-middle{
+  display: grid;
+  gap: 26px;
+}
+
+.hm-card{
+  background: linear-gradient(180deg, rgba(9,22,48,.94), rgba(10,22,45,.86));
+  border: 1px solid rgba(118,145,198,.18);
+  border-radius: 18px;
+  box-shadow: 0 14px 34px rgba(0,0,0,.28);
+  padding: 22px;
+}
+
+.hm-block-title,
+.hm-section-title{
+  margin: 0 0 18px;
+  font-size: 18px;
+  line-height: 1.2;
+  font-weight: 800;
+  color: #fff;
+}
+
+.hm-profile__top{
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.hm-profile__avatar{
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 24px;
+  background: rgba(255,255,255,.08);
+  color: rgba(255,255,255,.85);
+}
+
+.hm-profile__name{
+  margin: 0 0 4px;
+  font-size: 18px;
+  color: #fff;
+  font-weight: 800;
+}
+
+.hm-profile__meta{
+  font-size: 14px;
+  color: rgba(255,255,255,.62);
+}
+
+.hm-streak{
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(255,255,255,.06);
+  border-radius: 14px;
+  padding: 16px;
+}
+
+.hm-streak__icon{
+  font-size: 24px;
+}
+
+.hm-streak__title{
+  color: #fff;
+  font-weight: 800;
+  font-size: 16px;
+}
+
+.hm-streak__sub{
+  color: rgba(255,255,255,.6);
+  font-size: 14px;
+  margin-top: 2px;
+}
+
+.hm-motivation__quote{
+  color: #fff;
+  font-size: 16px;
+  line-height: 1.5;
+  margin: 0 0 26px;
+}
+
+.hm-motivation__sub{
+  color: rgba(255,255,255,.6);
+  font-size: 14px;
+  margin-top: 14px;
+}
+
+.hm-progress{
+  width: 100%;
+  height: 6px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.12);
+  overflow: hidden;
+}
+
+.hm-progress--small{
+  height: 5px;
+}
+
+.hm-progress__bar{
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #ff8b2c, #ff4669);
+}
+
+.hm-progress__bar.is-red{ background: #ff445f; }
+.hm-progress__bar.is-blue{ background: #2f86ff; }
+.hm-progress__bar.is-yellow{ background: #d9a600; }
+.hm-progress__bar.is-orange{ background: #ff8b2c; }
+.hm-progress__bar.is-purple{ background: #9f4dff; }
+.hm-progress__bar.is-cyan{ background: #00c2f2; }
+
+.hm-nutrition-grid{
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.hm-nutri-card{
+  background: rgba(255,255,255,.025);
+  border: 1px solid rgba(255,255,255,.06);
+  border-radius: 16px;
+  padding: 18px 16px;
+}
+
+.hm-nutri-card__top{
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  margin-bottom: 28px;
+}
+
+.hm-nutri-card__label{
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.hm-nutri-card__icon{
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 13px;
+  background: rgba(255,255,255,.07);
+}
+
+.hm-nutri-card__icon.is-red{ color: #ff445f; }
+.hm-nutri-card__icon.is-blue{ color: #2f86ff; }
+.hm-nutri-card__icon.is-yellow{ color: #d9a600; }
+.hm-nutri-card__icon.is-orange{ color: #ff8b2c; }
+.hm-nutri-card__icon.is-purple{ color: #9f4dff; }
+.hm-nutri-card__icon.is-cyan{ color: #00c2f2; }
+
+.hm-nutri-card__value{
+  color: #fff;
+  font-size: 22px;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.hm-nutri-card__value span{
+  color: rgba(255,255,255,.65);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.hm-nutri-card__percent{
+  color: rgba(255,255,255,.65);
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+.hm-workout__head{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.hm-workout__meta{
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  color: rgba(255,255,255,.62);
+  font-size: 14px;
+}
+
+.hm-workout__list{
+  display: grid;
+  gap: 22px;
+}
+
+.hm-exercise__name{
+  margin: 0 0 14px;
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+}
+
+.hm-set-grid{
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.hm-set{
+  background: rgba(255,255,255,.06);
+  border-radius: 12px;
+  padding: 14px;
+  text-align: center;
+}
+
+.hm-set__label{
+  color: rgba(255,255,255,.55);
+  font-size: 13px;
+  margin-bottom: 8px;
+}
+
+.hm-set__value{
+  color: #fff;
+  font-weight: 800;
+  font-size: 15px;
+}
+
+.hm-graph__placeholder{
+  min-height: 250px;
+  border: 1px dashed rgba(255,255,255,.15);
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  color: rgba(255,255,255,.45);
+  font-size: 15px;
+}
+
+.hm-activity-list,
+.hm-ach-list{
+  display: grid;
+  gap: 14px;
+}
+
+.hm-activity,
+.hm-ach{
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(255,255,255,.06);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.hm-activity__icon,
+.hm-ach__icon{
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(255,255,255,.08);
+  color: rgba(255,255,255,.85);
+  flex-shrink: 0;
+}
+
+.hm-activity__body,
+.hm-ach__body{
+  flex: 1;
+  min-width: 0;
+}
+
+.hm-activity__text,
+.hm-ach__title{
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+.hm-activity__time,
+.hm-ach__desc{
+  color: rgba(255,255,255,.55);
+  font-size: 13px;
+  margin-top: 3px;
+}
+
+.hm-activity__badge,
+.hm-ach__check{
+  flex-shrink: 0;
+  color: #ffd24d;
+  font-size: 18px;
+}
+
+.hm-ach__check{
+  color: #25d366;
+}
+
+.hm-btn{
+  width: 100%;
+  margin-top: 18px;
+  height: 46px;
+  border: none;
+  border-radius: 12px;
+  background: rgba(255,255,255,.08);
+  color: #fff;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.hm-btn:hover{
+  background: rgba(255,255,255,.12);
+}
+
+@media (max-width: 1200px){
+  .hm-grid{
+    grid-template-columns: 280px minmax(0, 1fr);
+  }
+
+  .hm-right{
+    grid-column: 1 / -1;
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 900px){
+  .hm-grid{
+    grid-template-columns: 1fr;
+  }
+
+  .hm-left,
+  .hm-right,
+  .hm-middle{
+    grid-template-columns: 1fr;
+  }
+
+  .hm-nutrition-grid{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .hm-set-grid{
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 640px){
+  .hm-wrap{
+    padding: 20px 14px 34px;
+  }
+
+  .hm-nutrition-grid,
+  .hm-set-grid,
+  .hm-right{
+    grid-template-columns: 1fr;
+  }
+
+  .hm-workout__head{
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/** Left side **/
+.hm-profile__avatar{
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  overflow: hidden;
+  background: rgba(255,255,255,.08);
+  flex-shrink: 0;
+}
+
+.hm-profile__avatar img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/** Nutrition **/
+.hm-nutri-card__info{
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  color: rgba(255,255,255,.65);
+  font-size: 13px;
+  margin-bottom: 10px;
+}
+
+/** Workout **/
+.hm-nutri-link,
+.hm-workout__link{
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+.hm-nutri-link .hm-nutri-card,
+.hm-workout__link{
+  transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+
+.hm-nutri-link:hover .hm-nutri-card,
+.hm-workout__link:hover{
+  transform: translateY(-2px);
+}
+
+.hm-workout__name{
+  color: #fff;
+  font-size: 18px;
+  font-weight: 800;
+  margin-bottom: 18px;
+}
+
+.hm-workout__topline{
+  margin-bottom: 8px;
+}
+
+.hm-workout__empty{
+  color: rgba(255,255,255,.55);
+  font-size: 15px;
+  padding: 10px 0 4px;
+}
+
+/** Graph css**/
+.hm-graph__link{
+  display: block;
+  text-decoration: none;
+  color: inherit;
+}
+
+.hm-graph__head{
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.hm-graph__more{
+  color: rgba(255,255,255,.7);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.hm-graph__canvasWrap{
+  height: 240px;
+  margin-bottom: 18px;
+}
+
+.hm-graph__stats{
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255,255,255,.08);
+}
+
+.hm-graph__stat{
+  text-align: center;
+}
+
+.hm-graph__statValue{
+  color: #fff;
+  font-size: 30px;
+  font-weight: 800;
+  line-height: 1.1;
+  margin-bottom: 6px;
+}
+
+.hm-graph__statValue.is-positive{
+  color: #22c55e;
+}
+
+.hm-graph__statValue.is-negative{
+  color: #ff5c5c;
+}
+
+.hm-graph__statLabel{
+  color: rgba(255,255,255,.6);
+  font-size: 14px;
+}
+
+@media (max-width: 640px){
+  .hm-graph__head{
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .hm-graph__stats{
+    grid-template-columns: 1fr;
+  }
+
+  .hm-graph__stat{
+    text-align: left;
+  }
+}
+
+.hm-activity__avatar{
+  width:42px;
+  height:42px;
+  border-radius:50%;
+  overflow:hidden;
+  flex-shrink:0;
+}
+
+.hm-activity__avatar img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+
+.hm-ach{
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  background: rgba(255,255,255,.06);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.hm-ach__thumb{
+  width: 46px;
+  height: 46px;
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+  background: rgba(255,255,255,.08);
+}
+
+.hm-ach__thumb img{
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.hm-ach__body{
+  flex: 1;
+  min-width: 0;
+}
+
+.hm-ach__title{
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.hm-ach__desc{
+  color: rgba(255,255,255,.58);
+  font-size: 13px;
+  margin-top: 2px;
+  line-height: 1.35;
+}
+
+.hm-ach__time{
+  color: rgba(255,255,255,.42);
+  font-size: 12px;
+  margin-top: 5px;
+}
+
+.hm-ach__rarity{
+  flex-shrink: 0;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 6px 8px;
+  border-radius: 999px;
+  background: rgba(255,255,255,.08);
+  color: #fff;
+}
+
+.hm-ach__rarity--common{ color: #d1d5db; }
+.hm-ach__rarity--uncommon{ color: #4ade80; }
+.hm-ach__rarity--rare{ color: #60a5fa; }
+.hm-ach__rarity--epic{ color: #c084fc; }
+.hm-ach__rarity--legendary{ color: #fbbf24; }
