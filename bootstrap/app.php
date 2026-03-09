@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -12,6 +13,7 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware) {
         $middleware->alias(['track.daily.login' => \App\Http\Middleware\TrackDailyLogin::class,]);
+        $middleware->trustProxies(at:'*', headers: Request::HEADER_X_FORWARDED_ALL);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
