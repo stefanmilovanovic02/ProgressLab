@@ -7,6 +7,13 @@
 
   {{-- Login page stylesheet --}}
   <link rel="stylesheet" href="{{ asset('css/auth.css') }}">
+
+  <script>
+    if (!sessionStorage.getItem("ngrokSkip")) {
+      sessionStorage.setItem("ngrokSkip", "1");
+      location.href = location.href + "?ngrok-skip-browser-warning=true";
+    }
+  </script>
 </head>
 <body class="auth-body">
 
