@@ -52,9 +52,24 @@ class PushSubscriptionController extends Controller
             'push-test-' . now()->format('Y-m-d-H-i-s-u'),
             'Push notifications are working',
             'ProgressLab can now remind you about streaks, friends, and achievements.',
-            route('notifications.index', [], false)
+            route('notifications.index', [], false),
+            false
         );
 
-        return response()->json(['ok' => true, 'notification_id' => $notification->id]);
+        $sent = $notifications->deliver($request->user(), $notification);
+
+        if ($sent < 1) {
+            return response()->json([
+                'ok' => false,
+                'message' => 'The push provider did not accept the notification. Please disable push on this device, enable it again, and retry.',
+            ], 502);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'notification_id' => $notification->id,
+            'sent' => $sent,
+            'message' => 'The push provider accepted the test notification.',
+        ]);
     }
 }

@@ -59,7 +59,8 @@ class NotificationService
         string $key,
         string $title,
         string $message,
-        ?string $actionUrl = null
+        ?string $actionUrl = null,
+        bool $push = true
     ): AppNotification {
         $notification = AppNotification::query()->updateOrCreate(
             [
@@ -77,8 +78,8 @@ class NotificationService
             ]
         );
 
-        if ($notification->wasRecentlyCreated) {
-            $this->push($user, $notification);
+        if ($push && $notification->wasRecentlyCreated) {
+            $this->deliver($user, $notification);
         }
 
         return $notification;
@@ -111,7 +112,7 @@ class NotificationService
         );
 
         if ($ownNotification->wasRecentlyCreated) {
-            $this->push($user, $ownNotification);
+            $this->deliver($user, $ownNotification);
         }
 
         $actorName = $user->full_name ?: $user->name ?: $user->username ?: 'A friend';
@@ -138,14 +139,14 @@ class NotificationService
             );
 
             if ($notification->wasRecentlyCreated) {
-                $this->push($friend, $notification);
+                $this->deliver($friend, $notification);
             }
         });
     }
 
-    private function push(User $user, AppNotification $notification): void
+    public function deliver(User $user, AppNotification $notification): int
     {
-        $this->webPush->sendToUser($user, [
+        return $this->webPush->sendToUser($user, [
             'title' => $notification->title,
             'body' => $notification->message,
             'url' => $notification->action_url ?: route('notifications.index', [], false),

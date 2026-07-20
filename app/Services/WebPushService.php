@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\PushSubscription as PushSubscriptionModel;
 use App\Models\User;
+use Composer\CaBundle\CaBundle;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema;
 use Minishlink\WebPush\Subscription;
@@ -31,13 +32,18 @@ class WebPushService
         }
 
         try {
-            $webPush = new WebPush([
-                'VAPID' => [
-                    'subject' => config('services.webpush.subject'),
-                    'publicKey' => config('services.webpush.public_key'),
-                    'privateKey' => config('services.webpush.private_key'),
+            $webPush = new WebPush(
+                [
+                    'VAPID' => [
+                        'subject' => config('services.webpush.subject'),
+                        'publicKey' => config('services.webpush.public_key'),
+                        'privateKey' => config('services.webpush.private_key'),
+                    ],
                 ],
-            ]);
+                [],
+                30,
+                ['verify' => CaBundle::getBundledCaBundlePath()]
+            );
 
             $body = json_encode(array_merge([
                 'title' => 'ProgressLab',

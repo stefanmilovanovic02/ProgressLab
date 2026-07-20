@@ -189,4 +189,21 @@ class NotificationsTest extends TestCase
             ->where('title', 'Your streak expires tonight 🔥')
             ->count());
     }
+
+    public function test_push_test_reports_failure_when_no_provider_accepts_delivery(): void
+    {
+        $user = User::query()->create([
+            'name' => 'No Push Device',
+            'email' => 'no-device@example.test',
+            'password' => 'password',
+        ]);
+
+        $this->actingAs($user)
+            ->postJson(route('push-subscriptions.test'))
+            ->assertStatus(502)
+            ->assertJson([
+                'ok' => false,
+                'message' => 'The push provider did not accept the notification. Please disable push on this device, enable it again, and retry.',
+            ]);
+    }
 }

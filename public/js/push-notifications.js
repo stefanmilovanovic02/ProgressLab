@@ -39,8 +39,11 @@
       body: body ? JSON.stringify(body) : null,
     });
 
-    if (!response.ok) throw new Error('The server could not save this notification setting.');
-    return response.json();
+    const result = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(result.message || 'The server could not complete this notification request.');
+    }
+    return result;
   };
 
   const applicationServerKey = (value) => {
@@ -150,8 +153,8 @@
     setStatus('Sending a test notification…', 'info');
 
     try {
-      await request(testUrl, 'POST');
-      setStatus('Test sent. It should appear on this device shortly.', 'success');
+      const result = await request(testUrl, 'POST');
+      setStatus(result.message || 'Test accepted. It should appear on this device shortly.', 'success');
     } catch (error) {
       setStatus(error.message || 'The test notification could not be sent.', 'error');
     } finally {
