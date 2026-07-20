@@ -22,13 +22,7 @@ class HomeController extends Controller
             'streak' => $this->loginStreak($user->id),
         ];
         //quote logic
-        $motivation = [
-            'quote' => $this->motivationMessage($profile['streak']),
-            'progress' => min(100, $profile['streak'] * 5),
-            'subtext' => $profile['streak'] > 0
-                ? $profile['streak'] . '% of your current momentum goal'
-                : 'Start your streak today',
-        ];
+        $motivation = $this->motivationProgress($profile['streak']);
         // nutrition logic
         $todayEntry = \App\Models\NutritionEntry::query()
             ->where('user_id', $user->id)
@@ -44,39 +38,39 @@ class HomeController extends Controller
                 target: (int) ($goal->calorie_target ?? 0),
                 unit: 'kcal',
                 icon: '🔥',
-                colorClass: 'is-red'
+                colorClass: 'is-calories'
             ),
             $this->nutritionCard(
                 label: 'Protein',
                 value: (int) ($todayEntry->protein_g ?? 0),
                 target: (int) ($goal->protein_g ?? 0),
                 unit: 'g',
-                icon: '💧',
-                colorClass: 'is-blue'
+                icon: '🥩',
+                colorClass: 'is-protein'
             ),
             $this->nutritionCard(
                 label: 'Carbohydrates',
                 value: (int) ($todayEntry->carbs_g ?? 0),
                 target: (int) ($goal->carbs_g ?? 0),
                 unit: 'g',
-                icon: '💧',
-                colorClass: 'is-yellow'
+                icon: '🍚',
+                colorClass: 'is-carbs'
             ),
             $this->nutritionCard(
                 label: 'Fat',
                 value: (int) ($todayEntry->fat_g ?? 0),
                 target: (int) ($goal->fat_g ?? 0),
                 unit: 'g',
-                icon: '💧',
-                colorClass: 'is-orange'
+                icon: '🥜',
+                colorClass: 'is-fat'
             ),
             $this->nutritionCard(
                 label: 'Creatine',
                 value: (int) ($todayEntry->creatine_g ?? 0),
                 target: (int) ($goal->creatine_g ?? 0),
                 unit: 'g',
-                icon: '💧',
-                colorClass: 'is-purple'
+                icon: '🧬',
+                colorClass: 'is-creatine'
             ),
             $this->nutritionCard(
                 label: 'Water',
@@ -84,7 +78,7 @@ class HomeController extends Controller
                 target: (float) ($goal->water_l ?? 0),
                 unit: 'L',
                 icon: '💧',
-                colorClass: 'is-cyan'
+                colorClass: 'is-water'
             ),
         ];
         // workout logic
@@ -303,7 +297,6 @@ class HomeController extends Controller
             ->where('user_id', $userId)
             ->whereDate('login_date', '<=', $today->toDateString())
             ->orderBy('login_date', 'desc')
-            ->limit(400)
             ->pluck('login_date');
 
         $loginSet = [];
@@ -322,14 +315,49 @@ class HomeController extends Controller
         return $count;
     }
 
-    private function motivationMessage(int $streak): string
+    private function motivationProgress(int $streak): array
     {
+        if ($streak === 0) {
+            return [
+                'quote' => 'Start tracking today and build your streak.',
+                'progress' => 0,
+                'subtext' => 'Day 0 of 100 · Start your first cycle today',
+            ];
+        }
+
+        $completedCycles = intdiv($streak, 100);
+        $cycleDay = $streak % 100;
+
+        if ($cycleDay === 0) {
+            return [
+                'quote' => 'You completed 100 days. You did it — now do it again.',
+                'progress' => 100,
+                'subtext' => 'Cycle ' . $completedCycles . ' complete · 100 of 100 days',
+            ];
+        }
+
+        $cycle = $completedCycles + 1;
+
+        return [
+            'quote' => $this->motivationMessage($cycleDay, $completedCycles),
+            'progress' => $cycleDay,
+            'subtext' => 'Cycle ' . $cycle . ' · Day ' . $cycleDay . ' of 100',
+        ];
+    }
+
+    private function motivationMessage(int $cycleDay, int $completedCycles): string
+    {
+        if ($completedCycles > 0 && $cycleDay === 1) {
+            return 'You did it. Now do it again — your next 100 days start today.';
+        }
+
         return match (true) {
-            $streak >= 100 => '100+ day streak. You are locked in.',
-            $streak >= 30 => 'A full month of consistency. Keep pushing.',
-            $streak >= 14 => 'Two weeks strong. Momentum is building.',
-            $streak >= 7 => 'One week down. Great discipline.',
-            $streak >= 1 => 'You showed up today. Keep it going.',
+            $cycleDay >= 75 => 'The finish line is close. Keep showing up.',
+            $cycleDay >= 50 => 'Halfway through this cycle. Stay locked in.',
+            $cycleDay >= 30 => 'A full month of consistency. Keep pushing.',
+            $cycleDay >= 14 => 'Two weeks strong. Momentum is building.',
+            $cycleDay >= 7 => 'One week down. Great discipline.',
+            $cycleDay >= 1 => 'You showed up today. Keep it going.',
             default => 'Start tracking today and build your streak.',
         };
     }

@@ -3510,12 +3510,15 @@ transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, b
   background: linear-gradient(90deg, #ff8b2c, #ff4669);
 }
 
-.hm-progress__bar.is-red{ background: #ff445f; }
-.hm-progress__bar.is-blue{ background: #2f86ff; }
-.hm-progress__bar.is-yellow{ background: #d9a600; }
-.hm-progress__bar.is-orange{ background: #ff8b2c; }
-.hm-progress__bar.is-purple{ background: #9f4dff; }
-.hm-progress__bar.is-cyan{ background: #00c2f2; }
+.hm-progress__bar.is-calories{ background: linear-gradient(90deg, #ff6b4a, #ff3f68); }
+.hm-progress__bar.is-protein{ background: linear-gradient(90deg, #8b7cf6, #b06cff); }
+.hm-progress__bar.is-carbs{ background: linear-gradient(90deg, #c9984d, #e8c77d); }
+.hm-progress__bar.is-fat{ background: linear-gradient(90deg, #ff9c46, #ffc36b); }
+.hm-progress__bar.is-creatine{
+  background: linear-gradient(90deg, #d9dce3, #ffffff);
+  box-shadow: 0 0 8px rgba(255,255,255,.28);
+}
+.hm-progress__bar.is-water{ background: linear-gradient(90deg, #248cff, #35c9f2); }
 
 .hm-nutrition-grid{
   display: grid;
@@ -3553,12 +3556,12 @@ transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, b
   background: rgba(255,255,255,.07);
 }
 
-.hm-nutri-card__icon.is-red{ color: #ff445f; }
-.hm-nutri-card__icon.is-blue{ color: #2f86ff; }
-.hm-nutri-card__icon.is-yellow{ color: #d9a600; }
-.hm-nutri-card__icon.is-orange{ color: #ff8b2c; }
-.hm-nutri-card__icon.is-purple{ color: #9f4dff; }
-.hm-nutri-card__icon.is-cyan{ color: #00c2f2; }
+.hm-nutri-card__icon.is-calories{ background: rgba(255, 79, 91, .14); }
+.hm-nutri-card__icon.is-protein{ background: rgba(155, 116, 248, .14); }
+.hm-nutri-card__icon.is-carbs{ background: rgba(224, 190, 119, .14); }
+.hm-nutri-card__icon.is-fat{ background: rgba(255, 174, 82, .14); }
+.hm-nutri-card__icon.is-creatine{ background: rgba(255,255,255,.14); }
+.hm-nutri-card__icon.is-water{ background: rgba(47, 166, 242, .14); }
 
 .hm-nutri-card__value{
   color: #fff;
