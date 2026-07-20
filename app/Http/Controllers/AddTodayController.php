@@ -11,12 +11,13 @@ use App\Models\WorkoutLogSet;
 use App\Models\FriendActivity;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
+use App\Services\ExerciseHistoryService;
 
 
 
 class AddTodayController extends Controller
 {
-    public function index(Request $request){
+    public function index(Request $request, ExerciseHistoryService $exerciseHistoryService){
         $user = $request->user();
         $today = now()->format('Y-m-d');
 
@@ -50,8 +51,12 @@ class AddTodayController extends Controller
         ];
             // Workouts
             $workouts = Workout::query()->where('user_id', $user->id)->with(['exercises:id,name,muscle_group'])->orderBy('name')->get(['id', 'name']);
+            $exerciseHistory = $exerciseHistoryService->latestForUser(
+                $user,
+                $workouts->flatMap(fn ($workout) => $workout->exercises->pluck('id'))
+            );
         
-            return view('add-today.index', compact('entry', 'targets', 'workouts'));
+            return view('add-today.index', compact('entry', 'targets', 'workouts', 'exerciseHistory'));
     }
 
     public function storeNutrition(Request $request){
@@ -261,5 +266,4 @@ class AddTodayController extends Controller
         ]);
     }
 }
-
 

@@ -320,6 +320,7 @@
     <script>
       (function () {
         const workouts = @json($workoutsForJs);
+        const exerciseHistory = @json($exerciseHistory);
 
         const select  = document.getElementById('wsWorkoutSelect');
         const empty   = document.querySelector('[data-ws-empty]');
@@ -434,6 +435,7 @@
         // UI BUILD
         // =========
         function buildExerciseCard(ex, savedSets = null) {
+          const history = exerciseHistory[String(ex.id)] || null;
           const wrap = document.createElement('div');
           wrap.className = 'ws-ex';
           wrap.dataset.exerciseId = ex.id;
@@ -480,15 +482,20 @@
             });
           }
 
-          function addSet(prefill = {}) {
+          function addSet(prefill = {}, historySet = null) {
             const setIndex = setsWrap.querySelectorAll('.ws-row').length + 1;
+            const previousSet = historySet
+              || history?.sets?.find(set => Number(set.set_number) === setIndex)
+              || null;
+            const repsPlaceholder = previousSet?.reps ?? history?.max_reps ?? 12;
+            const weightPlaceholder = previousSet?.weight_kg ?? history?.max_weight_kg ?? 80;
 
             const row = document.createElement('div');
             row.className = 'ws-row';
             row.innerHTML = `
               <div class="ws-setnum">${setIndex}</div>
-              <div><input class="ws-in" type="number" min="0" placeholder="12" value="${prefill.reps ?? ''}"></div>
-              <div><input class="ws-in" type="number" min="0" step="0.5" placeholder="80" value="${prefill.weight_kg ?? ''}"></div>
+              <div><input class="ws-in" type="number" min="0" placeholder="${repsPlaceholder}" value="${prefill.reps ?? ''}" aria-label="Set ${setIndex} reps; previous ${repsPlaceholder}"></div>
+              <div><input class="ws-in" type="number" min="0" step="0.5" placeholder="${weightPlaceholder}" value="${prefill.weight_kg ?? ''}" aria-label="Set ${setIndex} weight in kilograms; previous ${weightPlaceholder}"></div>
               <div class="ws-act">
                 <button type="button" class="ws-remove" title="Remove set" aria-label="Remove set">–</button>
               </div>
@@ -505,9 +512,11 @@
 
           // Prefill sets if saved, else create defaults
           if (savedSets && savedSets.length) {
-            savedSets.forEach(s => addSet(s));
+            savedSets.forEach((set, index) => addSet(set, history?.sets?.[index] || null));
           } else {
-            for (let i = 0; i < (ex.default_sets || 3); i++) addSet();
+            for (let i = 0; i < (ex.default_sets || 3); i++) {
+              addSet({}, history?.sets?.[i] || null);
+            }
           }
 
           // Toggle accordion
