@@ -18,6 +18,7 @@ use App\Http\Controllers\FriendsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\NotificationsController;
 use App\Http\Controllers\PushSubscriptionController;
+use App\Http\Controllers\ProgressPhotoController;
 
 // Guest (Not logged in)
  Route::middleware('guest')->group(function () {
@@ -71,6 +72,10 @@ Route::middleware(['auth', 'track.daily.login'])->group(function () {
     Route::post('/add-today/workout', [AddTodayController::class, 'storeWorkout'])->name('add-today.workout.store');
     Route::get('/add-today/workout/today', [AddTodayController::class, 'getTodayWorkout'])->name('add-today.workout.today');
     Route::post('/add-today/workout/save', [AddTodayController::class, 'saveTodayWorkout'])->name('add-today.workout.save');
+    Route::post('/progress-photos', [ProgressPhotoController::class, 'store'])->name('progress-photos.store');
+    Route::get('/progress-photos/{progressPhoto}/{view}', [ProgressPhotoController::class, 'show'])
+        ->where('view', 'front|side|back')
+        ->name('progress-photos.show');
 
     // 5) Workouts (create workouts from favorite exercises)
     Route::get('/workouts', [WorkoutController::class, 'index'])->name('workouts.index');

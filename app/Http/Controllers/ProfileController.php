@@ -185,9 +185,21 @@ class ProfileController extends Controller
             ]);
         }
 
+        $progressPhotoPaths = $user->progressPhotoSets()
+            ->get(['front_path', 'side_path', 'back_path'])
+            ->flatMap(fn ($photoSet) => [
+                $photoSet->front_path,
+                $photoSet->side_path,
+                $photoSet->back_path,
+            ])
+            ->filter()
+            ->values()
+            ->all();
+
         Auth::logout();
 
         $user->delete();
+        Storage::disk('local')->delete($progressPhotoPaths);
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

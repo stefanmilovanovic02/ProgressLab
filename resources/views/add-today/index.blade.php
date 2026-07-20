@@ -203,6 +203,113 @@
 
       </section>
 
+      <section class="pl-card pp-card" id="progress-photos" aria-labelledby="progress-photos-title">
+        <div class="pp-head">
+          <div class="pp-head__title">
+            <div class="pp-head__icon" aria-hidden="true">📸</div>
+            <div>
+              <span class="pp-eyebrow">Private check-in</span>
+              <h2 id="progress-photos-title">Progress Photos</h2>
+            </div>
+          </div>
+          <div class="pp-history">
+            <strong>{{ $progressPhotoCount }}</strong>
+            <span>{{ Str::plural('check-in', $progressPhotoCount) }} saved</span>
+          </div>
+        </div>
+
+        <p class="pp-intro">
+          Add three consistent angles to create a useful visual record. Your photos are stored privately and are only available to your account.
+        </p>
+
+        @if(session('progress_photo_status'))
+          <div class="pp-success" role="status">{{ session('progress_photo_status') }}</div>
+        @endif
+
+        @if($errors->hasAny(['front_photo', 'side_photo', 'back_photo']))
+          <div class="pp-error" role="alert">
+            {{ $errors->first('front_photo') ?: ($errors->first('side_photo') ?: $errors->first('back_photo')) }}
+          </div>
+        @endif
+
+        <div class="pp-stepper" aria-label="Progress photo steps">
+          <div class="pp-stepper__line"><span data-pp-progress></span></div>
+          @foreach([
+            ['Front', 'Face the camera'],
+            ['Side', 'Turn 90 degrees'],
+            ['Back', 'Face away'],
+          ] as $index => [$label, $hint])
+            <button class="pp-step-dot {{ $index === 0 ? 'is-active' : '' }}" type="button" data-pp-step-button="{{ $index }}">
+              <span>{{ $index + 1 }}</span>
+              <strong>{{ $label }}</strong>
+              <small>{{ $hint }}</small>
+            </button>
+          @endforeach
+        </div>
+
+        <form
+          class="pp-form"
+          action="{{ route('progress-photos.store') }}"
+          method="POST"
+          enctype="multipart/form-data"
+          data-progress-photo-form
+          data-success-url="{{ route('add-today') }}#progress-photos"
+        >
+          @csrf
+
+          @foreach([
+            ['front_photo', 'Front view', 'Stand straight and face the camera.', 'Front'],
+            ['side_photo', 'Side view', 'Turn sideways and keep the same posture.', 'Side'],
+            ['back_photo', 'Back view', 'Face away from the camera with a relaxed posture.', 'Back'],
+          ] as $index => [$field, $titleText, $descriptionText, $shortLabel])
+            <div class="pp-panel {{ $index === 0 ? 'is-active' : '' }}" data-pp-panel="{{ $index }}" {{ $index === 0 ? '' : 'hidden' }}>
+              <div class="pp-panel__copy">
+                <span class="pp-panel__count">Step {{ $index + 1 }} of 3</span>
+                <h3>{{ $titleText }}</h3>
+                <p>{{ $descriptionText }} Try to use similar lighting, distance, and clothing each time.</p>
+                <ul>
+                  <li>Keep your full body visible</li>
+                  <li>Use natural, even lighting</li>
+                  <li>Stand in a neutral pose</li>
+                </ul>
+              </div>
+
+              <label class="pp-upload" for="{{ $field }}" data-pp-upload>
+                <input
+                  id="{{ $field }}"
+                  name="{{ $field }}"
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+                  data-pp-input
+                  required
+                >
+                <span class="pp-upload__empty" data-pp-empty>
+                  <span class="pp-upload__figure" aria-hidden="true">{{ $index === 1 ? '◐' : ($index === 2 ? '◒' : '◉') }}</span>
+                  <strong>Add {{ strtolower($shortLabel) }} photo</strong>
+                  <small>Take a photo or choose one from your library</small>
+                </span>
+                <img data-pp-preview alt="{{ $shortLabel }} progress photo preview" hidden>
+                <span class="pp-upload__change" data-pp-change hidden>Choose another photo</span>
+              </label>
+              <p class="pp-file-status" data-pp-file-status>No photo selected</p>
+            </div>
+          @endforeach
+
+          <div class="pp-form__message" data-pp-message role="alert" hidden></div>
+
+          <div class="pp-actions">
+            <button class="pp-btn pp-btn--secondary" type="button" data-pp-back hidden>Back</button>
+            <span class="pp-privacy">🔒 Private storage</span>
+            <button class="pp-btn pp-btn--primary" type="button" data-pp-next>Next: Side view</button>
+            <button class="pp-btn pp-btn--primary" type="submit" data-pp-save hidden>Save progress photos</button>
+          </div>
+        </form>
+
+        @if($latestProgressPhotoDate)
+          <p class="pp-latest">Last check-in: {{ \Illuminate\Support\Carbon::parse($latestProgressPhotoDate)->format('M j, Y') }}</p>
+        @endif
+      </section>
+
   </main>
     @php
     $workoutsForJs = $workouts->map(function ($w) {
@@ -587,6 +694,218 @@
         // Start with saved log if exists
         loadToday();
 
+      })();
+      </script>
+
+      <script>
+      (() => {
+        const form = document.querySelector('[data-progress-photo-form]');
+        if (!form) return;
+
+        const panels = [...form.querySelectorAll('[data-pp-panel]')];
+        const inputs = [...form.querySelectorAll('[data-pp-input]')];
+        const stepButtons = [...document.querySelectorAll('[data-pp-step-button]')];
+        const progress = document.querySelector('[data-pp-progress]');
+        const backButton = form.querySelector('[data-pp-back]');
+        const nextButton = form.querySelector('[data-pp-next]');
+        const saveButton = form.querySelector('[data-pp-save]');
+        const message = form.querySelector('[data-pp-message]');
+        const stepNames = ['Front', 'Side', 'Back'];
+        const previewUrls = new Map();
+        let currentStep = 0;
+
+        function showMessage(text) {
+          message.textContent = text;
+          message.hidden = !text;
+        }
+
+        function canVisit(step) {
+          return inputs.slice(0, step).every(input => input.files.length > 0);
+        }
+
+        function render() {
+          panels.forEach((panel, index) => {
+            panel.hidden = index !== currentStep;
+            panel.classList.toggle('is-active', index === currentStep);
+          });
+
+          stepButtons.forEach((button, index) => {
+            button.classList.toggle('is-active', index === currentStep);
+            button.classList.toggle('is-complete', index < currentStep && inputs[index].files.length > 0);
+            button.setAttribute('aria-current', index === currentStep ? 'step' : 'false');
+          });
+
+          progress.style.width = `${currentStep * 50}%`;
+          backButton.hidden = currentStep === 0;
+          nextButton.hidden = currentStep === panels.length - 1;
+          saveButton.hidden = currentStep !== panels.length - 1;
+          if (currentStep < panels.length - 1) {
+            nextButton.textContent = `Next: ${stepNames[currentStep + 1]} view`;
+          }
+        }
+
+        function goTo(step) {
+          if (step < 0 || step >= panels.length) return;
+          if (!canVisit(step)) {
+            const missing = inputs.findIndex((input, index) => index < step && !input.files.length);
+            showMessage(`Add your ${stepNames[missing].toLowerCase()} photo before continuing.`);
+            return;
+          }
+          currentStep = step;
+          showMessage('');
+          render();
+        }
+
+        inputs.forEach((input, index) => {
+          input.addEventListener('change', () => {
+            const file = input.files[0];
+            const panel = panels[index];
+            const preview = panel.querySelector('[data-pp-preview]');
+            const empty = panel.querySelector('[data-pp-empty]');
+            const change = panel.querySelector('[data-pp-change]');
+            const status = panel.querySelector('[data-pp-file-status]');
+
+            if (previewUrls.has(index)) {
+              URL.revokeObjectURL(previewUrls.get(index));
+              previewUrls.delete(index);
+            }
+
+            if (!file) {
+              preview.removeAttribute('src');
+              preview.hidden = true;
+              empty.hidden = false;
+              change.hidden = true;
+              status.textContent = 'No photo selected';
+              render();
+              return;
+            }
+
+            const url = URL.createObjectURL(file);
+            previewUrls.set(index, url);
+            preview.src = url;
+            preview.hidden = false;
+            empty.hidden = true;
+            change.hidden = false;
+            status.textContent = `${file.name} · ${(file.size / 1024 / 1024).toFixed(1)} MB`;
+            showMessage('');
+            render();
+          });
+        });
+
+        stepButtons.forEach((button, index) => {
+          button.addEventListener('click', () => goTo(index));
+        });
+
+        backButton.addEventListener('click', () => goTo(currentStep - 1));
+        nextButton.addEventListener('click', () => {
+          if (!inputs[currentStep].files.length) {
+            showMessage(`Add your ${stepNames[currentStep].toLowerCase()} photo before continuing.`);
+            return;
+          }
+          goTo(currentStep + 1);
+        });
+
+        async function decodeImage(file) {
+          if ('createImageBitmap' in window) {
+            return createImageBitmap(file, { imageOrientation: 'from-image' });
+          }
+
+          return new Promise((resolve, reject) => {
+            const url = URL.createObjectURL(file);
+            const image = new Image();
+            image.onload = () => {
+              URL.revokeObjectURL(url);
+              resolve(image);
+            };
+            image.onerror = () => {
+              URL.revokeObjectURL(url);
+              reject(new Error('This image format could not be prepared by your browser.'));
+            };
+            image.src = url;
+          });
+        }
+
+        async function preparePhoto(file, name) {
+          let source;
+          try {
+            source = await decodeImage(file);
+          } catch (error) {
+            if (file.size <= 1900 * 1024) return file;
+            throw new Error('This photo is too large for your browser to prepare. Please choose a smaller photo.');
+          }
+
+          const sourceWidth = source.width || source.naturalWidth;
+          const sourceHeight = source.height || source.naturalHeight;
+          const scale = Math.min(1, 1440 / Math.max(sourceWidth, sourceHeight));
+          const canvas = document.createElement('canvas');
+          canvas.width = Math.max(1, Math.round(sourceWidth * scale));
+          canvas.height = Math.max(1, Math.round(sourceHeight * scale));
+          canvas.getContext('2d').drawImage(source, 0, 0, canvas.width, canvas.height);
+          if (typeof source.close === 'function') source.close();
+
+          const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', .8));
+          if (!blob) throw new Error('This photo could not be prepared. Please choose another image.');
+
+          const prepared = blob.size < file.size || file.size > 1900 * 1024
+            ? new File([blob], `${name}.jpg`, { type: 'image/jpeg', lastModified: Date.now() })
+            : file;
+
+          if (prepared.size > 2 * 1024 * 1024) {
+            throw new Error('This photo is still too large. Please choose a smaller image.');
+          }
+
+          return prepared;
+        }
+
+        form.addEventListener('submit', async event => {
+          event.preventDefault();
+
+          const missing = inputs.findIndex(input => !input.files.length);
+          if (missing !== -1) {
+            goTo(missing);
+            showMessage(`Add your ${stepNames[missing].toLowerCase()} photo before saving.`);
+            return;
+          }
+
+          saveButton.disabled = true;
+          saveButton.textContent = 'Preparing photos…';
+          showMessage('');
+
+          try {
+            const data = new FormData(form);
+            const fields = ['front_photo', 'side_photo', 'back_photo'];
+
+            for (let index = 0; index < inputs.length; index++) {
+              const prepared = await preparePhoto(inputs[index].files[0], stepNames[index].toLowerCase());
+              data.set(fields[index], prepared, prepared.name);
+            }
+
+            saveButton.textContent = 'Saving…';
+            const response = await fetch(form.action, {
+              method: 'POST',
+              headers: { 'Accept': 'application/json' },
+              body: data,
+            });
+
+            if (!response.ok) {
+              const result = await response.json().catch(() => ({}));
+              const firstError = result.errors ? Object.values(result.errors).flat()[0] : null;
+              throw new Error(firstError || 'Your photos could not be saved. Please try again.');
+            }
+
+            window.location.assign(form.dataset.successUrl);
+          } catch (error) {
+            showMessage(error.message || 'Your photos could not be saved. Please try again.');
+            saveButton.disabled = false;
+            saveButton.textContent = 'Save progress photos';
+          }
+        });
+
+        window.addEventListener('pagehide', () => {
+          previewUrls.forEach(url => URL.revokeObjectURL(url));
+        });
+
+        render();
       })();
       </script>
 

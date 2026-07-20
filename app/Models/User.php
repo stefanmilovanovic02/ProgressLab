@@ -90,6 +90,11 @@ class User extends Authenticatable
         return $this->hasMany(\App\Models\PushSubscription::class);
     }
 
+    public function progressPhotoSets()
+    {
+        return $this->hasMany(\App\Models\ProgressPhotoSet::class);
+    }
+
     public function getAvatarUrlAttribute(): string
         {
             if (!$this->avatar_path) {

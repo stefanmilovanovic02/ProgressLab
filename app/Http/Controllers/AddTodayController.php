@@ -55,8 +55,17 @@ class AddTodayController extends Controller
                 $user,
                 $workouts->flatMap(fn ($workout) => $workout->exercises->pluck('id'))
             );
+            $progressPhotoCount = $user->progressPhotoSets()->count();
+            $latestProgressPhotoDate = $user->progressPhotoSets()->max('captured_on');
         
-            return view('add-today.index', compact('entry', 'targets', 'workouts', 'exerciseHistory'));
+            return view('add-today.index', compact(
+                'entry',
+                'targets',
+                'workouts',
+                'exerciseHistory',
+                'progressPhotoCount',
+                'latestProgressPhotoDate'
+            ));
     }
 
     public function storeNutrition(Request $request){
@@ -266,4 +275,3 @@ class AddTodayController extends Controller
         ]);
     }
 }
-
