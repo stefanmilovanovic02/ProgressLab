@@ -33,6 +33,7 @@ class ExampleTest extends TestCase
             ->assertSee('/images/branding/progresslab-favicon.png', false)
             ->assertSee('/images/branding/progresslab-touch-icon.png', false)
             ->assertSee('/manifest.webmanifest', false)
-            ->assertSee('/js/push-notifications.js', false);
+            ->assertSee('/js/push-notifications.js', false)
+            ->assertSee('/js/numeric-inputs.js', false);
     }
 }

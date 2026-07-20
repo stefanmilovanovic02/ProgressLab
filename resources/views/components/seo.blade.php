@@ -29,6 +29,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="ProgressLab">
 <script defer src="{{ asset('js/push-notifications.js') }}"></script>
+<script defer src="{{ asset('js/numeric-inputs.js') }}"></script>
 
 <meta property="og:site_name" content="ProgressLab">
 <meta property="og:type" content="website">

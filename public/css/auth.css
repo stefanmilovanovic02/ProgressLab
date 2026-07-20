@@ -4203,6 +4203,8 @@ transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, b
 }
 
 .hm-btn{
+  display: grid;
+  place-items: center;
   width: 100%;
   margin-top: 18px;
   height: 46px;
@@ -4211,6 +4213,7 @@ transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, b
   background: rgba(255,255,255,.08);
   color: #fff;
   font-weight: 700;
+  text-decoration: none;
   cursor: pointer;
 }
 

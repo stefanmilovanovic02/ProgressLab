@@ -162,6 +162,7 @@
         {{-- RIGHT --}}
         <aside class="hm-right">
             <section class="hm-card">
+                <a href="{{ route('notifications.index') }}" class="hm-graph__link">
                 <h2 class="hm-block-title">Friends Activity</h2>
 
                 <div class="hm-activity-list">
@@ -185,7 +186,8 @@
                     @endforelse
                 </div>
 
-                <button class="hm-btn" type="button">View All Activity</button>
+                <span class="hm-btn">View All Activity</span>
+                </a>
             </section>
 
             <section class="hm-card">
