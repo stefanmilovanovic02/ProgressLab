@@ -8,12 +8,6 @@
   {{-- Login page stylesheet --}}
   <link rel="stylesheet" href="{{ asset('css/auth.css') }}">
 
-  <script>
-    if (!sessionStorage.getItem("ngrokSkip")) {
-      sessionStorage.setItem("ngrokSkip", "1");
-      location.href = location.href + "?ngrok-skip-browser-warning=true";
-    }
-  </script>
 </head>
 <body class="auth-body">
 
@@ -65,7 +59,7 @@
 
           <div class="auth-row">
             <label class="checkbox">
-              <input type="checkbox" name="remember" {{ old('remember') ? 'checked' : '' }} />
+              <input type="checkbox" name="remember" value="1" {{ old('remember') ? 'checked' : '' }} />
               <span class="checkbox-text">Remember me</span>
             </label>
           </div>
