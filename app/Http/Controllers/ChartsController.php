@@ -30,7 +30,28 @@ class ChartsController extends Controller
             ->orderBy('exercises.name')
             ->get();
 
-        return view('charts.index', compact('defaultMacro', 'defaultPeriod', 'exercises'));
+        $progressPhotos = $user->progressPhotoSets()
+            ->orderBy('captured_on')
+            ->orderBy('id')
+            ->get(['id', 'captured_on'])
+            ->map(fn ($photoSet) => [
+                'id' => $photoSet->id,
+                'date' => $photoSet->captured_on->toDateString(),
+                'label' => $photoSet->captured_on->format('M j, Y'),
+                'urls' => [
+                    'front' => route('progress-photos.show', [$photoSet, 'front'], false),
+                    'side' => route('progress-photos.show', [$photoSet, 'side'], false),
+                    'back' => route('progress-photos.show', [$photoSet, 'back'], false),
+                ],
+            ])
+            ->values();
+
+        return view('charts.index', compact(
+            'defaultMacro',
+            'defaultPeriod',
+            'exercises',
+            'progressPhotos'
+        ));
     }
 
     public function macros(Request $request)

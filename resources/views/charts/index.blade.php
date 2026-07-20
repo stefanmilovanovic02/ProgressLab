@@ -156,6 +156,108 @@
         </div>
         </section>
 
+        {{-- Progress Photo Comparison --}}
+        <section class="pl-card ch-card pc-card" aria-label="Progress Photo Comparison" data-photo-comparison>
+          <div class="ch-head pc-head">
+            <div class="ch-head__left">
+              <div class="ch-icon" aria-hidden="true">📸</div>
+              <div>
+                <h2 class="ch-title">Progress Photo Comparison</h2>
+                <p class="pc-subtitle">Drag the divider to compare your private check-ins.</p>
+              </div>
+            </div>
+            <span class="pc-private">🔒 Private</span>
+          </div>
+
+          @if($progressPhotos->count() < 2)
+            <div class="pc-empty">
+              <div class="pc-empty__icon" aria-hidden="true">◫</div>
+              <h3>{{ $progressPhotos->isEmpty() ? 'No progress photos yet' : 'One more check-in needed' }}</h3>
+              <p>Save at least two Front, Side, and Back photo check-ins to compare your progress.</p>
+              <a class="pl-btn pl-btn--light" href="{{ route('add-today') }}#progress-photos">Add progress photos</a>
+            </div>
+          @else
+            <div class="pc-controls">
+              <div class="pc-control">
+                <span class="ch-label">Starting photo</span>
+                <div class="pc-start">
+                  <span>First check-in</span>
+                  <strong data-pc-before-control-date>{{ $progressPhotos->first()['label'] }}</strong>
+                </div>
+              </div>
+
+              <div class="pc-control pc-control--period">
+                <span class="ch-label">Compare with</span>
+                <div class="ch-seg pc-periods">
+                  <button type="button" class="ch-segbtn is-active" data-pc-period="latest">Latest</button>
+                  <button type="button" class="ch-segbtn" data-pc-period="week">Last Week</button>
+                  <button type="button" class="ch-segbtn" data-pc-period="month">Last Month</button>
+                  <button type="button" class="ch-segbtn" data-pc-period="year">Last Year</button>
+                </div>
+              </div>
+
+              <div class="pc-control pc-control--date">
+                <label class="ch-label" for="pcCustomDate">Or choose a date</label>
+                <input
+                  class="pc-date"
+                  id="pcCustomDate"
+                  type="date"
+                  min="{{ $progressPhotos->get(1)['date'] }}"
+                  max="{{ $progressPhotos->last()['date'] }}"
+                  value="{{ $progressPhotos->last()['date'] }}"
+                >
+              </div>
+            </div>
+
+            <div class="pc-tabs" role="tablist" aria-label="Photo angle">
+              @foreach(['front' => 'Front', 'side' => 'Side', 'back' => 'Back'] as $angle => $label)
+                <button
+                  class="pc-tab {{ $loop->first ? 'is-active' : '' }}"
+                  type="button"
+                  role="tab"
+                  aria-selected="{{ $loop->first ? 'true' : 'false' }}"
+                  data-pc-angle="{{ $angle }}"
+                >{{ $label }}</button>
+              @endforeach
+            </div>
+
+            <div class="pc-compare" data-pc-stage style="--compare-position: 50%;">
+              <img class="pc-image pc-image--after" data-pc-after-image alt="After progress photo">
+              <div class="pc-before-layer">
+                <img class="pc-image pc-image--before" data-pc-before-image alt="Before progress photo">
+              </div>
+
+              <span class="pc-image-label pc-image-label--before">Before</span>
+              <span class="pc-image-label pc-image-label--after">After</span>
+
+              <div class="pc-divider" aria-hidden="true">
+                <span class="pc-divider__handle">↔</span>
+              </div>
+              <input
+                class="pc-range"
+                type="range"
+                min="0"
+                max="100"
+                value="50"
+                aria-label="Adjust before and after comparison"
+                data-pc-range
+              >
+            </div>
+
+            <div class="ch-footer pc-footer">
+              <div>
+                <span class="pc-footer__label">Before</span>
+                <strong data-pc-before-date>{{ $progressPhotos->first()['label'] }}</strong>
+              </div>
+              <p data-pc-date-note>Comparing with your latest check-in.</p>
+              <div class="pc-footer__after">
+                <span class="pc-footer__label">After</span>
+                <strong data-pc-after-date>{{ $progressPhotos->last()['label'] }}</strong>
+              </div>
+            </div>
+          @endif
+        </section>
+
   </main>
 
   <script>
@@ -365,6 +467,112 @@
 
     })();
     </script>
+
+    @if($progressPhotos->count() >= 2)
+    <script>
+    (() => {
+      const photos = @json($progressPhotos);
+      const card = document.querySelector('[data-photo-comparison]');
+      if (!card || photos.length < 2) return;
+
+      const beforePhoto = photos[0];
+      const comparisonPhotos = photos.slice(1);
+      const stage = card.querySelector('[data-pc-stage]');
+      const beforeImage = card.querySelector('[data-pc-before-image]');
+      const afterImage = card.querySelector('[data-pc-after-image]');
+      const beforeDate = card.querySelector('[data-pc-before-date]');
+      const afterDate = card.querySelector('[data-pc-after-date]');
+      const dateNote = card.querySelector('[data-pc-date-note]');
+      const dateInput = card.querySelector('#pcCustomDate');
+      const range = card.querySelector('[data-pc-range]');
+      const periodButtons = [...card.querySelectorAll('[data-pc-period]')];
+      const angleButtons = [...card.querySelectorAll('[data-pc-angle]')];
+      let activeAngle = 'front';
+      let afterPhoto = comparisonPhotos[comparisonPhotos.length - 1];
+
+      function asDate(value) {
+        return new Date(`${value}T12:00:00`);
+      }
+
+      function photoOnOrBefore(target) {
+        const eligible = comparisonPhotos.filter(photo => asDate(photo.date) <= target);
+        return eligible.length ? eligible[eligible.length - 1] : comparisonPhotos[0];
+      }
+
+      function renderImages() {
+        beforeImage.src = beforePhoto.urls[activeAngle];
+        afterImage.src = afterPhoto.urls[activeAngle];
+        beforeImage.alt = `Before ${activeAngle} progress photo from ${beforePhoto.label}`;
+        afterImage.alt = `After ${activeAngle} progress photo from ${afterPhoto.label}`;
+        beforeDate.textContent = beforePhoto.label;
+        afterDate.textContent = afterPhoto.label;
+        dateInput.value = afterPhoto.date;
+      }
+
+      function selectPeriod(period) {
+        periodButtons.forEach(button => {
+          const active = button.dataset.pcPeriod === period;
+          button.classList.toggle('is-active', active);
+          button.setAttribute('aria-pressed', active ? 'true' : 'false');
+        });
+
+        if (period === 'latest') {
+          afterPhoto = comparisonPhotos[comparisonPhotos.length - 1];
+          dateNote.textContent = 'Comparing with your latest check-in.';
+          renderImages();
+          return;
+        }
+
+        const target = new Date();
+        if (period === 'week') target.setDate(target.getDate() - 7);
+        if (period === 'month') target.setMonth(target.getMonth() - 1);
+        if (period === 'year') target.setFullYear(target.getFullYear() - 1);
+
+        afterPhoto = photoOnOrBefore(target);
+        const periodLabels = { week: 'one week ago', month: 'one month ago', year: 'one year ago' };
+        dateNote.textContent = asDate(afterPhoto.date) <= target
+          ? `Closest saved check-in on or before ${periodLabels[period]}.`
+          : `No check-in existed by ${periodLabels[period]}, so your earliest comparison is shown.`;
+        renderImages();
+      }
+
+      periodButtons.forEach(button => {
+        button.addEventListener('click', () => selectPeriod(button.dataset.pcPeriod));
+      });
+
+      dateInput.addEventListener('change', () => {
+        if (!dateInput.value) return;
+        periodButtons.forEach(button => {
+          button.classList.remove('is-active');
+          button.setAttribute('aria-pressed', 'false');
+        });
+        afterPhoto = photoOnOrBefore(asDate(dateInput.value));
+        dateNote.textContent = afterPhoto.date === dateInput.value
+          ? 'Comparing with the check-in saved on your selected date.'
+          : 'No check-in exists on that exact date, so the closest earlier check-in is shown.';
+        renderImages();
+      });
+
+      angleButtons.forEach(button => {
+        button.addEventListener('click', () => {
+          activeAngle = button.dataset.pcAngle;
+          angleButtons.forEach(candidate => {
+            const active = candidate === button;
+            candidate.classList.toggle('is-active', active);
+            candidate.setAttribute('aria-selected', active ? 'true' : 'false');
+          });
+          renderImages();
+        });
+      });
+
+      range.addEventListener('input', () => {
+        stage.style.setProperty('--compare-position', `${range.value}%`);
+      });
+
+      renderImages();
+    })();
+    </script>
+    @endif
 
 <x-achievement-toasts />
 </body>
