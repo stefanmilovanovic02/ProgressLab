@@ -98,14 +98,14 @@ class StreaksController extends Controller
 
         // LOGIN FIRST (as you asked)
         $streaks = [
-            ['key'=>'login','title'=>'Login Streak','days'=>$loginStreak,'icon'=>'👥','accent'=>'purple'],
-            ['key'=>'calories','title'=>'Calories Streak','days'=>$caloriesStreak,'icon'=>'🔥','accent'=>'red'],
-            ['key'=>'protein','title'=>'Protein Streak','days'=>$proteinStreak,'icon'=>'💧','accent'=>'blue'],
-            ['key'=>'carbs','title'=>'Carbs Streak','days'=>$carbsStreak,'icon'=>'💧','accent'=>'yellow'],
-            ['key'=>'fat','title'=>'Fat Streak','days'=>$fatStreak,'icon'=>'💧','accent'=>'orange'],
-            ['key'=>'creatine','title'=>'Creatine Streak','days'=>$creatineStreak,'icon'=>'💧','accent'=>'violet'],
-            ['key'=>'water','title'=>'Water Streak','days'=>$waterStreak,'icon'=>'💧','accent'=>'cyan'],
-            ['key'=>'workout','title'=>'Workout Streak','days'=>$workoutStreak,'icon'=>'💪','accent'=>'green'],
+            ['key'=>'login','title'=>'Login Streak','days'=>$loginStreak,'icon'=>'👥','accent'=>'login'],
+            ['key'=>'calories','title'=>'Calories Streak','days'=>$caloriesStreak,'icon'=>'🔥','accent'=>'calories'],
+            ['key'=>'protein','title'=>'Protein Streak','days'=>$proteinStreak,'icon'=>'🥩','accent'=>'protein'],
+            ['key'=>'carbs','title'=>'Carbs Streak','days'=>$carbsStreak,'icon'=>'🍚','accent'=>'carbs'],
+            ['key'=>'fat','title'=>'Fat Streak','days'=>$fatStreak,'icon'=>'🥜','accent'=>'fat'],
+            ['key'=>'creatine','title'=>'Creatine Streak','days'=>$creatineStreak,'icon'=>'🧬','accent'=>'creatine'],
+            ['key'=>'water','title'=>'Water Streak','days'=>$waterStreak,'icon'=>'💧','accent'=>'water'],
+            ['key'=>'workout','title'=>'Workout Streak','days'=>$workoutStreak,'icon'=>'💪','accent'=>'workout'],
         ];
 
         return view('streaks.index', [

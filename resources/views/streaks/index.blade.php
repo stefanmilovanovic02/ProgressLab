@@ -30,7 +30,7 @@
     {{-- Cards Grid --}}
     <section class="st-grid" aria-label="Streaks">
       @foreach($streaks as $s)
-        <article class="st-card" data-accent="{{ $s['accent'] }}">
+        <article class="st-card" data-accent="{{ $s['accent'] }}" style="--st-index: {{ $loop->index }};">
           <div class="st-card__icon" aria-hidden="true">{{ $s['icon'] }}</div>
 
           <div class="st-card__row">

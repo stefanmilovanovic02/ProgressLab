@@ -2597,7 +2597,11 @@ body.wo-modal-open{ overflow: hidden; }
 }
 
 .st-card{
+  --st-accent-rgb: 255, 255, 255;
+  position: relative;
+  isolation: isolate;
   min-height: 170px;
+  overflow: hidden;
   border-radius: 18px;
   background: rgba(18, 25, 38, .70);
   border: 1px solid rgba(255,255,255,.10);
@@ -2606,15 +2610,29 @@ body.wo-modal-open{ overflow: hidden; }
   justify-items: center;
   text-align: center;
   box-shadow: 0 12px 30px rgba(0,0,0,.25);
-transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, background .18s ease;
+  transition: transform .22s ease, box-shadow .22s ease, border-color .22s ease, background .22s ease;
+}
+
+.st-card::before{
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background:
+    radial-gradient(circle at 50% 8%, rgba(var(--st-accent-rgb), .20), transparent 44%),
+    linear-gradient(145deg, rgba(var(--st-accent-rgb), .08), transparent 58%);
+  opacity: 0;
+  transition: opacity .22s ease;
 }
 
 .st-card:hover{
   transform: translateY(-6px);
-  background:  rgba(18, 25, 38, .82);
-  border-color: rgba(255, 255, 255, .16);
-  box-shadow: 0 18px 45px rgba(0, 0, 0, .35);
+  background: rgba(18, 25, 38, .9);
+  border-color: rgba(var(--st-accent-rgb), .45);
+  box-shadow: 0 18px 48px rgba(0,0,0,.38), 0 10px 34px rgba(var(--st-accent-rgb), .14);
 }
+.st-card:hover::before{ opacity: 1; }
+.st-card > *{ position: relative; z-index: 1; }
 
 .st-card__icon{
   width: 46px;
@@ -2626,11 +2644,15 @@ transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, b
   border: 1px solid rgba(255,255,255,.08);
   font-size: 22px;
   margin-top: 4px;
+  box-shadow: 0 0 0 1px rgba(var(--st-accent-rgb), .18), 0 10px 30px rgba(var(--st-accent-rgb), .09);
+  transition: transform .25s ease, border-color .22s ease, background .22s ease, box-shadow .22s ease;
 }
 
 .st-card:hover .st-card__icon{
-  border-color: rgba(255, 255, 255, .14);
-  background: rgba(255, 255, 255, .06);
+  transform: translateY(-2px) scale(1.08);
+  border-color: rgba(var(--st-accent-rgb), .38);
+  background: rgba(var(--st-accent-rgb), .12);
+  box-shadow: 0 0 0 1px rgba(var(--st-accent-rgb), .22), 0 12px 34px rgba(var(--st-accent-rgb), .18);
 }
 
 
@@ -2642,7 +2664,19 @@ transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, b
   font-weight: 900;
 }
 
-.st-flame{ filter: drop-shadow(0 6px 16px rgba(255,120,0,.35)); }
+.st-flame{
+  display: inline-block;
+  transform-origin: 50% 85%;
+  filter: drop-shadow(0 6px 14px rgba(var(--st-accent-rgb), .48));
+  animation: st-flame-spin .9s cubic-bezier(.2,.8,.25,1) both;
+  animation-delay: calc(var(--st-index) * 70ms);
+  will-change: transform;
+}
+
+.st-card:hover .st-flame,
+.st-card:active .st-flame{
+  animation: st-flame-dance .62s ease-in-out infinite;
+}
 
 .st-days{
   font-size: 20px;
@@ -2663,14 +2697,38 @@ transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, b
 }
 
 /* Accent colors */
-.st-card[data-accent="red"] .st-card__icon{ box-shadow: 0 0 0 1px rgba(255,77,77,.20), 0 10px 30px rgba(255,77,77,.10); }
-.st-card[data-accent="blue"] .st-card__icon{ box-shadow: 0 0 0 1px rgba(59,130,246,.20), 0 10px 30px rgba(59,130,246,.10); }
-.st-card[data-accent="yellow"] .st-card__icon{ box-shadow: 0 0 0 1px rgba(251,191,36,.20), 0 10px 30px rgba(251,191,36,.10); }
-.st-card[data-accent="orange"] .st-card__icon{ box-shadow: 0 0 0 1px rgba(251,146,60,.20), 0 10px 30px rgba(251,146,60,.10); }
-.st-card[data-accent="violet"] .st-card__icon{ box-shadow: 0 0 0 1px rgba(168,85,247,.20), 0 10px 30px rgba(168,85,247,.10); }
-.st-card[data-accent="cyan"] .st-card__icon{ box-shadow: 0 0 0 1px rgba(34,211,238,.20), 0 10px 30px rgba(34,211,238,.10); }
-.st-card[data-accent="green"] .st-card__icon{ box-shadow: 0 0 0 1px rgba(34,197,94,.20), 0 10px 30px rgba(34,197,94,.10); }
-.st-card[data-accent="purple"] .st-card__icon{ box-shadow: 0 0 0 1px rgba(217,70,239,.20), 0 10px 30px rgba(217,70,239,.10); }
+.st-card[data-accent="login"]{ --st-accent-rgb: 168, 85, 247; }
+.st-card[data-accent="calories"]{ --st-accent-rgb: 255, 77, 77; }
+.st-card[data-accent="protein"]{ --st-accent-rgb: 155, 116, 248; }
+.st-card[data-accent="carbs"]{ --st-accent-rgb: 224, 190, 119; }
+.st-card[data-accent="fat"]{ --st-accent-rgb: 251, 146, 60; }
+.st-card[data-accent="creatine"]{ --st-accent-rgb: 235, 240, 248; }
+.st-card[data-accent="water"]{ --st-accent-rgb: 47, 166, 242; }
+.st-card[data-accent="workout"]{ --st-accent-rgb: 34, 197, 94; }
+
+.st-card:hover .st-days{ color: rgb(var(--st-accent-rgb)); }
+
+@keyframes st-flame-spin{
+  0%{ opacity: 0; transform: perspective(90px) rotateY(0deg) scale(.65); }
+  65%{ opacity: 1; transform: perspective(90px) rotateY(400deg) scale(1.16); }
+  100%{ opacity: 1; transform: perspective(90px) rotateY(360deg) scale(1); }
+}
+
+@keyframes st-flame-dance{
+  0%, 100%{ transform: translateY(0) rotate(-4deg) scale(1); }
+  35%{ transform: translateY(-4px) rotate(6deg) scale(1.12, .94); }
+  70%{ transform: translateY(-1px) rotate(-7deg) scale(.96, 1.1); }
+}
+
+@media (prefers-reduced-motion: reduce){
+  .st-flame,
+  .st-card:hover .st-flame,
+  .st-card:active .st-flame{
+    animation: none;
+  }
+  .st-card,
+  .st-card__icon{ transition-duration: .01ms; }
+}
 
 /* Big card */
 .st-big{
