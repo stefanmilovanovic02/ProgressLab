@@ -174,9 +174,11 @@
 
   function openModal() {
     modal.classList.add('is-active');
+    document.body.classList.add('wo-modal-open');
   }
   function closeModal() {
     modal.classList.remove('is-active');
+    document.body.classList.remove('wo-modal-open');
     rowsWrap.innerHTML = '';
     form.reset();
   }
@@ -229,12 +231,8 @@
         <div class="wo-exinputwrap">
           <input class="wo-input wo-exinput" type="text" placeholder="Exercise name (e.g., Bench Press)" autocomplete="off">
           <input type="hidden" name="exercise_ids[]" class="wo-exid">
-          <div class="wo-suggest" hidden></div>
+          <div class="wo-suggest" role="listbox" aria-label="Exercise search results" hidden></div>
         </div>
-
-        <select class="wo-input wo-select" disabled>
-          <option value="">Select muscle group (optional)</option>
-        </select>
       </div>
 
       <button class="wo-trash" type="button" aria-label="Remove">🗑️</button>
@@ -243,7 +241,6 @@
     const textInput = row.querySelector('.wo-exinput');
     const hiddenId  = row.querySelector('.wo-exid');
     const suggest   = row.querySelector('.wo-suggest');
-    const select    = row.querySelector('.wo-select');
     const trash     = row.querySelector('.wo-trash');
 
     trash.addEventListener('click', () => row.remove());
@@ -268,15 +265,14 @@
 
     function clearPicked() {
       hiddenId.value = '';
-      select.innerHTML = `<option value="">Select muscle group (optional)</option>`;
-      select.disabled = true;
     }
 
     function showSuggest(items) {
       suggest.innerHTML = '';
 
       if (!items.length) {
-        suggest.hidden = true;
+        suggest.innerHTML = '<div class="wo-suggest__empty">No matching exercises found. Try another name.</div>';
+        suggest.hidden = false;
         return;
       }
 
@@ -292,13 +288,6 @@
         btn.addEventListener('click', () => {
           textInput.value = item.name;
           hiddenId.value = item.id;
-
-          select.innerHTML = `
-            <option value="">Select muscle group (optional)</option>
-            <option selected>${item.muscle_group ?? '—'}</option>
-          `;
-          select.disabled = true;
-
           suggest.hidden = true;
           closeAllSuggest();
         });
@@ -337,22 +326,18 @@
 
     const textInput = row.querySelector('.wo-exinput');
     const hiddenId  = row.querySelector('.wo-exid');
-    const select    = row.querySelector('.wo-select');
     const suggest   = row.querySelector('.wo-suggest');
 
     textInput.value = ex.name || '';
     hiddenId.value  = ex.id || '';
 
-    select.innerHTML = `
-      <option value="">Select muscle group (optional)</option>
-      <option selected>${ex.muscle_group ?? '—'}</option>
-    `;
-    select.disabled = true;
-
     if (suggest) suggest.hidden = true;
   }
 
-  addRowBtn.addEventListener('click', () => addRow());
+  addRowBtn.addEventListener('click', () => {
+    const row = addRow();
+    row.querySelector('.wo-exinput')?.focus();
+  });
 
   // ✅ Global click-away closes all suggestions
   document.addEventListener('click', function (e) {

@@ -1532,6 +1532,7 @@ select.pl-input--field option{
   display: none;
   align-items: center;
   justify-content: center;
+  padding: 24px;
   z-index: 999;
 }
 .wo-modal.is-active{
@@ -1544,14 +1545,14 @@ select.pl-input--field option{
 }
 .wo-modal__panel{
   position: relative;
-  width: 92%;
-  max-width: 520px;
+  width: min(94%, 760px);
+  height: min(90vh, 840px);
+  height: min(90dvh, 840px);
   border-radius: 16px;
   background: rgba(18, 25, 38, .98);
   border: 1px solid rgba(255,255,255,.10);
-  padding: 22px;
+  padding: 26px;
   z-index: 2;
-  max-height: min(88vh, 720px);
   overflow: hidden;
   display: flex;
   flex-direction: column;
@@ -1571,8 +1572,7 @@ select.pl-input--field option{
   justify-content: flex-end;
   gap: 10px;
   margin-top: 18px;
-  position: sticky;
-  bottom: 0;
+  flex: 0 0 auto;
   background: rgba(18, 25, 38, .98);
   padding-top: 12px;
 }
@@ -1635,11 +1635,15 @@ select.pl-input--field option{
 .wo-addbtn:hover{ background: rgba(255,255,255,.08); }
 
 .wo-exlist{
-   margin-top: 12px; 
-   display: grid; gap: 12px; 
-   max-height: 38vh;
+   min-height: 0;
+   margin-top: 12px;
+   display: grid;
+   align-content: start;
+   gap: 12px;
+   flex: 1 1 auto;
    overflow-y: auto;
-   padding-right: 6px;
+   padding-right: 8px;
+   overscroll-behavior: contain;
   }
 
   /* Optional: nicer scrollbar */
@@ -1653,7 +1657,12 @@ select.pl-input--field option{
       background: transparent;
     }
 
-.wo-exrow{ display:flex; gap: 10px; align-items: flex-start; }
+.wo-exrow{
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  gap: 10px;
+  align-items: flex-start;
+}
 
 .wo-excard{
   flex: 1 1 auto;
@@ -1663,7 +1672,11 @@ select.pl-input--field option{
   padding: 12px;
 }
 .wo-exinputwrap{ position: relative; }
-.wo-select{ margin-top: 10px; }
+.wo-exinput{
+  min-height: 50px;
+  margin-top: 0;
+  font-size: 16px;
+}
 
 .wo-trash{
   border: 0;
@@ -1679,10 +1692,8 @@ select.pl-input--field option{
 
 /* Suggestions dropdown */
 .wo-suggest{
-  position:absolute;
-  left: 0;
-  right: 0;
-  top: calc(100% + 8px);
+  position: static;
+  margin-top: 10px;
 
   background: rgba(18, 25, 38, .98);
   border: 1px solid rgba(255,255,255,.10);
@@ -1691,13 +1702,11 @@ select.pl-input--field option{
   padding: 10px;
 
   /* 👇 Bigger height */
-  max-height: 380px;      /* was 220px */
-  overflow-y: auto;
+  max-height: none;
 
   display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
-
-  z-index: 9999;
 }
 
 .wo-suggest[hidden]{
@@ -1725,17 +1734,26 @@ select.pl-input--field option{
 
 .wo-suggest__name{ font-weight: 800; font-size: 13px; }
 .wo-suggest__meta{ margin-top: 2px; font-size: 12px; color: rgba(255,255,255,.65); }
+.wo-suggest__empty{
+  grid-column: 1 / -1;
+  padding: 16px;
+  color: rgba(255,255,255,.62);
+  font-size: 13px;
+  text-align: center;
+}
 
 .wo-exrow { position: relative; }
 .wo-excard { overflow: visible; }
-.wo-modal__panel { overflow: visible; }
-.wo-suggest {z-index: 9999;}
 
 #createWorkoutForm{
   display: flex;
   flex-direction: column;
+  flex: 1 1 auto;
   min-height: 0;
+  overflow: hidden;
 }
+
+body.wo-modal-open{ overflow: hidden; }
 
 .icons-wrapper{
   display: flex;
@@ -1744,8 +1762,27 @@ select.pl-input--field option{
 }
 
 @media (max-width: 560px){
-  .wo-exrow{ flex-direction: column; }
-  .wo-trash{ width: 100%; height: 44px; }
+  .wo-modal{
+    align-items: flex-end;
+    padding: 10px;
+  }
+
+  .wo-modal__panel{
+    width: 100%;
+    height: calc(100vh - 20px);
+    height: calc(100dvh - 20px);
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .wo-modal__top{ margin-bottom: 8px; }
+  .wo-field{ margin-top: 6px; }
+  .wo-exhead{ margin-top: 14px; }
+  .wo-exlist{ padding-right: 4px; }
+  .wo-excard{ padding: 10px; }
+  .wo-suggest{ grid-template-columns: 1fr; }
+  .wo-suggest__item{ padding: 12px; }
+  .wo-modal__actions{ margin-top: 10px; }
 }
 
 /* =========================
