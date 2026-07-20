@@ -16,6 +16,7 @@ use App\Http\Controllers\StreaksController;
 use App\Http\Controllers\AchievementsController;
 use App\Http\Controllers\FriendsController;
 use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\NotificationsController;
 
 // Guest (Not logged in)
  Route::middleware('guest')->group(function () {
@@ -98,6 +99,13 @@ Route::middleware(['auth', 'track.daily.login'])->group(function () {
         Route::get('/achievements/notifications', [AchievementsController::class, 'notifications'])
             ->name('achievements.notifications');
     });
+
+    // Notifications
+    Route::get('/notifications', [NotificationsController::class, 'index'])->name('notifications.index');
+    Route::post('/notifications/read-all', [NotificationsController::class, 'readAll'])->name('notifications.read-all');
+    Route::post('/notifications/{notification}/read', [NotificationsController::class, 'read'])->name('notifications.read');
+    Route::post('/notifications/{notification}/open', [NotificationsController::class, 'open'])->name('notifications.open');
+
     // 9) Friends (list, add/remove, profiles, compare)
     Route::middleware(['auth'])->group(function () {
     Route::get('/friends', [FriendsController::class, 'index'])->name('friends.index');

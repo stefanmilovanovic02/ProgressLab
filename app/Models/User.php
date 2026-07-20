@@ -80,6 +80,11 @@ class User extends Authenticatable
         return $this->hasMany(\App\Models\FriendRequest::class, 'receiver_id');
     }
 
+    public function appNotifications()
+    {
+        return $this->hasMany(\App\Models\AppNotification::class);
+    }
+
     public function getAvatarUrlAttribute(): string
         {
             if (!$this->avatar_path) {

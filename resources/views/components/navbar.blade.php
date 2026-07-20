@@ -31,6 +31,23 @@
       <a class="pl-nav__link {{ request()->routeIs('friends.*') ? 'is-active' : '' }}" href="{{ route('friends.index') }}">Friends</a>
       <a class="pl-nav__link {{ request()->routeIs('profile.*') ? 'is-active' : '' }}" href="{{ route('profile.show') }}">Profile</a>
 
+      <a
+        class="pl-nav__notifications {{ request()->routeIs('notifications.*') ? 'is-active' : '' }}"
+        href="{{ route('notifications.index') }}"
+        aria-label="Notifications{{ $unreadNotificationCount ? ': ' . $unreadNotificationCount . ' unread' : '' }}"
+      >
+        <svg class="pl-nav__notifications-icon" viewBox="0 0 24 24" aria-hidden="true">
+          <path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"></path>
+          <path d="M10 21h4"></path>
+        </svg>
+        <span class="pl-nav__notifications-label">Notifications</span>
+        @if($unreadNotificationCount > 0)
+          <span class="pl-nav__notifications-badge" aria-hidden="true">
+            {{ $unreadNotificationCount > 99 ? '99+' : $unreadNotificationCount }}
+          </span>
+        @endif
+      </a>
+
       <form class="pl-nav__logout" action="{{ route('logout') }}" method="POST">
         @csrf
         <button type="submit" class="pl-nav__logout-btn">
