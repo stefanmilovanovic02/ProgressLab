@@ -62,6 +62,28 @@ class FriendsTest extends TestCase
             $table->timestamps();
         });
 
+        Schema::create('exercises', function (Blueprint $table) {
+            $table->id();
+            $table->string('name');
+            $table->timestamps();
+        });
+
+        Schema::create('workout_log_exercises', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('workout_log_id');
+            $table->unsignedBigInteger('exercise_id');
+            $table->timestamps();
+        });
+
+        Schema::create('workout_log_sets', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('workout_log_exercise_id');
+            $table->unsignedTinyInteger('set_number');
+            $table->unsignedSmallInteger('reps')->nullable();
+            $table->decimal('weight_kg', 6, 2)->nullable();
+            $table->timestamps();
+        });
+
         Schema::create('nutrition_entries', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('user_id');
@@ -79,6 +101,9 @@ class FriendsTest extends TestCase
     protected function tearDown(): void
     {
         Schema::dropIfExists('nutrition_entries');
+        Schema::dropIfExists('workout_log_sets');
+        Schema::dropIfExists('workout_log_exercises');
+        Schema::dropIfExists('exercises');
         Schema::dropIfExists('workout_logs');
         Schema::dropIfExists('login_logs');
         Schema::dropIfExists('friend_requests');
@@ -207,6 +232,33 @@ class FriendsTest extends TestCase
         $this->assertSame(1, DB::table('login_logs')->where('user_id', $user->id)->count());
     }
 
+    public function test_strength_comparison_uses_null_when_only_one_friend_logged_that_day(): void
+    {
+        $user = $this->createUser('lifter@example.test');
+        $friend = $this->createUser('lifting-friend@example.test');
+        $this->makeFriends($user, $friend);
+
+        $exerciseId = DB::table('exercises')->insertGetId([
+            'name' => 'Bench Press',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->addExerciseResult($user->id, $exerciseId, '2026-03-12', 22.5);
+        $this->addExerciseResult($friend->id, $exerciseId, '2026-03-28', 47.5);
+
+        $this->actingAs($user)
+            ->getJson(route('friends.exercise-comparison', [
+                'user' => $friend,
+                'exercise_id' => $exerciseId,
+                'period' => 'all',
+            ]))
+            ->assertOk()
+            ->assertJsonPath('labels', ['Mar 12', 'Mar 28'])
+            ->assertJsonPath('user', [22.5, null])
+            ->assertJsonPath('friend', [null, 47.5]);
+    }
+
     private function createUser(string $email): User
     {
         return User::query()->create([
@@ -231,6 +283,31 @@ class FriendsTest extends TestCase
                 'created_at' => now(),
                 'updated_at' => now(),
             ],
+        ]);
+    }
+
+    private function addExerciseResult(int $userId, int $exerciseId, string $date, float $weight): void
+    {
+        $workoutLogId = DB::table('workout_logs')->insertGetId([
+            'user_id' => $userId,
+            'workout_id' => 1,
+            'entry_date' => $date,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $loggedExerciseId = DB::table('workout_log_exercises')->insertGetId([
+            'workout_log_id' => $workoutLogId,
+            'exercise_id' => $exerciseId,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('workout_log_sets')->insert([
+            'workout_log_exercise_id' => $loggedExerciseId,
+            'set_number' => 1,
+            'reps' => 8,
+            'weight_kg' => $weight,
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
     }
 }

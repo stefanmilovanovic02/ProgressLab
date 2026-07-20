@@ -658,8 +658,14 @@ public function summary(Request $request, User $user)
                 ->values();
 
             $labels = $allDays->map(fn($d) => \Carbon\Carbon::parse($d)->format('M j'))->values()->all();
-            $myValues = $allDays->map(fn($d) => (float) ($mine[$d] ?? null))->values()->all();
-            $friendValues = $allDays->map(fn($d) => (float) ($friend[$d] ?? null))->values()->all();
+            $myValues = $allDays
+                ->map(fn($d) => array_key_exists($d, $mine) ? (float) $mine[$d] : null)
+                ->values()
+                ->all();
+            $friendValues = $allDays
+                ->map(fn($d) => array_key_exists($d, $friend) ? (float) $friend[$d] : null)
+                ->values()
+                ->all();
 
             $exerciseName = DB::table('exercises')->where('id', $exerciseId)->value('name');
 
