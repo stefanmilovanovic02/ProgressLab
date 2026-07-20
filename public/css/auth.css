@@ -2753,42 +2753,44 @@ body.wo-modal-open{ overflow: hidden; }
 }
 
 :is(.st-card, .st-milestone)[data-flame-tier="blazing"] .st-flame::before{
-  background: linear-gradient(145deg, #fff 0%, #f472b6 30%, rgb(var(--st-accent-rgb)) 70%, #7c3aed 100%);
+  background: linear-gradient(145deg, #fff 0%, rgb(var(--st-accent-rgb)) 30%, rgba(var(--st-accent-rgb), .92) 62%, #0b1020 100%);
 }
 :is(.st-card, .st-milestone)[data-flame-tier="blazing"] .st-flame__aura{
   opacity: .9;
-  background: radial-gradient(circle, rgba(236,72,153,.48), rgba(var(--st-accent-rgb), .2) 46%, transparent 72%);
+  background: radial-gradient(circle, rgba(var(--st-accent-rgb), .5), rgba(var(--st-accent-rgb), .18) 48%, transparent 72%);
 }
 
 :is(.st-card, .st-milestone)[data-flame-tier="inferno"] .st-flame::before{
-  background: linear-gradient(145deg, #fff 0%, #c084fc 24%, hsl(var(--st-upgrade-hue) 90% 62%) 60%, #4f46e5 100%);
+  background: linear-gradient(145deg, #fff 0%, rgb(var(--st-accent-rgb)) 24%, rgba(var(--st-accent-rgb), .78) 58%, #060a13 100%);
+  box-shadow: inset -4px -5px 7px rgba(0,0,0,.36), inset 3px 3px 6px rgba(255,255,255,.4);
 }
 :is(.st-card, .st-milestone)[data-flame-tier="inferno"] .st-flame__aura{
   opacity: 1;
-  background: radial-gradient(circle, rgba(168,85,247,.58), rgba(79,70,229,.22) 50%, transparent 72%);
+  background: radial-gradient(circle, rgba(var(--st-accent-rgb), .6), rgba(var(--st-accent-rgb), .2) 50%, transparent 72%);
   animation: st-flame-aura 1.4s ease-in-out infinite;
 }
 
 :is(.st-card, .st-milestone)[data-flame-tier="cosmic"] .st-flame::before{
-  background: linear-gradient(145deg, #fff 0%, #67e8f9 20%, hsl(var(--st-upgrade-hue) 95% 65%) 54%, #8b5cf6 100%);
-  box-shadow: inset -3px -4px 7px rgba(30,27,75,.35), inset 3px 3px 6px rgba(255,255,255,.42);
+  background: linear-gradient(145deg, #fff 0%, rgb(var(--st-accent-rgb)) 20%, rgba(var(--st-accent-rgb), .68) 52%, #030712 100%);
+  box-shadow: inset -4px -6px 8px rgba(0,0,0,.46), inset 3px 3px 7px rgba(255,255,255,.5);
 }
 :is(.st-card, .st-milestone)[data-flame-tier="cosmic"] .st-flame__aura{
   opacity: 1;
   inset: -10px;
-  background: radial-gradient(circle, rgba(34,211,238,.56), rgba(139,92,246,.25) 48%, transparent 73%);
+  border: 1px solid rgba(var(--st-accent-rgb), .24);
+  background: radial-gradient(circle, rgba(var(--st-accent-rgb), .66), rgba(var(--st-accent-rgb), .2) 48%, transparent 73%);
   animation: st-flame-aura 1s ease-in-out infinite;
 }
 
 :is(.st-card, .st-milestone)[data-flame-tier="legendary"] .st-flame::before{
-  background: conic-gradient(from 205deg, #fff, #67e8f9, hsl(var(--st-upgrade-hue) 95% 64%), #f0abfc, #fff);
-  box-shadow: inset -3px -4px 7px rgba(30,27,75,.38), inset 3px 3px 6px rgba(255,255,255,.5);
+  background: conic-gradient(from 205deg, #fff, rgb(var(--st-accent-rgb)), #050914, rgba(var(--st-accent-rgb), .82), #fff);
+  box-shadow: inset -5px -7px 9px rgba(0,0,0,.52), inset 3px 3px 8px rgba(255,255,255,.58);
 }
 :is(.st-card, .st-milestone)[data-flame-tier="legendary"] .st-flame__aura{
   opacity: 1;
   inset: -12px;
   border: 1px solid rgba(255,255,255,.3);
-  background: conic-gradient(from 0deg, transparent, rgba(34,211,238,.5), transparent, rgba(217,70,239,.5), transparent);
+  background: conic-gradient(from 0deg, transparent, rgba(var(--st-accent-rgb), .58), transparent, rgba(var(--st-accent-rgb), .3), transparent);
   animation: st-legendary-aura 2s linear infinite;
 }
 

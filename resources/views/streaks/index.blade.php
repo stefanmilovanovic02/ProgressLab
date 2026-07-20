@@ -39,7 +39,7 @@
           data-streak-title="{{ $s['title'] }}"
           data-streak-days="{{ $s['days'] }}"
           data-streak-milestone="{{ $s['milestone'] }}"
-          style="--st-index: {{ $loop->index }}; --st-upgrade-hue: {{ $s['flame_rank'] > 0 ? 300 - ((($s['flame_rank'] - 1) * 28) % 140) : 320 }};"
+          style="--st-index: {{ $loop->index }};"
         >
           <div class="st-card__icon" aria-hidden="true">{{ $s['icon'] }}</div>
 
@@ -94,8 +94,8 @@
   const tierNames = {
     ignited: 'Ignited Flame',
     blazing: 'Blazing Flame',
-    inferno: 'Purple Inferno',
-    cosmic: 'Cosmic Flame',
+    inferno: 'Deep Inferno',
+    cosmic: 'Elite Flame',
     legendary: 'Legendary Flame',
   };
   const queue = [];
@@ -146,12 +146,10 @@
     const { card, milestone } = active;
     const flameTier = card.dataset.flameTier;
     const accent = getComputedStyle(card).getPropertyValue('--st-accent-rgb').trim();
-    const upgradeHue = getComputedStyle(card).getPropertyValue('--st-upgrade-hue').trim();
 
     modal.dataset.accent = card.dataset.accent;
     modal.dataset.flameTier = flameTier;
     modal.style.setProperty('--st-accent-rgb', accent);
-    modal.style.setProperty('--st-upgrade-hue', upgradeHue);
     title.textContent = `${milestone}-Day ${card.dataset.streakTitle}`;
     tier.textContent = tierNames[flameTier] || 'Upgraded Flame';
     message.textContent = milestone >= 100
