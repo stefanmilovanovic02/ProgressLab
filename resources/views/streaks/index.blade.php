@@ -34,7 +34,7 @@
           <div class="st-card__icon" aria-hidden="true">{{ $s['icon'] }}</div>
 
           <div class="st-card__row">
-            <span class="st-flame" aria-hidden="true">🔥</span>
+            <span class="st-flame" aria-hidden="true"></span>
             <span class="st-days">{{ $s['days'] }}</span>
             <span class="st-dayslabel">Days</span>
           </div>

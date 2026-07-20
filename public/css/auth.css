@@ -2666,11 +2666,38 @@ body.wo-modal-open{ overflow: hidden; }
 
 .st-flame{
   display: inline-block;
+  position: relative;
+  width: 18px;
+  height: 24px;
+  flex: 0 0 18px;
   transform-origin: 50% 85%;
   filter: drop-shadow(0 6px 14px rgba(var(--st-accent-rgb), .48));
   animation: st-flame-spin .9s cubic-bezier(.2,.8,.25,1) both;
   animation-delay: calc(var(--st-index) * 70ms);
   will-change: transform;
+}
+
+.st-flame::before{
+  content: "";
+  position: absolute;
+  inset: 0;
+  clip-path: polygon(52% 0, 78% 28%, 72% 43%, 91% 35%, 100% 66%, 88% 88%, 67% 100%, 34% 98%, 10% 80%, 0 55%, 15% 28%, 28% 49%, 31% 23%);
+  border-radius: 48% 52% 50% 50%;
+  background: linear-gradient(145deg, rgba(255,255,255,.82) 0%, rgb(var(--st-accent-rgb)) 38%, rgba(var(--st-accent-rgb), .62) 100%);
+  box-shadow: inset -3px -4px 6px rgba(0,0,0,.18), inset 3px 3px 5px rgba(255,255,255,.24);
+}
+
+.st-flame::after{
+  content: "";
+  position: absolute;
+  left: 6px;
+  bottom: 3px;
+  width: 7px;
+  height: 10px;
+  clip-path: polygon(50% 0, 100% 58%, 78% 100%, 22% 100%, 0 58%);
+  border-radius: 50%;
+  background: rgba(255,255,255,.78);
+  box-shadow: 0 0 7px rgba(255,255,255,.32);
 }
 
 .st-card:hover .st-flame,
