@@ -31,6 +31,8 @@ class ExampleTest extends TestCase
             ->assertSee('<meta name="twitter:card" content="summary_large_image">', false)
             ->assertSee('/images/branding/progresslab-og.png', false)
             ->assertSee('/images/branding/progresslab-favicon.png', false)
-            ->assertSee('/images/branding/progresslab-touch-icon.png', false);
+            ->assertSee('/images/branding/progresslab-touch-icon.png', false)
+            ->assertSee('/manifest.webmanifest', false)
+            ->assertSee('/js/push-notifications.js', false);
     }
 }

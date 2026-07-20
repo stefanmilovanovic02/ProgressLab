@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\AppNotification;
+use App\Models\Achievement;
 use App\Models\FriendActivity;
 use App\Models\FriendRequest;
 use App\Models\User;
@@ -12,6 +13,10 @@ use Illuminate\Support\Facades\Schema;
 class NotificationService
 {
     private const RECENT_ACTIVITY_DAYS = 30;
+
+    public function __construct(private readonly WebPushService $webPush)
+    {
+    }
 
     public function syncForUser(User $user): void
     {
@@ -56,7 +61,7 @@ class NotificationService
         string $message,
         ?string $actionUrl = null
     ): AppNotification {
-        return AppNotification::query()->updateOrCreate(
+        $notification = AppNotification::query()->updateOrCreate(
             [
                 'user_id' => $user->id,
                 'source_type' => 'system',
@@ -71,6 +76,83 @@ class NotificationService
                 'data' => ['key' => $key],
             ]
         );
+
+        if ($notification->wasRecentlyCreated) {
+            $this->push($user, $notification);
+        }
+
+        return $notification;
+    }
+
+    public function notifyAchievementUnlocked(
+        User $user,
+        UserAchievement $unlock,
+        Achievement $achievement,
+        FriendActivity $activity
+    ): void {
+        $ownNotification = AppNotification::query()->updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'source_type' => 'achievement',
+                'source_id' => $unlock->id,
+            ],
+            [
+                'category' => 'achievement',
+                'title' => 'Achievement unlocked',
+                'message' => 'You unlocked “' . $achievement->title . '”.',
+                'icon' => '🏆',
+                'action_url' => route('achievements.index', [], false),
+                'data' => [
+                    'achievement_id' => $achievement->id,
+                    'rarity' => $achievement->rarity,
+                    'image_path' => $achievement->image_path,
+                ],
+            ]
+        );
+
+        if ($ownNotification->wasRecentlyCreated) {
+            $this->push($user, $ownNotification);
+        }
+
+        $actorName = $user->full_name ?: $user->name ?: $user->username ?: 'A friend';
+
+        $user->friends()->each(function (User $friend) use ($activity, $achievement, $actorName, $user) {
+            $notification = AppNotification::query()->updateOrCreate(
+                [
+                    'user_id' => $friend->id,
+                    'source_type' => 'friend_activity',
+                    'source_id' => $activity->id,
+                ],
+                [
+                    'category' => 'friend',
+                    'title' => 'Friend achievement',
+                    'message' => $actorName . ' unlocked “' . $achievement->title . '”.',
+                    'icon' => '🏆',
+                    'action_url' => route('friends.index', [], false),
+                    'data' => [
+                        'actor_id' => $user->id,
+                        'actor_name' => $actorName,
+                        'achievement_id' => $achievement->id,
+                    ],
+                ]
+            );
+
+            if ($notification->wasRecentlyCreated) {
+                $this->push($friend, $notification);
+            }
+        });
+    }
+
+    private function push(User $user, AppNotification $notification): void
+    {
+        $this->webPush->sendToUser($user, [
+            'title' => $notification->title,
+            'body' => $notification->message,
+            'url' => $notification->action_url ?: route('notifications.index', [], false),
+            'tag' => $notification->source_type . '-' . $notification->source_id,
+            'category' => $notification->category,
+            'badgeCount' => $this->unreadCount($user),
+        ]);
     }
 
     private function welcomeNotification(User $user): array

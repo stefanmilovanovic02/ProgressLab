@@ -1,0 +1,24 @@
+{
+  "id": "/",
+  "name": "ProgressLab",
+  "short_name": "ProgressLab",
+  "description": "Track workouts, nutrition, achievements, and fitness streaks.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#071225",
+  "theme_color": "#071225",
+  "icons": [
+    {
+      "src": "/images/branding/progresslab-touch-icon.png",
+      "sizes": "180x180",
+      "type": "image/png"
+    },
+    {
+      "src": "/images/branding/progresslab-favicon.png",
+      "sizes": "256x256",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

@@ -27,6 +27,37 @@
       <div class="nt-status" role="status">{{ session('status') }}</div>
     @endif
 
+    <section
+      class="nt-push"
+      data-push-settings
+      data-public-key="{{ config('services.webpush.public_key') }}"
+      data-store-url="{{ route('push-subscriptions.store') }}"
+      data-destroy-url="{{ route('push-subscriptions.destroy') }}"
+      data-test-url="{{ route('push-subscriptions.test') }}"
+      aria-labelledby="push-settings-title"
+    >
+      <div class="nt-push__icon" aria-hidden="true">📲</div>
+      <div class="nt-push__content">
+        <div class="nt-push__heading">
+          <div>
+            <span class="nt-push__eyebrow">Mobile alerts</span>
+            <h2 id="push-settings-title">Never lose a streak</h2>
+          </div>
+          <span class="nt-push__live">Android + iPhone</span>
+        </div>
+        <p>Get friend achievement alerts, ProgressLab updates, and a reminder before your login streak expires.</p>
+        <p class="nt-push__status" data-push-status role="status">Checking this device…</p>
+        <div class="nt-push__install" data-push-install-hint hidden>
+          <strong>iPhone setup:</strong> In Safari, tap Share → Add to Home Screen. Open ProgressLab from that icon, return here, and enable notifications.
+        </div>
+      </div>
+      <div class="nt-push__actions">
+        <button class="nt-action nt-action--primary" type="button" data-push-enable hidden>Enable push</button>
+        <button class="nt-action nt-action--primary" type="button" data-push-test hidden>Send test</button>
+        <button class="nt-action" type="button" data-push-disable hidden>Disable on device</button>
+      </div>
+    </section>
+
     <section class="nt-toolbar" aria-label="Notification controls">
       <nav class="nt-filters" aria-label="Notification filters">
         @foreach([

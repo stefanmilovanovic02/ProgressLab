@@ -37,7 +37,7 @@ class AchievementService
             }
 
             if ($this->meetsCriteria($user, $achievement)) {
-                UserAchievement::updateOrCreate(
+                $unlock = UserAchievement::updateOrCreate(
                     [
                         'user_id' => $user->id,
                         'achievement_id' => $achievement->id,
@@ -48,11 +48,18 @@ class AchievementService
                     ]
                 );
 
-                FriendActivity::create([
+                $activity = FriendActivity::create([
                     'user_id' => $user->id,
                     'type' => 'achievement',
                     'text' => 'unlocked the achievement "' .$achievement->title . '".',
                 ]);
+
+                app(NotificationService::class)->notifyAchievementUnlocked(
+                    $user,
+                    $unlock,
+                    $achievement,
+                    $activity
+                );
 
                 $newlyUnlocked[] = [
                     'id' => $achievement->id,

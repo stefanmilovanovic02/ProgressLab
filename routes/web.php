@@ -17,6 +17,7 @@ use App\Http\Controllers\AchievementsController;
 use App\Http\Controllers\FriendsController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\NotificationsController;
+use App\Http\Controllers\PushSubscriptionController;
 
 // Guest (Not logged in)
  Route::middleware('guest')->group(function () {
@@ -105,6 +106,9 @@ Route::middleware(['auth', 'track.daily.login'])->group(function () {
     Route::post('/notifications/read-all', [NotificationsController::class, 'readAll'])->name('notifications.read-all');
     Route::post('/notifications/{notification}/read', [NotificationsController::class, 'read'])->name('notifications.read');
     Route::post('/notifications/{notification}/open', [NotificationsController::class, 'open'])->name('notifications.open');
+    Route::post('/push-subscriptions', [PushSubscriptionController::class, 'store'])->name('push-subscriptions.store');
+    Route::delete('/push-subscriptions', [PushSubscriptionController::class, 'destroy'])->name('push-subscriptions.destroy');
+    Route::post('/push-subscriptions/test', [PushSubscriptionController::class, 'test'])->name('push-subscriptions.test');
 
     // 9) Friends (list, add/remove, profiles, compare)
     Route::middleware(['auth'])->group(function () {

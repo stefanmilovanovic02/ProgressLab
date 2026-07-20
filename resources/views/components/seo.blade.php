@@ -20,9 +20,15 @@
 <meta name="description" content="{{ $description }}">
 <meta name="robots" content="{{ $robots }}">
 <meta name="theme-color" content="#071225">
+<meta name="csrf-token" content="{{ csrf_token() }}">
 <link rel="canonical" href="{{ $canonicalUrl }}">
+<link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
 <link rel="icon" type="image/png" sizes="256x256" href="{{ $favicon }}">
 <link rel="apple-touch-icon" sizes="180x180" href="{{ $touchIcon }}">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="ProgressLab">
+<script defer src="{{ asset('js/push-notifications.js') }}"></script>
 
 <meta property="og:site_name" content="ProgressLab">
 <meta property="og:type" content="website">

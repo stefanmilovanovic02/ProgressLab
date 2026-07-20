@@ -85,6 +85,11 @@ class User extends Authenticatable
         return $this->hasMany(\App\Models\AppNotification::class);
     }
 
+    public function pushSubscriptions()
+    {
+        return $this->hasMany(\App\Models\PushSubscription::class);
+    }
+
     public function getAvatarUrlAttribute(): string
         {
             if (!$this->avatar_path) {

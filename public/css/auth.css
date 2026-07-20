@@ -3613,6 +3613,102 @@ transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, b
   font-size: 14px;
 }
 
+.nt-push{
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 18px;
+  align-items: center;
+  margin-bottom: 22px;
+  padding: 22px;
+  border: 1px solid rgba(34,211,238,.28);
+  border-radius: 20px;
+  background: radial-gradient(circle at 0 0, rgba(14,165,233,.18), transparent 42%), linear-gradient(135deg, rgba(9,24,49,.98), rgba(6,17,36,.96));
+  box-shadow: 0 18px 46px rgba(0,0,0,.2);
+}
+
+.nt-push__icon{
+  display: grid;
+  width: 56px;
+  height: 56px;
+  place-items: center;
+  border: 1px solid rgba(103,232,249,.3);
+  border-radius: 17px;
+  background: rgba(8,145,178,.14);
+  font-size: 27px;
+}
+
+.nt-push__content{ min-width: 0; }
+
+.nt-push__heading{
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.nt-push__eyebrow{
+  display: block;
+  margin-bottom: 3px;
+  color: #67e8f9;
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+.nt-push h2{
+  margin: 0;
+  color: #f8fafc;
+  font-size: 1.12rem;
+}
+
+.nt-push p{
+  margin: 8px 0 0;
+  color: #a8b7cc;
+  line-height: 1.55;
+}
+
+.nt-push__live{
+  flex: 0 0 auto;
+  padding: 5px 9px;
+  border: 1px solid rgba(34,197,94,.28);
+  border-radius: 999px;
+  background: rgba(34,197,94,.09);
+  color: #86efac;
+  font-size: .72rem;
+  font-weight: 800;
+}
+
+.nt-push .nt-push__status{
+  color: #7dd3fc;
+  font-size: .85rem;
+  font-weight: 700;
+}
+
+.nt-push__status[data-type="success"]{ color: #86efac; }
+.nt-push__status[data-type="error"]{ color: #fda4af; }
+
+.nt-push__install{
+  margin-top: 12px;
+  padding: 11px 13px;
+  border-left: 3px solid #22d3ee;
+  border-radius: 8px;
+  background: rgba(15,118,148,.12);
+  color: #cbd5e1;
+  font-size: .85rem;
+  line-height: 1.5;
+}
+
+.nt-push__actions{
+  display: flex;
+  min-width: 128px;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nt-push__actions .nt-action{ width: 100%; }
+.nt-push [hidden]{ display: none !important; }
+
 .nt-toolbar{
   display: flex;
   align-items: center;
@@ -3854,6 +3950,20 @@ transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, b
 }
 
 @media (max-width: 720px){
+  .nt-push{
+    grid-template-columns: auto minmax(0, 1fr);
+    align-items: start;
+    padding: 18px;
+  }
+
+  .nt-push__heading{ align-items: flex-start; }
+
+  .nt-push__actions{
+    grid-column: 1 / -1;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+  }
+
   .nt-toolbar{
     align-items: stretch;
     flex-direction: column;
@@ -3883,6 +3993,15 @@ transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, b
 }
 
 @media (max-width: 480px){
+  .nt-push__icon{
+    width: 46px;
+    height: 46px;
+    border-radius: 14px;
+    font-size: 23px;
+  }
+
+  .nt-push__live{ display: none; }
+
   .nt-filters{
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
