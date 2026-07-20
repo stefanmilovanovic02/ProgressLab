@@ -1,9 +1,11 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Charts • ProgressLab</title>
+  <x-seo
+    title="Fitness Progress Charts"
+    description="Visualize nutrition trends, workout volume, and exercise strength progress with interactive ProgressLab charts."
+    robots="noindex, nofollow, noarchive"
+  />
   <link rel="stylesheet" href="{{ asset('css/auth.css') }}">
 
   {{-- Chart.js --}}

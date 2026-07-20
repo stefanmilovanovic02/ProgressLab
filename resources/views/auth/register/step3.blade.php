@@ -1,9 +1,12 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Register • Step 3</title>
+  <x-seo
+    title="Choose Your Fitness Goal"
+    description="Choose a bulk, cut, or recomposition goal and finish setting up your personalized ProgressLab targets."
+    robots="noindex, follow"
+    :canonical="route('register.goal')"
+  />
 
   <link rel="stylesheet" href="{{ asset('css/auth.css') }}">
 </head>

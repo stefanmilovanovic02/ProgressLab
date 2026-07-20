@@ -553,6 +553,14 @@ body{
   text-decoration: none;
 }
 
+.pl-nav__brand-logo{
+  width: 34px;
+  height: 34px;
+  display: block;
+  object-fit: contain;
+  filter: drop-shadow(0 4px 10px rgba(21, 139, 255, .2));
+}
+
 .pl-nav__brand-badge{
   width: 26px;
   height: 26px;

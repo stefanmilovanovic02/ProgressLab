@@ -1,9 +1,11 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Profile • ProgressLab</title>
+  <x-seo
+    title="Your Profile"
+    description="Manage your private ProgressLab profile, fitness metrics, nutrition targets, and account preferences."
+    robots="noindex, nofollow, noarchive"
+  />
   <link rel="stylesheet" href="{{ asset('css/auth.css') }}">
 </head>
 <body class="auth-body">

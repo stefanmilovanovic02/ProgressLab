@@ -1,9 +1,11 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Streaks • ProgressLab</title>
+  <x-seo
+    title="Fitness Streaks"
+    description="Review your login, nutrition, hydration, and workout consistency streaks in ProgressLab."
+    robots="noindex, nofollow, noarchive"
+  />
 
   <link rel="stylesheet" href="{{ asset('css/auth.css') }}">
 </head>

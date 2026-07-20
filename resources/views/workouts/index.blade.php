@@ -1,9 +1,11 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Workouts • ProgressLab</title>
+  <x-seo
+    title="Workout Plans"
+    description="Create, organize, and manage reusable workout plans and exercises with ProgressLab."
+    robots="noindex, nofollow, noarchive"
+  />
 
   <link rel="stylesheet" href="{{ asset('css/auth.css') }}">
 </head>

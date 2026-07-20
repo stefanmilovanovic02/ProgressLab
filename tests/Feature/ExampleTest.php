@@ -25,6 +25,11 @@ class ExampleTest extends TestCase
             ->assertOk()
             ->assertSee('name="remember" value="1"', false)
             ->assertDontSee('sessionStorage', false)
-            ->assertDontSee('ngrokSkip', false);
+            ->assertDontSee('ngrokSkip', false)
+            ->assertSee('<meta name="description"', false)
+            ->assertSee('<meta property="og:image"', false)
+            ->assertSee('<meta name="twitter:card" content="summary_large_image">', false)
+            ->assertSee('/images/branding/progresslab-og.png', false)
+            ->assertSee('/images/branding/progresslab-logo.png', false);
     }
 }

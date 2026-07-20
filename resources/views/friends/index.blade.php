@@ -1,9 +1,11 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Friends • ProgressLab</title>
+    <x-seo
+        title="Friends and Comparisons"
+        description="Connect with friends, follow activity, and compare shared exercise progress in ProgressLab."
+        robots="noindex, nofollow, noarchive"
+    />
 
     <link rel="stylesheet" href="{{ asset('css/auth.css') }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">

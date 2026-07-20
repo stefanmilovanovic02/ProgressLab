@@ -1,9 +1,11 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Add Today • ProgressLab</title>
+  <x-seo
+    title="Log Today's Progress"
+    description="Log today's calories, macros, hydration, creatine, exercises, sets, reps, and workout weights in ProgressLab."
+    robots="noindex, nofollow, noarchive"
+  />
   <link rel="stylesheet" href="{{ asset('css/auth.css') }}">
 </head>
 <body class="auth-body">

@@ -1,9 +1,12 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Register • Step 2</title>
+  <x-seo
+    title="Calculate Your Fitness Targets"
+    description="Calculate personalized maintenance calories and fitness targets while setting up your ProgressLab account."
+    robots="noindex, follow"
+    :canonical="route('register.macros')"
+  />
 
   <link rel="stylesheet" href="{{ asset('css/auth.css') }}">
 </head>

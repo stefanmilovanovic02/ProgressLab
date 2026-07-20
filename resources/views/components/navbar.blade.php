@@ -2,11 +2,14 @@
   <div class="pl-nav__inner">
 
     {{-- Left: Brand --}}
-    <a href="{{ route('home') }}" class="pl-nav__brand">
-      <span class="pl-nav__brand-badge" aria-hidden="true">
-        {{-- simple logo mark (you can swap later) --}}
-        <span class="pl-nav__brand-dot"></span>
-      </span>
+    <a href="{{ route('home') }}" class="pl-nav__brand" aria-label="ProgressLab home">
+      <img
+        class="pl-nav__brand-logo"
+        src="{{ asset('images/branding/progresslab-logo.png') }}"
+        alt=""
+        width="34"
+        height="34"
+      >
       <span class="pl-nav__brand-text">ProgressLab</span>
     </a>
 

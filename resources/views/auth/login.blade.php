@@ -1,9 +1,11 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Sign in</title>
+  <x-seo
+    title="Track Your Fitness Progress"
+    description="Sign in to ProgressLab to track workouts, nutrition, streaks, achievements, and measurable fitness progress."
+    :canonical="route('login')"
+  />
 
   {{-- Login page stylesheet --}}
   <link rel="stylesheet" href="{{ asset('css/auth.css') }}">

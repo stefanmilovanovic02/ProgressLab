@@ -1,9 +1,11 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Change Password • ProgressLab</title>
+  <x-seo
+    title="Change Password"
+    description="Securely update your ProgressLab account password."
+    robots="noindex, nofollow, noarchive"
+  />
   <link rel="stylesheet" href="{{ asset('css/auth.css') }}">
 </head>
 <body class="auth-body">

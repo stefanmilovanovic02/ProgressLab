@@ -1,9 +1,11 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Register</title>
+  <x-seo
+    title="Create Your Account"
+    description="Create a free ProgressLab account and start tracking workouts, nutrition, goals, streaks, and achievements."
+    :canonical="route('register')"
+  />
 
   {{-- Auth pages stylesheet (Login + Register) --}}
   <link rel="stylesheet" href="{{ asset('css/auth.css') }}">

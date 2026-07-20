@@ -1,9 +1,11 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Achievements • ProgressLab</title>
+  <x-seo
+    title="Fitness Achievements"
+    description="Unlock achievements for workout, nutrition, hydration, consistency, and fitness milestones in ProgressLab."
+    robots="noindex, nofollow, noarchive"
+  />
 
   <link rel="stylesheet" href="{{ asset('css/auth.css') }}">
 </head>

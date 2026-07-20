@@ -1,9 +1,11 @@
 <!doctype html>
 <html lang="en">
 <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Home • ProgressLab</title>
+    <x-seo
+        title="Home Dashboard"
+        description="Track today's nutrition, workouts, streaks, achievements, and weekly fitness progress in your ProgressLab dashboard."
+        robots="noindex, nofollow, noarchive"
+    />
     <link rel="stylesheet" href="{{ asset('css/auth.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
