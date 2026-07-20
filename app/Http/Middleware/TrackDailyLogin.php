@@ -13,19 +13,19 @@ class TrackDailyLogin
         $user = $request->user();
 
         if ($user) {
-            $today = now()->toDateString();
+            $activityAt = now();
+            $loginDate = $activityAt->copy()->startOfDay();
 
-            $updated = LoginLog::query()
-                ->where('user_id', $user->id)
-                ->where('login_date', $today)
-                ->update(['updated_at' => now()]);
-
-            if ($updated === 0) {
-                LoginLog::create([
+            LoginLog::query()->upsert(
+                [[
                     'user_id' => $user->id,
-                    'login_date' => $today,
-                ]);
-            }
+                    'login_date' => $loginDate,
+                    'created_at' => $activityAt,
+                    'updated_at' => $activityAt,
+                ]],
+                ['user_id', 'login_date'],
+                ['updated_at']
+            );
         }
 
         return $next($request);

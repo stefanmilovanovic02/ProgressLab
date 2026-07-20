@@ -51,6 +51,7 @@ class FriendsTest extends TestCase
             $table->unsignedBigInteger('user_id');
             $table->date('login_date');
             $table->timestamps();
+            $table->unique(['user_id', 'login_date']);
         });
 
         Schema::create('workout_logs', function (Blueprint $table) {
@@ -150,7 +151,7 @@ class FriendsTest extends TestCase
 
         DB::table('login_logs')->insert([
             'user_id' => $friend->id,
-            'login_date' => '2026-07-20',
+            'login_date' => '2026-07-20 00:00:00',
             'created_at' => '2026-07-20 08:00:00',
             'updated_at' => '2026-07-20 11:56:00',
         ]);
@@ -188,7 +189,7 @@ class FriendsTest extends TestCase
         $user = $this->createUser('presence@example.test');
         DB::table('login_logs')->insert([
             'user_id' => $user->id,
-            'login_date' => '2026-07-20',
+            'login_date' => '2026-07-20 00:00:00',
             'created_at' => '2026-07-20 08:00:00',
             'updated_at' => '2026-07-20 08:00:00',
         ]);
@@ -203,6 +204,7 @@ class FriendsTest extends TestCase
             ->value('updated_at');
 
         $this->assertSame('2026-07-20 12:00:00', Carbon::parse($updatedAt)->format('Y-m-d H:i:s'));
+        $this->assertSame(1, DB::table('login_logs')->where('user_id', $user->id)->count());
     }
 
     private function createUser(string $email): User
