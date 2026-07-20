@@ -108,6 +108,29 @@ class StreaksController extends Controller
             ['key'=>'workout','title'=>'Workout Streak','days'=>$workoutStreak,'icon'=>'💪','accent'=>'workout'],
         ];
 
+        $streaks = collect($streaks)->map(function (array $streak) {
+            $days = $streak['days'];
+            $rank = $days >= 100 ? intdiv($days, 100) : 0;
+
+            $streak['flame_tier'] = match (true) {
+                $days >= 300 => 'legendary',
+                $days >= 200 => 'cosmic',
+                $days >= 100 => 'inferno',
+                $days >= 50 => 'blazing',
+                $days >= 10 => 'ignited',
+                default => 'spark',
+            };
+            $streak['flame_rank'] = $rank;
+            $streak['milestone'] = match (true) {
+                $days === 10 => 10,
+                $days === 50 => 50,
+                $days >= 100 && $days % 100 === 0 => $days,
+                default => 0,
+            };
+
+            return $streak;
+        })->all();
+
         return view('streaks.index', [
             'streaks' => $streaks,
             'dailyMessage' => $dailyMessage,
