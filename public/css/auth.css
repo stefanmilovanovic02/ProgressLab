@@ -4769,6 +4769,7 @@ transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, b
 /* Progress photo check-in */
 .pp-card{
   margin-top: 24px;
+  padding: 26px;
   overflow: hidden;
 }
 
@@ -4793,10 +4794,10 @@ transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease, b
   width: 48px;
   height: 48px;
   place-items: center;
-  border: 1px solid rgba(56, 189, 248, .26);
+  border: 1px solid rgba(255, 255, 255, .08);
   border-radius: 14px;
-  background: linear-gradient(145deg, rgba(37, 99, 235, .22), rgba(34, 211, 238, .08));
-  font-size: 23px;
+  background: rgba(255, 255, 255, .05);
+  font-size: 22px;
 }
 
 .pp-head h2{
