@@ -626,6 +626,7 @@
                         pointBackgroundColor: '#3b82f6',
                         pointBorderColor: '#3b82f6',
                         pointRadius: 3,
+                        spanGaps: true,
                         tension: 0.35,
                         borderWidth: 2
                     },
@@ -637,6 +638,7 @@
                         pointBackgroundColor: '#ef4444',
                         pointBorderColor: '#ef4444',
                         pointRadius: 3,
+                        spanGaps: true,
                         tension: 0.35,
                         borderWidth: 2
                     }
