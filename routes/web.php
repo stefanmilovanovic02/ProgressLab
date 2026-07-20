@@ -123,6 +123,7 @@ Route::middleware(['auth', 'track.daily.login'])->group(function () {
     Route::post('/friends/request', [FriendsController::class, 'sendRequest'])->name('friends.request');
     Route::post('/friends/requests/{friendRequest}/accept', [FriendsController::class, 'accept'])->name('friends.requests.accept');
     Route::post('/friends/requests/{friendRequest}/decline', [FriendsController::class, 'decline'])->name('friends.requests.decline');
+    Route::delete('/friends/{user}', [FriendsController::class, 'destroy'])->name('friends.destroy');
     
     Route::get('/friends/{user}/summary', [\App\Http\Controllers\FriendsController::class, 'summary'])->name('friends.summary');
         

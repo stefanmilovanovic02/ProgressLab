@@ -177,6 +177,8 @@
                         <span class="fr-pill" id="fmEmail">email</span>
                     </div>
                 </div>
+
+                <button class="fr-unfriend" type="button" data-unfriend-open>Unfriend</button>
             </div>
         </div>
 
@@ -243,6 +245,20 @@
 
             <div id="fcEmpty" class="fr-compareEmpty">Select an exercise to compare progress.</div>
         </div>
+    </div>
+
+    <div class="fr-unfriend-confirm" data-unfriend-confirm aria-hidden="true">
+        <button class="fr-unfriend-confirm__backdrop" type="button" aria-label="Cancel removing friend" data-unfriend-cancel></button>
+        <section class="fr-unfriend-confirm__dialog" role="alertdialog" aria-modal="true" aria-labelledby="unfriendConfirmTitle" aria-describedby="unfriendConfirmText">
+            <div class="fr-unfriend-confirm__icon" aria-hidden="true">👥</div>
+            <h2 id="unfriendConfirmTitle">Remove friend?</h2>
+            <p id="unfriendConfirmText">Are you sure you want to remove <strong data-unfriend-name>this friend</strong> from your friends list?</p>
+            <div class="fr-unfriend-confirm__actions">
+                <button class="pl-btn pl-btn--ghost" type="button" data-unfriend-cancel>Cancel</button>
+                <button class="fr-unfriend-confirm__yes" type="button" data-unfriend-confirm-button>Yes, unfriend</button>
+            </div>
+            <p class="fr-unfriend-confirm__error" data-unfriend-error role="alert" hidden></p>
+        </section>
     </div>
 </div>
 
@@ -428,6 +444,12 @@
 
     const fcExerciseSelect = document.getElementById('fcExerciseSelect');
     const fcEmpty = document.getElementById('fcEmpty');
+    const csrf = document.querySelector('meta[name="csrf-token"]').content;
+    const unfriendOpen = modal.querySelector('[data-unfriend-open]');
+    const unfriendConfirm = modal.querySelector('[data-unfriend-confirm]');
+    const unfriendName = modal.querySelector('[data-unfriend-name]');
+    const unfriendButton = modal.querySelector('[data-unfriend-confirm-button]');
+    const unfriendError = modal.querySelector('[data-unfriend-error]');
 
     let currentFriendId = null;
     let fcChart = null;
@@ -438,13 +460,67 @@
     }
 
     function closeModal(){
+        closeUnfriendConfirm();
         modal.classList.remove('is-open');
         document.body.style.overflow = '';
     }
 
+    function openUnfriendConfirm(){
+        if (!currentFriendId) return;
+        unfriendName.textContent = fmName.textContent || 'this friend';
+        unfriendError.hidden = true;
+        unfriendError.textContent = '';
+        unfriendButton.disabled = false;
+        unfriendButton.textContent = 'Yes, unfriend';
+        unfriendConfirm.classList.add('is-open');
+        unfriendConfirm.setAttribute('aria-hidden', 'false');
+        unfriendButton.focus();
+    }
+
+    function closeUnfriendConfirm(){
+        unfriendConfirm.classList.remove('is-open');
+        unfriendConfirm.setAttribute('aria-hidden', 'true');
+    }
+
     closeEls.forEach(el => el.addEventListener('click', closeModal));
+    unfriendOpen.addEventListener('click', openUnfriendConfirm);
+    unfriendConfirm.querySelectorAll('[data-unfriend-cancel]').forEach(button => {
+        button.addEventListener('click', closeUnfriendConfirm);
+    });
+
+    unfriendButton.addEventListener('click', async () => {
+        if (!currentFriendId || unfriendButton.disabled) return;
+
+        unfriendButton.disabled = true;
+        unfriendButton.textContent = 'Removing…';
+        unfriendError.hidden = true;
+
+        try {
+            const response = await fetch(`{{ url('/friends') }}/${currentFriendId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrf,
+                },
+            });
+
+            if (!response.ok) throw new Error('Friend could not be removed.');
+            window.location.reload();
+        } catch (error) {
+            unfriendError.textContent = error.message || 'Friend could not be removed. Please try again.';
+            unfriendError.hidden = false;
+            unfriendButton.disabled = false;
+            unfriendButton.textContent = 'Yes, unfriend';
+        }
+    });
+
     document.addEventListener('keydown', (e) => {
-        if(e.key === 'Escape') closeModal();
+        if(e.key !== 'Escape') return;
+        if(unfriendConfirm.classList.contains('is-open')) {
+            closeUnfriendConfirm();
+            return;
+        }
+        closeModal();
     });
 
     function setDot(dot){

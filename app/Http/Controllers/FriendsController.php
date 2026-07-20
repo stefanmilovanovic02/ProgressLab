@@ -286,6 +286,46 @@ private function humanLastSeen($timestamp): string
         return response()->json(['ok' => true]);
     }
 
+    public function destroy(Request $request, User $user)
+    {
+        $auth = $request->user();
+
+        $isFriend = $auth->friends()
+            ->where('users.id', $user->id)
+            ->exists();
+
+        abort_unless($isFriend, 404);
+
+        DB::transaction(function () use ($auth, $user) {
+            DB::table('friends')
+                ->where(function ($query) use ($auth, $user) {
+                    $query->where('user_id', $auth->id)
+                        ->where('friend_id', $user->id);
+                })
+                ->orWhere(function ($query) use ($auth, $user) {
+                    $query->where('user_id', $user->id)
+                        ->where('friend_id', $auth->id);
+                })
+                ->delete();
+
+            FriendRequest::query()
+                ->where(function ($query) use ($auth, $user) {
+                    $query->where('sender_id', $auth->id)
+                        ->where('receiver_id', $user->id);
+                })
+                ->orWhere(function ($query) use ($auth, $user) {
+                    $query->where('sender_id', $user->id)
+                        ->where('receiver_id', $auth->id);
+                })
+                ->delete();
+        });
+
+        return response()->json([
+            'ok' => true,
+            'message' => 'Friend removed.',
+        ]);
+    }
+
     private function publicImageUrl(?string $path): string
         {
             if (!$path) return asset('images/default-avatar.png');

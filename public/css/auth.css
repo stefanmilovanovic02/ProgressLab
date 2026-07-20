@@ -3794,6 +3794,99 @@ body.st-milestone-open{ overflow: hidden; }
   align-items:flex-start;
 }
 
+.fr-unfriend{
+  margin: 2px 42px 0 auto;
+  padding: 9px 13px;
+  border: 1px solid rgba(248,113,113,.28);
+  border-radius: 10px;
+  background: rgba(239,68,68,.09);
+  color: #fca5a5;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 850;
+  cursor: pointer;
+  transition: background .18s ease, border-color .18s ease, color .18s ease;
+}
+.fr-unfriend:hover{
+  border-color: rgba(248,113,113,.48);
+  background: rgba(239,68,68,.17);
+  color: #fee2e2;
+}
+
+.fr-unfriend-confirm{
+  position: fixed;
+  inset: 0;
+  z-index: 10002;
+  display: none;
+  padding: 18px;
+  place-items: center;
+}
+.fr-unfriend-confirm.is-open{ display: grid; }
+.fr-unfriend-confirm__backdrop{
+  position: absolute;
+  inset: 0;
+  border: 0;
+  background: rgba(0,0,0,.76);
+  backdrop-filter: blur(7px);
+  cursor: default;
+}
+.fr-unfriend-confirm__dialog{
+  position: relative;
+  width: min(100%, 430px);
+  padding: 28px;
+  border: 1px solid rgba(248,113,113,.22);
+  border-radius: 20px;
+  background: linear-gradient(155deg, #151e2d, #0b111d);
+  box-shadow: 0 30px 90px rgba(0,0,0,.62), 0 0 42px rgba(239,68,68,.08);
+  text-align: center;
+}
+.fr-unfriend-confirm__icon{
+  display: grid;
+  width: 58px;
+  height: 58px;
+  margin: 0 auto 14px;
+  place-items: center;
+  border: 1px solid rgba(248,113,113,.2);
+  border-radius: 50%;
+  background: rgba(239,68,68,.1);
+  font-size: 25px;
+}
+.fr-unfriend-confirm h2{
+  margin: 0;
+  color: #fff;
+  font-size: 22px;
+}
+.fr-unfriend-confirm p{
+  margin: 10px 0 20px;
+  color: rgba(255,255,255,.64);
+  font-size: 13px;
+  line-height: 1.55;
+}
+.fr-unfriend-confirm p strong{ color: rgba(255,255,255,.92); }
+.fr-unfriend-confirm__actions{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.fr-unfriend-confirm__yes{
+  min-height: 42px;
+  border: 1px solid rgba(248,113,113,.5);
+  border-radius: 10px;
+  background: #dc2626;
+  color: #fff;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 850;
+  cursor: pointer;
+}
+.fr-unfriend-confirm__yes:hover{ background: #ef4444; }
+.fr-unfriend-confirm__yes:disabled{ cursor: wait; opacity: .65; }
+.fr-unfriend-confirm .fr-unfriend-confirm__error{
+  margin: 12px 0 0;
+  color: #fca5a5;
+}
+.fr-unfriend-confirm__error[hidden]{ display: none; }
+
 .fr-modal__avatarWrap{
   position: relative;
   width: 68px;
@@ -4138,6 +4231,15 @@ body.st-milestone-open{ overflow: hidden; }
 .hm-progress__bar.is-creatine{
   background: linear-gradient(90deg, #d9dce3, #ffffff);
   box-shadow: 0 0 8px rgba(255,255,255,.28);
+}
+
+@media (max-width: 640px){
+  .fr-modal__head{ flex-wrap: wrap; }
+  .fr-unfriend{
+    width: 100%;
+    margin: 8px 0 0;
+  }
+  .fr-unfriend-confirm__dialog{ padding: 24px 18px 20px; }
 }
 
 /* ============================
