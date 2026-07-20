@@ -19,6 +19,7 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\NotificationsController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\ProgressPhotoController;
+use App\Http\Controllers\LeaderboardController;
 
 // Guest (Not logged in)
  Route::middleware('guest')->group(function () {
@@ -98,6 +99,10 @@ Route::middleware(['auth', 'track.daily.login'])->group(function () {
 
     // 7) Streaks
     Route::get('/streaks', [StreaksController::class, 'index'])->name('streaks.index');
+
+    // Leaderboards
+    Route::get('/leaderboards', [LeaderboardController::class, 'index'])->name('leaderboards.index');
+    Route::get('/leaderboards/data', [LeaderboardController::class, 'data'])->name('leaderboards.data');
 
     // 8) Achievements
     Route::get('/achievements', [AchievementsController::class, 'index'])->name('achievements.index');

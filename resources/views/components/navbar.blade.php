@@ -29,6 +29,7 @@
       <a class="pl-nav__link {{ request()->routeIs('streaks.*') ? 'is-active' : '' }}" href="{{ route('streaks.index') }}">Streaks</a>
       <a class="pl-nav__link {{ request()->routeIs('achievements.*') ? 'is-active' : '' }}" href="{{ route('achievements.index') }}">Achievements</a>
       <a class="pl-nav__link {{ request()->routeIs('friends.*') ? 'is-active' : '' }}" href="{{ route('friends.index') }}">Friends</a>
+      <a class="pl-nav__link {{ request()->routeIs('leaderboards.*') ? 'is-active' : '' }}" href="{{ route('leaderboards.index') }}">Leaderboard</a>
       <a class="pl-nav__link {{ request()->routeIs('profile.*') ? 'is-active' : '' }}" href="{{ route('profile.show') }}">Profile</a>
 
       <a
