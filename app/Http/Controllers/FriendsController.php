@@ -37,9 +37,9 @@ class FriendsController extends Controller
         $dot = 'offline';
 
         if ($lastSeen) {
-            $secs = now()->diffInSeconds(\Carbon\Carbon::parse($lastSeen));
+            $secs = (int) \Carbon\Carbon::parse($lastSeen)->diffInSeconds(now(), true);
 
-            if ($secs <= 60) {          
+            if ($secs <= 300) {
                 $status = 'Online';
                 $dot = 'online';
             } elseif ($secs <= 7200) {
@@ -132,19 +132,19 @@ private function humanLastSeen($timestamp): string
     if (!$timestamp) return '—';
 
     $dt = \Carbon\Carbon::parse($timestamp);
-    $secs = $dt->diffInSeconds(now());
+    $secs = (int) $dt->diffInSeconds(now(), true);
 
-    if ($secs <= 5) return 'Active now';
+    if ($secs <= 15) return 'Active now';
     if ($secs < 60) return 'Last seen ' . $secs . ' seconds ago';
 
     $mins = intdiv($secs, 60);
-    if ($mins < 60) return 'Last seen ' . $mins . ' minutes ago';
+    if ($mins < 60) return 'Last seen ' . $mins . ' minute' . ($mins === 1 ? '' : 's') . ' ago';
 
     $hours = intdiv($mins, 60);
-    if ($hours < 24) return 'Last seen ' . $hours . ' hours ago';
+    if ($hours < 24) return 'Last seen ' . $hours . ' hour' . ($hours === 1 ? '' : 's') . ' ago';
 
     $days = intdiv($hours, 24);
-    return 'Last seen ' . $days . ' days ago';
+    return 'Last seen ' . $days . ' day' . ($days === 1 ? '' : 's') . ' ago';
 }
 
     public function search(Request $request)
@@ -355,19 +355,19 @@ private function humanLastSeen($timestamp): string
             if (!$timestamp) return '—';
 
             $dt = \Carbon\Carbon::parse($timestamp);
-            $secs = $dt->diffInSeconds(now());
+            $secs = (int) $dt->diffInSeconds(now(), true);
 
-            if ($secs <= 5) return 'Just now';
+            if ($secs <= 15) return 'Just now';
             if ($secs < 60) return $secs . ' seconds ago';
 
             $mins = intdiv($secs, 60);
-            if ($mins < 60) return $mins . ' minutes ago';
+            if ($mins < 60) return $mins . ' minute' . ($mins === 1 ? '' : 's') . ' ago';
 
             $hours = intdiv($mins, 60);
-            if ($hours < 24) return $hours . ' hours ago';
+            if ($hours < 24) return $hours . ' hour' . ($hours === 1 ? '' : 's') . ' ago';
 
             $days = intdiv($hours, 24);
-            return $days . ' days ago';
+            return $days . ' day' . ($days === 1 ? '' : 's') . ' ago';
         }
 
         // workout streak (expects workout_logs table with date column OR created_at)
@@ -420,8 +420,8 @@ public function summary(Request $request, User $user)
     $status = 'Offline';
     $dot = 'offline';
     if ($lastActive) {
-        $secs = \Carbon\Carbon::parse($lastActive)->diffInSeconds(now());
-        if ($secs <= 60) { $status = 'Online'; $dot = 'online'; }
+        $secs = (int) \Carbon\Carbon::parse($lastActive)->diffInSeconds(now(), true);
+        if ($secs <= 300) { $status = 'Online'; $dot = 'online'; }
         elseif ($secs <= 7200) { $status = 'Recently Active'; $dot = 'recent'; }
     }
 
@@ -457,14 +457,46 @@ public function summary(Request $request, User $user)
         ->all();
     $workoutStreak = $this->consecutiveDaysStreak($workoutDates);
 
-    // Third streak: WATER (days with water_ml > 0)
-    $waterDates = DB::table('nutrition_entries')
+    // Third card: the highest current nutrition streak. Ties rotate daily.
+    $nutritionRows = DB::table('nutrition_entries')
         ->where('user_id', $user->id)
-        ->where('water_ml', '>', 0)
         ->orderByDesc('entry_date')
-        ->pluck('entry_date')
-        ->all();
-    $waterStreak = $this->consecutiveDaysStreak($waterDates);
+        ->get([
+            'entry_date',
+            'calories',
+            'protein_g',
+            'carbs_g',
+            'fat_g',
+            'creatine_g',
+            'water_ml',
+        ]);
+
+    $nutritionStreaks = collect([
+        ['label' => 'Calories Streak', 'column' => 'calories', 'icon' => '🔥'],
+        ['label' => 'Protein Streak', 'column' => 'protein_g', 'icon' => '🥩'],
+        ['label' => 'Carbs Streak', 'column' => 'carbs_g', 'icon' => '🍚'],
+        ['label' => 'Fat Streak', 'column' => 'fat_g', 'icon' => '🥜'],
+        ['label' => 'Creatine Streak', 'column' => 'creatine_g', 'icon' => '🧬'],
+        ['label' => 'Water Streak', 'column' => 'water_ml', 'icon' => '💧'],
+    ])->map(function (array $streak) use ($nutritionRows) {
+        $dates = $nutritionRows
+            ->filter(fn ($entry) => (float) ($entry->{$streak['column']} ?? 0) > 0)
+            ->pluck('entry_date')
+            ->all();
+
+        return [
+            'label' => $streak['label'],
+            'value' => $this->consecutiveDaysStreak($dates),
+            'icon' => $streak['icon'],
+        ];
+    });
+
+    $highestNutritionValue = (int) $nutritionStreaks->max('value');
+    $highestNutritionStreaks = $nutritionStreaks
+        ->where('value', $highestNutritionValue)
+        ->values();
+    $tieSeed = abs(crc32($auth->id . '|' . $user->id . '|' . now()->toDateString()));
+    $featuredNutritionStreak = $highestNutritionStreaks[$tieSeed % $highestNutritionStreaks->count()];
 
     // ACHIEVEMENTS (top 3 unlocked)
     $achievements = [];
@@ -521,7 +553,7 @@ public function summary(Request $request, User $user)
         'streaks' => [
             ['label' => 'Login Streak', 'value' => $loginStreak, 'icon' => '🔥'],
             ['label' => 'Workout Streak', 'value' => $workoutStreak, 'icon' => '💪'],
-            ['label' => 'Water Streak', 'value' => $waterStreak, 'icon' => '💧'],
+            $featuredNutritionStreak,
         ],
         'achievements' => $achievements,
         'achievements_unlocked' => $achUnlockedCount,

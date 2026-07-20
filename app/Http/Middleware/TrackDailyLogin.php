@@ -15,15 +15,15 @@ class TrackDailyLogin
         if ($user) {
             $today = now()->toDateString();
 
-            $already = LoginLog::where('user_id', $user->id)
-                ->whereDate('login_date', $today)
-                ->exists();
+            $updated = LoginLog::query()
+                ->where('user_id', $user->id)
+                ->where('login_date', $today)
+                ->update(['updated_at' => now()]);
 
-            if (!$already) {
+            if ($updated === 0) {
                 LoginLog::create([
                     'user_id' => $user->id,
-                    // store as start-of-day (safe for datetime columns)
-                    'login_date' => now()->startOfDay(),
+                    'login_date' => $today,
                 ]);
             }
         }

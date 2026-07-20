@@ -691,6 +691,7 @@
         }
 
         const statusText = data.user.status || 'Offline';
+        fmStatus.classList.remove('is-online', 'is-recent', 'is-offline');
         fmStatus.textContent =
             (statusText === 'Online'
                 ? '🟢 '
@@ -698,13 +699,14 @@
                     ? '🟡 '
                     : '⚫ ') + statusText;
 
-        const dot = statusText === 'Online'
+        const dot = data.user.dot || (statusText === 'Online'
             ? 'online'
             : statusText === 'Recently Active'
                 ? 'recent'
-                : 'offline';
+                : 'offline');
 
         setDot(dot);
+        fmStatus.classList.add(`is-${dot}`);
 
         fmLast.textContent = 'Last active: ' + (data.user.last_active || '—');
 
