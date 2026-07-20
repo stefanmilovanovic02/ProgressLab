@@ -9,7 +9,9 @@
     $pageTitle = $title === 'ProgressLab' ? $title : $title . ' • ProgressLab';
     $canonicalUrl = $canonical ?: url()->current();
     $socialImage = asset('images/branding/progresslab-og.png');
-    $logo = asset('images/branding/progresslab-logo.png');
+    $logo = asset('images/branding/progresslab-logo.png') . '?v=2';
+    $favicon = asset('images/branding/progresslab-favicon.png');
+    $touchIcon = asset('images/branding/progresslab-touch-icon.png');
 @endphp
 
 <meta charset="utf-8">
@@ -19,8 +21,8 @@
 <meta name="robots" content="{{ $robots }}">
 <meta name="theme-color" content="#071225">
 <link rel="canonical" href="{{ $canonicalUrl }}">
-<link rel="icon" type="image/png" href="{{ $logo }}">
-<link rel="apple-touch-icon" href="{{ $logo }}">
+<link rel="icon" type="image/png" sizes="256x256" href="{{ $favicon }}">
+<link rel="apple-touch-icon" sizes="180x180" href="{{ $touchIcon }}">
 
 <meta property="og:site_name" content="ProgressLab">
 <meta property="og:type" content="website">
@@ -50,6 +52,7 @@
     'applicationCategory' => 'HealthApplication',
     'operatingSystem' => 'Web',
     'description' => $description,
+    'logo' => $logo,
     'image' => $socialImage,
 ], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
 @endif

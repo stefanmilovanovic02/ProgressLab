@@ -5,7 +5,7 @@
     <a href="{{ route('home') }}" class="pl-nav__brand" aria-label="ProgressLab home">
       <img
         class="pl-nav__brand-logo"
-        src="{{ asset('images/branding/progresslab-logo.png') }}"
+        src="{{ asset('images/branding/progresslab-logo.png') }}?v=2"
         alt=""
         width="34"
         height="34"
