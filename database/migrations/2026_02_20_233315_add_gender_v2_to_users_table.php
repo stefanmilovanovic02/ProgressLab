@@ -7,10 +7,12 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration {
     public function up(): void
     {
+        if (Schema::hasColumn('users', 'gender')) {
+            return;
+        }
+
         Schema::table('users', function (Blueprint $table) {
-            if (!Schema::hasColumn('users', 'gender')) {
-                $table->string('gender', 10)->nullable()->after('location');
-            }
+            $table->string('gender', 10)->nullable()->after('location');
         });
     }
 

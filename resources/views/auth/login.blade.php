@@ -29,6 +29,10 @@
       </header>
 
       <div class="auth-panel">
+        @if (session('status'))
+          <p class="auth-status">{{ session('status') }}</p>
+        @endif
+
         <form class="auth-form" action="{{ route('login.store') }}" method="POST">
           @csrf
 

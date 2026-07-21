@@ -6,6 +6,10 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration {
   public function up(): void {
+    if (Schema::hasTable('workout_log_sets')) {
+      return;
+    }
+
     Schema::create('workout_log_sets', function (Blueprint $table) {
       $table->id();
       $table->foreignId('workout_log_exercise_id')->constrained('workout_log_exercises')->cascadeOnDelete();
