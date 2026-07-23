@@ -12,6 +12,7 @@ use App\Models\FriendActivity;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 use App\Services\ExerciseHistoryService;
+use App\Services\NotificationService;
 
 
 
@@ -234,15 +235,18 @@ class AddTodayController extends Controller
                 'text' => 'logged nutrition for today.',
                 'updated_at' => now(),
             ]);
+            app(NotificationService::class)->notifyFriendActivity($existing);
             return;
         }
 
-        FriendActivity::create([
+        $activity = FriendActivity::create([
             'user_id' => $userId,
             'type' => 'nutrition',
             'text' => 'logged nutrition for today.',
             'meta' => ['date' => $today->toDateString()],
         ]);
+
+        app(NotificationService::class)->notifyFriendActivity($activity);
     }
 
     private function syncWorkoutActivity(int $userId, ?string $workoutName = null): void
@@ -264,14 +268,17 @@ class AddTodayController extends Controller
                 'text' => $text,
                 'updated_at' => now(),
             ]);
+            app(NotificationService::class)->notifyFriendActivity($existing);
             return;
         }
 
-        FriendActivity::create([
+        $activity = FriendActivity::create([
             'user_id' => $userId,
             'type' => 'workout',
             'text' => $text,
             'meta' => ['date' => $today->toDateString()],
         ]);
+
+        app(NotificationService::class)->notifyFriendActivity($activity);
     }
 }

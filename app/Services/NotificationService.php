@@ -144,6 +144,75 @@ class NotificationService
         });
     }
 
+    public function notifyFriendActivity(FriendActivity $activity): int
+    {
+        if (!Schema::hasTable('app_notifications') || !Schema::hasTable('friends')) {
+            return 0;
+        }
+
+        $activity->loadMissing('user');
+        $actor = $activity->user;
+
+        if (!$actor) {
+            return 0;
+        }
+
+        $actorName = $actor->full_name ?: $actor->name ?: $actor->username ?: 'A friend';
+        $title = match ($activity->type) {
+            'nutrition' => 'Friend logged nutrition',
+            'workout' => 'Friend completed a workout',
+            default => 'Friend activity',
+        };
+        $icon = match ($activity->type) {
+            'workout' => '🏋️',
+            'nutrition' => '🍽️',
+            'streak' => '🔥',
+            default => '✨',
+        };
+        $delivered = 0;
+
+        $actor->friends()->each(function (User $friend) use (
+            $activity,
+            $actor,
+            $actorName,
+            $title,
+            $icon,
+            &$delivered
+        ) {
+            $notification = AppNotification::query()->updateOrCreate(
+                [
+                    'user_id' => $friend->id,
+                    'source_type' => 'friend_activity',
+                    'source_id' => $activity->id,
+                ],
+                [
+                    'category' => 'friend',
+                    'title' => $title,
+                    'message' => $actorName . ' ' . $activity->text,
+                    'icon' => $icon,
+                    'action_url' => route('friends.index', [], false),
+                    'data' => [
+                        'actor_id' => $actor->id,
+                        'actor_name' => $actorName,
+                        'actor_avatar' => $actor->avatar_url,
+                        'activity_type' => $activity->type,
+                    ],
+                ]
+            );
+
+            if (!$notification->push_sent_at) {
+                $accepted = $this->deliver($friend, $notification);
+                $delivered += $accepted;
+
+                if ($accepted > 0) {
+                    $notification->forceFill(['push_sent_at' => now()])->save();
+                }
+            }
+        });
+
+        return $delivered;
+    }
+
     public function deliver(User $user, AppNotification $notification): int
     {
         return $this->webPush->sendToUser($user, [

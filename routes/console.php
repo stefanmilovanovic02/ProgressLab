@@ -9,6 +9,7 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('notifications:send-reminders')
-    ->dailyAt('20:00')
+    ->hourly()
+    ->between('18:00', '23:00')
     ->timezone(config('app.timezone'))
     ->withoutOverlapping();

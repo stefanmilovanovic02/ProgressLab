@@ -17,6 +17,7 @@ class AppNotification extends Model
         'action_url',
         'data',
         'read_at',
+        'push_sent_at',
     ];
 
     protected function casts(): array
@@ -24,6 +25,7 @@ class AppNotification extends Model
         return [
             'data' => 'array',
             'read_at' => 'datetime',
+            'push_sent_at' => 'datetime',
         ];
     }
 

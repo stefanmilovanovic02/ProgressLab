@@ -4,8 +4,10 @@ namespace Tests\Feature;
 
 use App\Http\Middleware\TrackDailyLogin;
 use App\Models\AppNotification;
+use App\Models\FriendActivity;
 use App\Models\User;
 use App\Services\NotificationService;
+use App\Services\WebPushService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
@@ -39,6 +41,7 @@ class NotificationsTest extends TestCase
             $table->string('action_url')->nullable();
             $table->json('data')->nullable();
             $table->timestamp('read_at')->nullable();
+            $table->timestamp('push_sent_at')->nullable();
             $table->timestamps();
             $table->unique(['user_id', 'source_type', 'source_id']);
         });
@@ -51,6 +54,23 @@ class NotificationsTest extends TestCase
             $table->text('auth_token');
             $table->string('content_encoding')->default('aes128gcm');
             $table->string('user_agent')->nullable();
+            $table->timestamps();
+        });
+
+        Schema::create('friends', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('user_id');
+            $table->unsignedBigInteger('friend_id');
+            $table->timestamps();
+            $table->unique(['user_id', 'friend_id']);
+        });
+
+        Schema::create('friend_activities', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('user_id');
+            $table->string('type');
+            $table->string('text');
+            $table->json('meta')->nullable();
             $table->timestamps();
         });
 
@@ -68,6 +88,8 @@ class NotificationsTest extends TestCase
     protected function tearDown(): void
     {
         Schema::dropIfExists('login_logs');
+        Schema::dropIfExists('friend_activities');
+        Schema::dropIfExists('friends');
         Schema::dropIfExists('push_subscriptions');
         Schema::dropIfExists('app_notifications');
         Schema::dropIfExists('users');
@@ -205,5 +227,57 @@ class NotificationsTest extends TestCase
                 'ok' => false,
                 'message' => 'The push provider did not accept the notification. Please disable push on this device, enable it again, and retry.',
             ]);
+    }
+
+    public function test_new_friend_activity_creates_and_pushes_one_notification_immediately(): void
+    {
+        $actor = User::query()->create([
+            'name' => 'Nutrition Friend',
+            'email' => 'nutrition-friend@example.test',
+            'password' => 'password',
+        ]);
+        $recipient = User::query()->create([
+            'name' => 'Push Recipient',
+            'email' => 'push-recipient@example.test',
+            'password' => 'password',
+        ]);
+
+        \Illuminate\Support\Facades\DB::table('friends')->insert([
+            'user_id' => $actor->id,
+            'friend_id' => $recipient->id,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $activity = FriendActivity::query()->create([
+            'user_id' => $actor->id,
+            'type' => 'nutrition',
+            'text' => 'logged nutrition for today.',
+            'meta' => ['date' => now()->toDateString()],
+        ]);
+
+        $push = \Mockery::mock(WebPushService::class);
+        $push->shouldReceive('sendToUser')
+            ->once()
+            ->withArgs(fn (User $user, array $payload) =>
+                $user->is($recipient)
+                && $payload['title'] === 'Friend logged nutrition'
+                && $payload['body'] === 'Nutrition Friend logged nutrition for today.'
+            )
+            ->andReturn(1);
+
+        $service = new NotificationService($push);
+        $this->assertSame(1, $service->notifyFriendActivity($activity));
+        $this->assertSame(0, $service->notifyFriendActivity($activity));
+
+        $this->assertDatabaseHas('app_notifications', [
+            'user_id' => $recipient->id,
+            'source_type' => 'friend_activity',
+            'source_id' => $activity->id,
+            'title' => 'Friend logged nutrition',
+            'message' => 'Nutrition Friend logged nutrition for today.',
+        ]);
+        $this->assertNotNull($recipient->appNotifications()->first()->push_sent_at);
+        $this->assertSame(1, $recipient->appNotifications()->count());
     }
 }
