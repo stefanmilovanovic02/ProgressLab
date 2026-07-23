@@ -218,7 +218,7 @@ class NotificationService
         return $this->webPush->sendToUser($user, [
             'title' => $notification->title,
             'body' => $notification->message,
-            'url' => $notification->action_url ?: route('notifications.index', [], false),
+            'url' => route('notifications.index', [], false),
             'tag' => $notification->source_type . '-' . $notification->source_id,
             'category' => $notification->category,
             'badgeCount' => $this->unreadCount($user),

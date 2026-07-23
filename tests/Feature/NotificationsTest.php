@@ -263,6 +263,7 @@ class NotificationsTest extends TestCase
                 $user->is($recipient)
                 && $payload['title'] === 'Friend logged nutrition'
                 && $payload['body'] === 'Nutrition Friend logged nutrition for today.'
+                && $payload['url'] === route('notifications.index', [], false)
             )
             ->andReturn(1);
 
