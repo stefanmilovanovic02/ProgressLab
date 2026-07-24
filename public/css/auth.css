@@ -3809,6 +3809,7 @@ body.st-milestone-open{ overflow: hidden; }
   line-height: 1;
   cursor: pointer;
   transition: transform .18s ease, background .18s ease, border-color .18s ease;
+  margin-top: 8px;
 }
 .fr-modal__close:hover{
   transform: rotate(8deg) scale(1.06);
