@@ -23,6 +23,8 @@ use App\Http\Controllers\LeaderboardController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\ExerciseController as AdminExerciseController;
+use App\Http\Controllers\Admin\SubscriptionController as AdminSubscriptionController;
+use App\Http\Controllers\Admin\OwnerProgressPhotoController;
 
 // Guest (Not logged in)
  Route::middleware('guest')->group(function () {
@@ -158,6 +160,13 @@ Route::middleware(['auth', 'track.daily.login'])->group(function () {
             Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
             Route::resource('users', AdminUserController::class);
             Route::resource('exercises', AdminExerciseController::class)->except('show');
+
+            Route::middleware('role:owner')->group(function () {
+                Route::resource('subscriptions', AdminSubscriptionController::class)->except('show');
+                Route::get('/progress-photos/{progressPhoto}/{view}', [OwnerProgressPhotoController::class, 'show'])
+                    ->where('view', 'front|side|back')
+                    ->name('progress-photos.show');
+            });
         });
 
 });

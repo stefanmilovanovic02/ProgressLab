@@ -63,11 +63,24 @@ class UserController extends Controller
             ->with('status', 'User created successfully.');
     }
 
-    public function show(User $user, AdminUserStatsService $statsService)
+    public function show(Request $request, User $user, AdminUserStatsService $statsService)
     {
         $stats = $statsService->build($user);
+        $ownerData = null;
 
-        return view('admin.users.show', compact('user', 'stats'));
+        if ($request->user()->isOwner()) {
+            $ownerData = [
+                'photos' => $user->progressPhotoSets()
+                    ->latest('captured_on')
+                    ->limit(24)
+                    ->get(),
+                'subscriptions' => $user->subscriptions()
+                    ->latest('starts_on')
+                    ->get(),
+            ];
+        }
+
+        return view('admin.users.show', compact('user', 'stats', 'ownerData'));
     }
 
     public function edit(Request $request, User $user)

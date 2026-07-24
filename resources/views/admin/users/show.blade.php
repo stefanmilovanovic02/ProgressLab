@@ -24,8 +24,13 @@
     @include('admin.partials.navigation')
 
     <div class="ad-privacy-banner">
-      <strong>Privacy protected</strong>
-      Progress photos are never loaded or displayed in the admin area. Streaks below are calculated from activity and are view-only.
+      @if(auth()->user()->isOwner())
+        <strong>Owner access</strong>
+        Progress photos are available below through protected Owner-only routes. Streaks remain calculated from activity and are view-only.
+      @else
+        <strong>Privacy protected</strong>
+        Progress photos are never loaded or displayed for administrators. Streaks below are calculated from activity and are view-only.
+      @endif
     </div>
 
     <section class="ad-stat-grid ad-stat-grid--user">
@@ -69,6 +74,42 @@
         </tbody></table></div>
       </section>
     </div>
+
+    @if($ownerData)
+      <section class="ad-card">
+        <div class="ad-card__head">
+          <div><span class="ad-eyebrow">Owner only</span><h2>Subscriptions</h2></div>
+          <a class="ad-button ad-button--secondary" href="{{ route('admin.subscriptions.create', ['user_id' => $user->id]) }}">Add subscription</a>
+        </div>
+        <div class="ad-table-wrap"><table class="ad-table"><thead><tr><th>Plan</th><th>Status</th><th>Paid</th><th>Starts</th><th>Ends</th><th></th></tr></thead><tbody>
+          @forelse($ownerData['subscriptions'] as $subscription)
+            <tr><td>{{ ucfirst($subscription->plan) }}</td><td><span class="ad-status ad-status--{{ $subscription->status }}">{{ ucfirst($subscription->status) }}</span></td><td>€{{ number_format((float) $subscription->amount_paid, 2) }}</td><td>{{ $subscription->starts_on->format('M j, Y') }}</td><td>{{ $subscription->ends_on?->format('M j, Y') ?? '—' }}</td><td><a class="ad-table-link" href="{{ route('admin.subscriptions.edit', $subscription) }}">Edit</a></td></tr>
+          @empty<tr><td colspan="6" class="ad-empty">No subscriptions recorded for this user.</td></tr>@endforelse
+        </tbody></table></div>
+      </section>
+
+      <section class="ad-card">
+        <div class="ad-card__head"><div><span class="ad-eyebrow">Owner only · private</span><h2>Progress photos</h2></div><span class="ad-lock">🔒 Protected files</span></div>
+        <p class="ad-section-copy">These images are served from private storage and cannot be opened by Admin, Trainer, Paid, or User accounts.</p>
+        <div class="ad-photo-history">
+          @forelse($ownerData['photos'] as $photoSet)
+            <article class="ad-photo-set">
+              <div class="ad-photo-set__date">{{ $photoSet->captured_on->format('M j, Y') }}</div>
+              <div class="ad-photo-set__grid">
+                @foreach(['front', 'side', 'back'] as $view)
+                  <a href="{{ route('admin.progress-photos.show', [$photoSet, $view]) }}" target="_blank" rel="noopener">
+                    <img src="{{ route('admin.progress-photos.show', [$photoSet, $view]) }}" alt="{{ ucfirst($view) }} progress photo from {{ $photoSet->captured_on->format('M j, Y') }}" loading="lazy">
+                    <span>{{ ucfirst($view) }}</span>
+                  </a>
+                @endforeach
+              </div>
+            </article>
+          @empty
+            <div class="ad-empty">This user has not uploaded any progress photos.</div>
+          @endforelse
+        </div>
+      </section>
+    @endif
 
     @if(!$user->isOwner() && !auth()->user()->is($user) && (auth()->user()->isOwner() || !$user->isAdmin()))
       <section class="ad-card ad-danger-zone">

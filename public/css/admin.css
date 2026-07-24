@@ -56,8 +56,9 @@
 .ad-toolbar { display: flex; align-items: end; gap: 12px; margin-bottom: 20px; }
 .ad-toolbar label:first-child { flex: 1; }
 .ad-label { display: block; margin-bottom: 7px; color: #8e9aad; font-size: 10px; font-weight: 900; letter-spacing: .07em; text-transform: uppercase; }
-.ad-toolbar input, .ad-toolbar select, .ad-form-grid input, .ad-form-grid select { width: 100%; height: 43px; padding: 0 12px; border: 1px solid rgba(255,255,255,.12); border-radius: 10px; outline: none; background: #141c2b; color: #edf3ff; font: inherit; font-size: 13px; }
-.ad-toolbar input:focus, .ad-toolbar select:focus, .ad-form-grid input:focus, .ad-form-grid select:focus { border-color: #438cff; box-shadow: 0 0 0 3px rgba(67,140,255,.12); }
+.ad-toolbar input, .ad-toolbar select, .ad-form-grid input, .ad-form-grid select, .ad-form-grid textarea { width: 100%; height: 43px; padding: 0 12px; border: 1px solid rgba(255,255,255,.12); border-radius: 10px; outline: none; background: #141c2b; color: #edf3ff; font: inherit; font-size: 13px; }
+.ad-form-grid textarea { height: auto; padding-block: 12px; resize: vertical; }
+.ad-toolbar input:focus, .ad-toolbar select:focus, .ad-form-grid input:focus, .ad-form-grid select:focus, .ad-form-grid textarea:focus { border-color: #438cff; box-shadow: 0 0 0 3px rgba(67,140,255,.12); }
 .ad-form-card { max-width: 900px; margin-inline: auto; padding: 26px; }
 .ad-form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 17px; }
 .ad-field-wide { grid-column: 1 / -1; }
@@ -80,9 +81,31 @@
 .ad-danger-zone { display: flex; align-items: center; justify-content: space-between; gap: 20px; }
 .ad-danger-zone p { margin: 6px 0 0; color: #7f8b9e; font-size: 12px; }
 .ad-divider { height: 1px; margin: 25px 0; background: rgba(255,255,255,.07); }
+.ad-owner-panel { margin-bottom: 18px; padding: 22px; border: 1px solid rgba(246,201,69,.22); border-radius: 18px; background: linear-gradient(135deg, rgba(246,201,69,.075), rgba(10,17,31,.9) 52%); }
+.ad-owner-panel .ad-card__head { margin-bottom: 16px; }
+.ad-owner-panel h2 { margin: 3px 0 0; color: #fff5c2; font-size: 19px; }
+.ad-owner-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+.ad-owner-metrics article { padding: 16px; border: 1px solid rgba(255,255,255,.08); border-radius: 13px; background: rgba(4,9,18,.35); }
+.ad-owner-metrics span, .ad-owner-metrics small { display: block; color: #8490a3; font-size: 10px; font-weight: 800; text-transform: uppercase; }
+.ad-owner-metrics strong { display: block; margin: 6px 0 3px; color: #fff4b0; font-size: 23px; }
+.ad-status { display: inline-flex; padding: 5px 8px; border-radius: 999px; background: rgba(255,255,255,.07); color: #aeb9ca; font-size: 9px; font-weight: 900; text-transform: uppercase; }
+.ad-status--active { background: rgba(53,211,145,.1); color: #71dfae; }
+.ad-status--trial { background: rgba(75,145,255,.1); color: #82b3ff; }
+.ad-status--canceled, .ad-status--expired { background: rgba(255,170,66,.1); color: #ffc276; }
+.ad-status--refunded { background: rgba(239,91,120,.1); color: #ff91a7; }
+.ad-section-copy { margin: -5px 0 18px; color: #7f8b9f; font-size: 12px; line-height: 1.55; }
+.ad-photo-history { display: grid; gap: 15px; }
+.ad-photo-set { padding: 15px; border: 1px solid rgba(255,255,255,.075); border-radius: 14px; background: rgba(255,255,255,.02); }
+.ad-photo-set__date { margin-bottom: 11px; color: #9ba8bb; font-size: 11px; font-weight: 900; }
+.ad-photo-set__grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.ad-photo-set__grid a { position: relative; min-width: 0; overflow: hidden; border: 1px solid rgba(255,255,255,.1); border-radius: 12px; background: #080e19; text-decoration: none; }
+.ad-photo-set__grid img { display: block; width: 100%; aspect-ratio: 4 / 5; object-fit: cover; transition: transform .25s ease, opacity .25s ease; }
+.ad-photo-set__grid a:hover img { transform: scale(1.025); opacity: .86; }
+.ad-photo-set__grid span { position: absolute; right: 8px; bottom: 8px; padding: 5px 8px; border-radius: 999px; background: rgba(3,8,16,.82); color: #eef5ff; font-size: 9px; font-weight: 900; text-transform: uppercase; backdrop-filter: blur(8px); }
 
 @media (max-width: 1050px) {
   .ad-stat-grid, .ad-stat-grid--user { grid-template-columns: repeat(3, 1fr); }
+  .ad-owner-metrics { grid-template-columns: repeat(2, 1fr); }
 }
 @media (max-width: 760px) {
   .ad-wrap { padding: 27px 14px 65px; }
@@ -105,4 +128,6 @@
   .ad-streak-grid { grid-template-columns: 1fr; }
   .ad-form-actions { flex-direction: column-reverse; }
   .ad-form-actions .ad-button { width: 100%; }
+  .ad-owner-metrics { grid-template-columns: 1fr; }
+  .ad-photo-set__grid { grid-template-columns: 1fr; }
 }

@@ -20,6 +20,24 @@
 
     @include('admin.partials.navigation')
 
+    @if($ownerMetrics)
+      <section class="ad-owner-panel">
+        <div class="ad-card__head">
+          <div>
+            <span class="ad-eyebrow">Owner only</span>
+            <h2>Business overview</h2>
+          </div>
+          <a class="ad-button ad-button--secondary" href="{{ route('admin.subscriptions.index') }}">Manage subscriptions</a>
+        </div>
+        <div class="ad-owner-metrics">
+          <article><span>Total users</span><strong>{{ number_format($stats['users']) }}</strong></article>
+          <article><span>Active subscriptions</span><strong>{{ number_format($ownerMetrics['active_subscriptions']) }}</strong><small>{{ number_format($ownerMetrics['subscriptions']) }} recorded</small></article>
+          <article><span>Total revenue</span><strong>€{{ number_format($ownerMetrics['revenue'], 2) }}</strong></article>
+          <article><span>This month</span><strong>€{{ number_format($ownerMetrics['monthly_revenue'], 2) }}</strong></article>
+        </div>
+      </section>
+    @endif
+
     <section class="ad-stat-grid">
       @foreach([
         ['Users', $stats['users'], '👥'],

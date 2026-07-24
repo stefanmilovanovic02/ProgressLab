@@ -9,6 +9,7 @@ use App\Services\NotificationService;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use Illuminate\Support\Facades\Storage;
 use Tests\TestCase;
 
 class AdminPanelTest extends TestCase
@@ -148,6 +149,20 @@ class AdminPanelTest extends TestCase
             $table->string('front_path');
             $table->string('side_path');
             $table->string('back_path');
+            $table->date('captured_on')->nullable();
+            $table->timestamps();
+        });
+        Schema::create('subscriptions', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('user_id');
+            $table->string('plan');
+            $table->string('status');
+            $table->decimal('amount_paid', 10, 2)->default(0);
+            $table->string('currency', 3)->default('EUR');
+            $table->date('starts_on');
+            $table->date('ends_on')->nullable();
+            $table->timestamp('paid_at')->nullable();
+            $table->text('notes')->nullable();
             $table->timestamps();
         });
     }
@@ -155,7 +170,7 @@ class AdminPanelTest extends TestCase
     protected function tearDown(): void
     {
         foreach ([
-            'progress_photo_sets', 'friends', 'user_achievements', 'achievements',
+            'subscriptions', 'progress_photo_sets', 'friends', 'user_achievements', 'achievements',
             'nutrition_entries', 'workout_log_sets', 'workout_log_exercises',
             'workout_logs', 'workouts', 'login_logs', 'experience_events',
             'user_exercise_ranks', 'exercise_workout', 'exercise_rank_standards',
@@ -300,6 +315,75 @@ class AdminPanelTest extends TestCase
             ->delete(route('admin.exercises.destroy', $unusedId))
             ->assertRedirect(route('admin.exercises.index'));
         $this->assertDatabaseMissing('exercises', ['id' => $unusedId]);
+    }
+
+    public function test_only_owner_can_manage_subscriptions_and_revenue_uses_recorded_payments(): void
+    {
+        $admin = $this->user(UserRole::Admin);
+        $owner = $this->user(UserRole::Owner, 'owner@example.test');
+        $member = $this->user(UserRole::Paid, 'subscriber@example.test');
+
+        $this->actingAs($admin)
+            ->get(route('admin.subscriptions.index'))
+            ->assertForbidden();
+
+        $this->actingAs($owner)
+            ->post(route('admin.subscriptions.store'), [
+                'user_id' => $member->id,
+                'plan' => 'paid',
+                'status' => 'active',
+                'amount_paid' => 29.99,
+                'currency' => 'EUR',
+                'starts_on' => now()->toDateString(),
+                'paid_at' => now()->toDateTimeString(),
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('subscriptions', [
+            'user_id' => $member->id,
+            'status' => 'active',
+            'amount_paid' => 29.99,
+        ]);
+
+        $this->actingAs($owner)
+            ->get(route('admin.dashboard'))
+            ->assertOk()
+            ->assertSee('Business overview')
+            ->assertSee('€29.99');
+    }
+
+    public function test_progress_photos_are_available_only_to_owner_routes(): void
+    {
+        Storage::fake('local');
+        Storage::disk('local')->put('progress-photos/secret-front.jpg', 'private-photo');
+
+        $admin = $this->user(UserRole::Admin);
+        $owner = $this->user(UserRole::Owner, 'owner@example.test');
+        $member = $this->user(UserRole::User, 'photo-member@example.test');
+        $photoId = DB::table('progress_photo_sets')->insertGetId([
+            'user_id' => $member->id,
+            'front_path' => 'progress-photos/secret-front.jpg',
+            'side_path' => 'progress-photos/secret-side.jpg',
+            'back_path' => 'progress-photos/secret-back.jpg',
+            'captured_on' => now()->toDateString(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $this->actingAs($admin)
+            ->get(route('admin.progress-photos.show', [$photoId, 'front']))
+            ->assertForbidden();
+
+        $this->actingAs($owner)
+            ->get(route('admin.progress-photos.show', [$photoId, 'front']))
+            ->assertOk()
+            ->assertHeader('Cache-Control', 'no-store, private');
+
+        $this->actingAs($owner)
+            ->get(route('admin.users.show', $member))
+            ->assertOk()
+            ->assertSee('Progress photos')
+            ->assertSee(route('admin.progress-photos.show', [$photoId, 'front']), false);
     }
 
     private function user(UserRole $role, string $email = 'role@example.test'): User

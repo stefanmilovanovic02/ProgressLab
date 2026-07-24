@@ -132,6 +132,11 @@ class User extends Authenticatable
         return $this->hasMany(\App\Models\ProgressPhotoSet::class);
     }
 
+    public function subscriptions()
+    {
+        return $this->hasMany(\App\Models\Subscription::class);
+    }
+
     public function experienceEvents()
     {
         return $this->hasMany(\App\Models\ExperienceEvent::class);
