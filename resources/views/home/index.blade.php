@@ -7,6 +7,7 @@
         robots="noindex, nofollow, noarchive"
     />
     <link rel="stylesheet" href="{{ asset('css/auth.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/ranked-xp.css') }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body class="auth-body">
@@ -49,6 +50,48 @@
             </div>
 
             <div class="hm-motivation__sub">{{ $motivation['subtext'] }}</div>
+        </section>
+
+        <section
+            class="hm-card rank-card rank-card--{{ $rankProgress['rank_slug'] }}"
+            style="--rank-color: {{ $rankProgress['color'] }}; --rank-next-color: {{ $rankProgress['next_color'] }};"
+        >
+            <div class="rank-card__head">
+                <div class="rank-card__badge" aria-hidden="true">
+                    <span class="rank-card__badge-star">★</span>
+                </div>
+                <div class="rank-card__identity">
+                    <div class="rank-card__eyebrow">Your Rank</div>
+                    <h3 class="rank-card__name">{{ $rankProgress['rank'] }}</h3>
+                    <div class="rank-card__level">Level {{ $rankProgress['level'] }} / {{ $rankProgress['level_count'] }}</div>
+                </div>
+                <div class="rank-card__total">
+                    <strong>{{ number_format($rankProgress['total_xp']) }}</strong>
+                    <span>Total XP</span>
+                </div>
+            </div>
+
+            <div class="rank-card__progress-head">
+                <span>{{ $rankProgress['is_max'] ? 'Maximum rank reached' : 'Progress to ' . $rankProgress['next_label'] }}</span>
+                <span>{{ $rankProgress['percent'] }}%</span>
+            </div>
+            <div
+                class="rank-card__track"
+                role="progressbar"
+                aria-label="Rank progress"
+                aria-valuemin="0"
+                aria-valuemax="{{ $rankProgress['required_xp'] }}"
+                aria-valuenow="{{ $rankProgress['level_xp'] }}"
+            >
+                <div class="rank-card__fill" style="width: {{ $rankProgress['percent'] }}%;"></div>
+            </div>
+            <div class="rank-card__xp">
+                @if($rankProgress['is_max'])
+                    Olympian IV complete
+                @else
+                    {{ number_format($rankProgress['level_xp']) }} / {{ number_format($rankProgress['required_xp']) }} XP
+                @endif
+            </div>
         </section>
     </aside>    
 

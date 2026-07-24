@@ -12,6 +12,7 @@ use App\Models\FriendActivity;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 use App\Services\ExerciseHistoryService;
+use App\Services\ExperienceService;
 use App\Services\NotificationService;
 
 
@@ -105,6 +106,7 @@ class AddTodayController extends Controller
                 $this->syncNutritionActivity($user->id);
             }
 
+            app(ExperienceService::class)->awardNutrition($user, $entry);
             $unlocked = app(\App\Services\AchievementService::class)->evaluate($request->user());
             if (!empty($unlocked)) {
                 session()->flash('unlocked', $unlocked);
@@ -262,12 +264,47 @@ class AddTodayController extends Controller
                     $log->save();
                 }
 
-                return compact('log', 'justCompleted');
+                $completedExerciseIds = collect($validated['exercises'])
+                    ->filter(function (array $exercise) {
+                        $sets = collect($exercise['sets'] ?? []);
+
+                        return $sets->isNotEmpty() && $sets->every(fn (array $set) =>
+                            array_key_exists('reps', $set)
+                            && $set['reps'] !== null
+                            && array_key_exists('weight_kg', $set)
+                            && $set['weight_kg'] !== null
+                        );
+                    })
+                    ->pluck('exercise_id')
+                    ->map(fn ($id) => (int) $id)
+                    ->values()
+                    ->all();
+
+                return compact('log', 'justCompleted', 'completedExerciseIds');
             });
+
+        $experience = app(ExperienceService::class);
+        foreach ($result['completedExerciseIds'] as $exerciseId) {
+            $experience->award(
+                $user,
+                'exercise_completed',
+                $result['log']->id . ':' . $exerciseId,
+                ExperienceService::EXERCISE_COMPLETED_XP,
+                'Completed an exercise',
+                ['workout_log_id' => $result['log']->id, 'exercise_id' => $exerciseId]
+            );
+        }
 
         // Achievements and friend activity belong to a finished workout, not a partial autosave.
         $unlocked = [];
         if ($result['justCompleted']) {
+            $experience->award(
+                $user,
+                'workout_completed',
+                (string) $result['log']->id,
+                ExperienceService::WORKOUT_COMPLETED_XP,
+                'Completed ' . $workout->name
+            );
             $this->syncWorkoutActivity($user->id, $workout->name);
             $unlocked = app(\App\Services\AchievementService::class)->evaluate($user);
         }

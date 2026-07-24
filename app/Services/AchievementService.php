@@ -61,6 +61,16 @@ class AchievementService
                     $activity
                 );
 
+                $experience = app(ExperienceService::class);
+                $experience->award(
+                    $user,
+                    'achievement',
+                    (string) $achievement->id,
+                    $experience->achievementPoints((int) $achievement->points, $achievement->rarity),
+                    'Unlocked ' . $achievement->title,
+                    ['achievement_id' => $achievement->id]
+                );
+
                 $newlyUnlocked[] = [
                     'id' => $achievement->id,
                     'title' => $achievement->title,

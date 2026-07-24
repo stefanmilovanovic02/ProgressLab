@@ -82,10 +82,23 @@ class WorkoutDurationTest extends TestCase
             $table->json('meta')->nullable();
             $table->timestamps();
         });
+
+        Schema::create('experience_events', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('user_id');
+            $table->string('source_type');
+            $table->string('source_key');
+            $table->unsignedInteger('points');
+            $table->string('description')->nullable();
+            $table->json('metadata')->nullable();
+            $table->timestamps();
+            $table->unique(['user_id', 'source_type', 'source_key']);
+        });
     }
 
     protected function tearDown(): void
     {
+        Schema::dropIfExists('experience_events');
         Schema::dropIfExists('friend_activities');
         Schema::dropIfExists('workout_log_sets');
         Schema::dropIfExists('workout_log_exercises');
@@ -155,6 +168,7 @@ class WorkoutDurationTest extends TestCase
         $this->assertSame(900, $workout->fresh()->estimated_duration_seconds);
         $this->assertSame('15 min', $workout->fresh()->estimated_duration_label);
         $this->assertSame(1, DB::table('friend_activities')->count());
+        $this->assertSame(2, DB::table('experience_events')->count());
 
         Carbon::setTestNow('2026-07-24 18:30:00');
         $this->actingAs($user)
@@ -164,6 +178,7 @@ class WorkoutDurationTest extends TestCase
 
         $this->assertSame(900, $workout->fresh()->estimated_duration_seconds);
         $this->assertSame(1, DB::table('friend_activities')->count());
+        $this->assertSame(2, DB::table('experience_events')->count());
     }
 
     private function payload(Workout $workout, int $exerciseId, array $sets): array

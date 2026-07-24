@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\DB;
 use App\Models\NutritionEntry;
 use App\Models\FriendActivity;
 use App\Models\UserAchievement;
+use App\Services\ExperienceService;
 
 class HomeController extends Controller
 {
@@ -23,6 +24,7 @@ class HomeController extends Controller
         ];
         //quote logic
         $motivation = $this->motivationProgress($profile['streak']);
+        $rankProgress = app(ExperienceService::class)->progress($user);
         // nutrition logic
         $todayEntry = \App\Models\NutritionEntry::query()
             ->where('user_id', $user->id)
@@ -263,7 +265,8 @@ class HomeController extends Controller
             'todayWorkout',
             'friendsActivity',
             'recentAchievements',
-            'weeklyProgress'
+            'weeklyProgress',
+            'rankProgress'
         ));
         
     }

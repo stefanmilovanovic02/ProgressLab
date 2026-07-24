@@ -95,6 +95,11 @@ class User extends Authenticatable
         return $this->hasMany(\App\Models\ProgressPhotoSet::class);
     }
 
+    public function experienceEvents()
+    {
+        return $this->hasMany(\App\Models\ExperienceEvent::class);
+    }
+
     public function getAvatarUrlAttribute(): string
         {
             if (!$this->avatar_path) {

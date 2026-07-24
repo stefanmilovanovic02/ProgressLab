@@ -1,0 +1,158 @@
+.rank-card {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+}
+
+.rank-card::before {
+    content: "";
+    position: absolute;
+    z-index: -1;
+    width: 190px;
+    height: 190px;
+    top: -105px;
+    right: -70px;
+    border-radius: 50%;
+    background: var(--rank-color);
+    filter: blur(65px);
+    opacity: .14;
+}
+
+.rank-card__head {
+    display: flex;
+    align-items: center;
+    gap: 13px;
+}
+
+.rank-card__badge {
+    position: relative;
+    display: grid;
+    place-items: center;
+    flex: 0 0 54px;
+    width: 54px;
+    height: 61px;
+    color: #07101f;
+    background: linear-gradient(145deg, color-mix(in srgb, var(--rank-color), white 28%), var(--rank-color));
+    clip-path: polygon(50% 0, 92% 18%, 86% 70%, 50% 100%, 14% 70%, 8% 18%);
+    filter: drop-shadow(0 7px 14px color-mix(in srgb, var(--rank-color), transparent 65%));
+}
+
+.rank-card__badge::after {
+    content: "";
+    position: absolute;
+    inset: 6px;
+    clip-path: inherit;
+    border: 1px solid rgba(255, 255, 255, .46);
+}
+
+.rank-card__badge-star {
+    position: relative;
+    z-index: 1;
+    font-size: 21px;
+    text-shadow: 0 1px 0 rgba(255, 255, 255, .35);
+}
+
+.rank-card__identity {
+    min-width: 0;
+}
+
+.rank-card__eyebrow,
+.rank-card__level,
+.rank-card__total span,
+.rank-card__progress-head,
+.rank-card__xp {
+    color: rgba(229, 235, 247, .62);
+    font-size: 12px;
+}
+
+.rank-card__eyebrow {
+    letter-spacing: .09em;
+    text-transform: uppercase;
+}
+
+.rank-card__name {
+    margin: 2px 0;
+    color: var(--rank-color);
+    font-size: 21px;
+    line-height: 1.05;
+}
+
+.rank-card__total {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    margin-left: auto;
+}
+
+.rank-card__total strong {
+    color: #fff;
+    font-size: 18px;
+}
+
+.rank-card__progress-head {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.rank-card__track {
+    height: 10px;
+    margin-top: 8px;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, .08);
+    border-radius: 999px;
+    background: rgba(255, 255, 255, .055);
+    box-shadow: inset 0 1px 4px rgba(0, 0, 0, .45);
+}
+
+.rank-card__fill {
+    position: relative;
+    height: 100%;
+    min-width: 3px;
+    border-radius: inherit;
+    background: linear-gradient(90deg, var(--rank-color), var(--rank-next-color));
+    box-shadow: 0 0 14px color-mix(in srgb, var(--rank-color), transparent 45%);
+    transition: width .55s ease;
+}
+
+.rank-card__fill::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(105deg, transparent 20%, rgba(255, 255, 255, .35) 48%, transparent 72%);
+    transform: translateX(-100%);
+    animation: rank-shimmer 3.2s ease-in-out infinite;
+}
+
+.rank-card__xp {
+    margin-top: 7px;
+    text-align: right;
+}
+
+@keyframes rank-shimmer {
+    0%, 55% { transform: translateX(-100%); }
+    85%, 100% { transform: translateX(100%); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .rank-card__fill {
+        transition: none;
+    }
+
+    .rank-card__fill::after {
+        animation: none;
+    }
+}
+
+@media (max-width: 480px) {
+    .rank-card__head {
+        align-items: flex-start;
+    }
+
+    .rank-card__badge {
+        flex-basis: 48px;
+        width: 48px;
+        height: 54px;
+    }
+}
