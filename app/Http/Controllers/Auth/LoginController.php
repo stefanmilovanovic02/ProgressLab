@@ -29,7 +29,12 @@ class LoginController extends Controller
             if (!empty($unlocked)) {
                 session()->flash('unlocked', $unlocked);
             }
-            return redirect()->intended(route('home'));
+
+            $fallback = $request->user()->isAdmin()
+                ? route('admin.dashboard')
+                : route('home');
+
+            return redirect()->intended($fallback);
         }
 
         return back()->withErrors([
