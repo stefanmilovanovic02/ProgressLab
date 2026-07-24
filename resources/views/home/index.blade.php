@@ -57,8 +57,13 @@
             style="--rank-color: {{ $rankProgress['color'] }}; --rank-next-color: {{ $rankProgress['next_color'] }};"
         >
             <div class="rank-card__head">
-                <div class="rank-card__badge" aria-hidden="true">
-                    <span class="rank-card__badge-star">★</span>
+                <div class="rank-card__badge">
+                    <img
+                        src="{{ asset('images/ranks/' . $rankProgress['rank_slug'] . '.png') }}"
+                        alt="{{ $rankProgress['rank'] }} rank badge"
+                        width="82"
+                        height="82"
+                    >
                 </div>
                 <div class="rank-card__identity">
                     <div class="rank-card__eyebrow">Your Rank</div>
