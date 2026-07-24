@@ -8,6 +8,7 @@
   />
 
   <link rel="stylesheet" href="{{ asset('css/auth.css') }}">
+  <link rel="stylesheet" href="{{ asset('css/workout-duration.css') }}">
 </head>
 <body class="auth-body">
 
@@ -37,11 +38,10 @@
       @forelse($workouts as $workout)
         @php
           $exerciseCount = $workout->exercises->count();
-          $preview = $workout->exercises->take(3);
-          $moreCount = max(0, $exerciseCount - $preview->count());
+          $moreCount = max(0, $exerciseCount - 3);
         @endphp
 
-        <article class="wo-card">
+        <article class="wo-card" data-workout-card>
           <header class="wo-card__head">
             <div class="wo-card__titlewrap">
               <span class="wo-icon" aria-hidden="true">🏋️</span>
@@ -76,8 +76,8 @@
             <div class="wo-label">Exercises</div>
 
             <ul class="wo-list" role="list">
-              @foreach($preview as $ex)
-                <li class="wo-row">
+              @foreach($workout->exercises as $index => $ex)
+                <li class="wo-row {{ $index >= 3 ? 'wo-row--extra' : '' }}" {{ $index >= 3 ? 'hidden' : '' }}>
                   <span class="wo-row__name">{{ $ex->name }}</span>
                   <span class="wo-chip">{{ $ex->muscle_group ?? '—' }}</span>
                 </li>
@@ -85,15 +85,29 @@
             </ul>
 
             @if($moreCount > 0)
-              <div class="wo-more">+{{ $moreCount }} more {{ $moreCount === 1 ? 'exercise' : 'exercises' }}</div>
+              <button
+                class="wo-more"
+                type="button"
+                aria-expanded="false"
+                data-workout-expand
+                data-collapsed-label="+{{ $moreCount }} more {{ $moreCount === 1 ? 'exercise' : 'exercises' }}"
+              >
+                +{{ $moreCount }} more {{ $moreCount === 1 ? 'exercise' : 'exercises' }}
+              </button>
             @endif
           </div>
 
           <footer class="wo-card__foot">
             <div class="wo-footline"></div>
             <div class="wo-total">
-              <span class="wo-total__label">Total Exercises</span>
-              <span class="wo-total__value">{{ $exerciseCount }}</span>
+              <div class="wo-total__item">
+                <span class="wo-total__label">Estimated Time</span>
+                <span class="wo-total__value">{{ $workout->estimated_duration_label ?? '—' }}</span>
+              </div>
+              <div class="wo-total__item wo-total__item--right">
+                <span class="wo-total__label">Total Exercises</span>
+                <span class="wo-total__value">{{ $exerciseCount }}</span>
+              </div>
             </div>
           </footer>
         </article>
@@ -153,6 +167,23 @@
   </div>
 
  <script>
+(function () {
+  document.querySelectorAll('[data-workout-expand]').forEach(button => {
+    button.addEventListener('click', () => {
+      const card = button.closest('[data-workout-card]');
+      if (!card) return;
+
+      const expanded = button.getAttribute('aria-expanded') !== 'true';
+      card.querySelectorAll('.wo-row--extra').forEach(row => {
+        row.hidden = !expanded;
+      });
+      card.classList.toggle('is-expanded', expanded);
+      button.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+      button.textContent = expanded ? 'Show less' : button.dataset.collapsedLabel;
+    });
+  });
+})();
+
 (function () {
   const openBtns = document.querySelectorAll('[data-open-create]');
   const modal = document.querySelector('[data-create-modal]');

@@ -7,6 +7,7 @@
     robots="noindex, nofollow, noarchive"
   />
   <link rel="stylesheet" href="{{ asset('css/auth.css') }}">
+  <link rel="stylesheet" href="{{ asset('css/workout-duration.css') }}">
 </head>
 <body class="auth-body">
 
@@ -196,7 +197,13 @@
 
         {{-- Selected workout content --}}
         <div class="ws-content" data-ws-content hidden>
-          <h3 class="ws-subtitle" data-ws-title>Workout Exercises</h3>
+          <div class="ws-content__head">
+            <h3 class="ws-subtitle" data-ws-title>Workout Exercises</h3>
+            <div class="ws-timer" data-ws-timer data-status="not_started">
+              <span data-ws-timer-label>Starts with your first complete set</span>
+              <strong data-ws-timer-value>--:--</strong>
+            </div>
+          </div>
 
           <div class="ws-list" data-ws-list></div>
         </div>
@@ -434,17 +441,66 @@
         const content = document.querySelector('[data-ws-content]');
         const title   = document.querySelector('[data-ws-title]');
         const list    = document.querySelector('[data-ws-list]');
+        const timer   = document.querySelector('[data-ws-timer]');
+        const timerLabel = document.querySelector('[data-ws-timer-label]');
+        const timerValue = document.querySelector('[data-ws-timer-value]');
 
-        if (!select || !empty || !content || !title || !list) return;
+        if (!select || !empty || !content || !title || !list || !timer || !timerLabel || !timerValue) return;
 
         const SAVE_URL = "{{ route('add-today.workout.save') }}";
         const LOAD_URL = "{{ route('add-today.workout.today') }}";
         const CSRF     = "{{ csrf_token() }}";
+        let timingInterval = null;
+        let currentTiming = { status: 'not_started' };
 
         function esc(s){
           return String(s).replace(/[&<>"']/g, m => ({
             '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
           }[m]));
+        }
+
+        function formatElapsed(totalSeconds) {
+          const seconds = Math.max(0, Math.floor(Number(totalSeconds) || 0));
+          const hours = Math.floor(seconds / 3600);
+          const minutes = Math.floor((seconds % 3600) / 60);
+          const remainder = seconds % 60;
+          const parts = [minutes, remainder].map(value => String(value).padStart(2, '0'));
+
+          return hours > 0
+            ? `${String(hours).padStart(2, '0')}:${parts.join(':')}`
+            : parts.join(':');
+        }
+
+        function updateTimerClock() {
+          if (currentTiming.status !== 'running' || !currentTiming.started_at) return;
+
+          const startedAt = Date.parse(currentTiming.started_at);
+          if (Number.isNaN(startedAt)) return;
+
+          timerValue.textContent = formatElapsed((Date.now() - startedAt) / 1000);
+        }
+
+        function applyTiming(nextTiming = null) {
+          clearInterval(timingInterval);
+          timingInterval = null;
+          currentTiming = nextTiming || { status: 'not_started' };
+          timer.dataset.status = currentTiming.status;
+
+          if (currentTiming.status === 'completed') {
+            timerLabel.textContent = 'Workout completed in';
+            timerValue.textContent = formatElapsed(currentTiming.duration_seconds);
+            return;
+          }
+
+          if (currentTiming.status === 'running') {
+            timerLabel.textContent = 'Workout in progress';
+            updateTimerClock();
+            timingInterval = setInterval(updateTimerClock, 1000);
+            return;
+          }
+
+          timerLabel.textContent = 'Starts with your first complete set';
+          timerValue.textContent = '--:--';
         }
 
         // =========
@@ -503,6 +559,7 @@
           }
 
           const data = await res.json();
+          applyTiming(data.timing);
 
           if (window.showAchievementToasts) {
             window.showAchievementToasts(data.unlocked || []);
@@ -527,6 +584,19 @@
         // Save on typing reps/weight
         document.addEventListener('input', (e) => {
           if (e.target.closest('.ws-card') && e.target.classList.contains('ws-in')) {
+            const rowInputs = e.target.closest('.ws-row')?.querySelectorAll('input.ws-in');
+
+            if (
+              currentTiming.status === 'not_started'
+              && rowInputs?.[0]?.value !== ''
+              && rowInputs?.[1]?.value !== ''
+            ) {
+              applyTiming({
+                status: 'running',
+                started_at: new Date().toISOString(),
+              });
+            }
+
             scheduleSave();
           }
         });
@@ -643,6 +713,7 @@
 
         function renderWorkout(workoutId, savedLog) {
           list.innerHTML = '';
+          applyTiming(savedLog?.timing || null);
 
           const w = workouts.find(x => String(x.id) === String(workoutId));
           if (!w) {

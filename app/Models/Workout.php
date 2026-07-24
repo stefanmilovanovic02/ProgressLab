@@ -6,7 +6,35 @@ use Illuminate\Database\Eloquent\Model;
 
 class Workout extends Model
 {
-  protected $fillable = ['user_id', 'name'];
+  protected $fillable = ['user_id', 'name', 'estimated_duration_seconds'];
+
+  protected function casts(): array
+  {
+    return [
+      'estimated_duration_seconds' => 'integer',
+    ];
+  }
+
+  public function getEstimatedDurationLabelAttribute(): ?string
+  {
+    $seconds = $this->estimated_duration_seconds;
+
+    if (!$seconds) {
+      return null;
+    }
+
+    $minutes = max(1, (int) round($seconds / 60));
+    $hours = intdiv($minutes, 60);
+    $remainingMinutes = $minutes % 60;
+
+    if ($hours > 0) {
+      return $remainingMinutes > 0
+        ? $hours . 'h ' . $remainingMinutes . 'm'
+        : $hours . 'h';
+    }
+
+    return $minutes . ' min';
+  }
 
   public function exercises()
   {

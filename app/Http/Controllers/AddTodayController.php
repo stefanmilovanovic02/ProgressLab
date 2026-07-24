@@ -132,6 +132,7 @@ class AddTodayController extends Controller
             'id' => $log->id,
             'workout_id' => $log->workout_id,
             'workout_name' => $log->workout?->name,
+            'timing' => $this->workoutTiming($log),
             'exercises' => $log->exercises->map(function ($le) {
             return [
                 'exercise_id' => $le->exercise_id,
@@ -164,14 +165,31 @@ class AddTodayController extends Controller
             ]);
 
             $workoutId = (int) $validated['workout_id'];
+            $workout = Workout::query()
+                ->where('user_id', $user->id)
+                ->findOrFail($workoutId);
 
-            DB::transaction(function () use ($user, $today, $workoutId, $validated) {
+            $result = DB::transaction(function () use ($user, $today, $workout, $validated) {
 
                 // One workout per day per user (unique index)
-                $log = WorkoutLog::updateOrCreate(
-                ['user_id' => $user->id, 'entry_date' => $today],
-                ['workout_id' => $workoutId]
+                $log = WorkoutLog::firstOrCreate(
+                    [
+                        'user_id' => $user->id,
+                        'entry_date' => $today,
+                    ],
+                    ['workout_id' => $workout->id]
                 );
+                $workoutChanged = (int) $log->workout_id !== (int) $workout->id;
+
+                if ($workoutChanged) {
+                    $log->exercises()->delete();
+                    $log->started_at = null;
+                    $log->completed_at = null;
+                    $log->duration_seconds = null;
+                }
+
+                $log->workout_id = $workout->id;
+                $log->save();
 
                 $incomingExerciseIds = collect($validated['exercises'])->pluck('exercise_id')->map(fn($v)=>(int)$v)->values();
 
@@ -206,17 +224,75 @@ class AddTodayController extends Controller
                     );
                 }
                 }
+
+                $completeSets = collect($validated['exercises'])
+                    ->flatMap(fn (array $exercise) => $exercise['sets'] ?? [])
+                    ->filter(fn (array $set) =>
+                        array_key_exists('reps', $set)
+                        && $set['reps'] !== null
+                        && array_key_exists('weight_kg', $set)
+                        && $set['weight_kg'] !== null
+                    );
+                $setCount = collect($validated['exercises'])
+                    ->sum(fn (array $exercise) => count($exercise['sets'] ?? []));
+                $hasStarted = $completeSets->isNotEmpty();
+                $isComplete = $setCount > 0 && $completeSets->count() === $setCount;
+                $justCompleted = false;
+
+                if ($hasStarted && !$log->started_at) {
+                    $log->started_at = now();
+                }
+
+                if ($isComplete && $log->started_at && !$log->completed_at) {
+                    $log->completed_at = now();
+                    $log->duration_seconds = max(
+                        1,
+                        (int) $log->started_at->diffInSeconds($log->completed_at)
+                    );
+                    $justCompleted = true;
+
+                    if (!$workout->estimated_duration_seconds) {
+                        $workout->update([
+                            'estimated_duration_seconds' => $log->duration_seconds,
+                        ]);
+                    }
+                }
+
+                if ($log->isDirty()) {
+                    $log->save();
+                }
+
+                return compact('log', 'justCompleted');
             });
 
-            // For Achievement and friend activity
-            $workoutName = Workout::where('id', $workoutId)->value('name');
-            $this->syncWorkoutActivity($user->id, $workoutName);
+        // Achievements and friend activity belong to a finished workout, not a partial autosave.
+        $unlocked = [];
+        if ($result['justCompleted']) {
+            $this->syncWorkoutActivity($user->id, $workout->name);
+            $unlocked = app(\App\Services\AchievementService::class)->evaluate($user);
+        }
 
-        $unlocked = app(\App\Services\AchievementService::class)->evaluate($user);
         if ($request->wantsJson()) {
-            return response()->json(['ok' => true, 'unlocked' => $unlocked]);
+            return response()->json([
+                'ok' => true,
+                'unlocked' => $unlocked,
+                'timing' => $this->workoutTiming($result['log']->fresh()),
+            ]);
         }
         return back()->with('status', 'Workout saved.')->with('unlocked', $unlocked);
+    }
+
+    private function workoutTiming(WorkoutLog $log): array
+    {
+        return [
+            'status' => $log->completed_at
+                ? 'completed'
+                : ($log->started_at ? 'running' : 'not_started'),
+            'started_at' => $log->started_at?->toIso8601String(),
+            'completed_at' => $log->completed_at?->toIso8601String(),
+            'duration_seconds' => $log->duration_seconds,
+            'estimated_duration_seconds' => $log->workout?->estimated_duration_seconds,
+        ];
     }
 
     // friend activity code
