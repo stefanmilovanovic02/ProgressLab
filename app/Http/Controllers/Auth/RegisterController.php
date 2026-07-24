@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Auth;
 
+use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\UserMetric;
@@ -145,7 +146,7 @@ class RegisterController extends Controller
 
         DB::transaction(function () use (&$user, $step1, $step2, $bmr, $tdee, $validated, $calories, $proteinG, $fatG, $carbG, $fatPercent, $proteinGPerKg) {
 
-            $user = User::create([
+            $user = User::make([
                 'name' => $step1['full_name'],
                 'full_name' => $step1['full_name'],
                 'username'  => $step1['username'],
@@ -153,6 +154,7 @@ class RegisterController extends Controller
                 'password'  => $step1['password_hash'],
                 'gender'    => $step2['gender'] ?? null,
             ]);
+            $user->forceFill(['role' => UserRole::User])->save();
 
             UserMetric::create([
                 'user_id' => $user->id,

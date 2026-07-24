@@ -3,6 +3,7 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Enums\UserRole;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -61,7 +62,43 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'role' => UserRole::class,
         ];
+    }
+
+    public function hasRole(UserRole|string $role): bool
+    {
+        $role = $role instanceof UserRole ? $role : UserRole::tryFrom(strtolower($role));
+
+        return $role !== null && $this->role === $role;
+    }
+
+    /**
+     * @param array<int, UserRole|string> $roles
+     */
+    public function hasAnyRole(array $roles): bool
+    {
+        return collect($roles)->contains(fn (UserRole|string $role) => $this->hasRole($role));
+    }
+
+    public function isTrainer(): bool
+    {
+        return $this->hasRole(UserRole::Trainer);
+    }
+
+    public function isPaid(): bool
+    {
+        return $this->hasRole(UserRole::Paid);
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->role?->isStaff() ?? false;
+    }
+
+    public function isOwner(): bool
+    {
+        return $this->hasRole(UserRole::Owner);
     }
 
     public function friends()

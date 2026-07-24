@@ -17,6 +17,7 @@ return Application::configure(basePath: dirname(__DIR__))
         // Custom middleware alias
         $middleware->alias([
             'track.daily.login' => \App\Http\Middleware\TrackDailyLogin::class,
+            'role' => \App\Http\Middleware\EnsureUserHasRole::class,
         ]);
 
         // Trust ngrok / proxy headers
