@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\NutritionEntry;
+use App\Models\Exercise;
 use App\Models\Workout;
 use App\Models\WorkoutLog;
 use App\Models\WorkoutLogExercise;
@@ -12,6 +13,7 @@ use App\Models\FriendActivity;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Carbon;
 use App\Services\ExerciseHistoryService;
+use App\Services\ExerciseRankService;
 use App\Services\ExperienceService;
 use App\Services\NotificationService;
 
@@ -19,7 +21,11 @@ use App\Services\NotificationService;
 
 class AddTodayController extends Controller
 {
-    public function index(Request $request, ExerciseHistoryService $exerciseHistoryService){
+    public function index(
+        Request $request,
+        ExerciseHistoryService $exerciseHistoryService,
+        ExerciseRankService $exerciseRankService
+    ){
         $user = $request->user();
         $today = now()->format('Y-m-d');
 
@@ -59,12 +65,14 @@ class AddTodayController extends Controller
             );
             $progressPhotoCount = $user->progressPhotoSets()->count();
             $latestProgressPhotoDate = $user->progressPhotoSets()->max('captured_on');
+            $exerciseRanks = $exerciseRankService->currentForUser($user);
         
             return view('add-today.index', compact(
                 'entry',
                 'targets',
                 'workouts',
                 'exerciseHistory',
+                'exerciseRanks',
                 'progressPhotoCount',
                 'latestProgressPhotoDate'
             ));
@@ -115,7 +123,7 @@ class AddTodayController extends Controller
         return back()->with('success', 'Nutrition entry updated successfully!');
     }
 
-    public function getTodayWorkout(Request $request)
+        public function getTodayWorkout(Request $request, ExerciseRankService $exerciseRankService)
         {
         $user = $request->user();
         $today = now()->format('Y-m-d');
@@ -130,15 +138,17 @@ class AddTodayController extends Controller
         }
 
         // Shape data for the frontend
+        $exerciseRanks = $exerciseRankService->currentForUser($user);
         $out = [
             'id' => $log->id,
             'workout_id' => $log->workout_id,
             'workout_name' => $log->workout?->name,
             'timing' => $this->workoutTiming($log),
-            'exercises' => $log->exercises->map(function ($le) {
+            'exercises' => $log->exercises->map(function ($le) use ($exerciseRanks) {
             return [
                 'exercise_id' => $le->exercise_id,
                 'name' => $le->exercise?->name,
+                'rank' => $exerciseRanks->get((string) $le->exercise_id),
                 'sets' => $le->sets->sortBy('set_number')->values()->map(fn($s) => [
                 'set_number' => $s->set_number,
                 'reps' => $s->reps,
@@ -151,7 +161,10 @@ class AddTodayController extends Controller
         return response()->json(['log' => $out]);
         }
 
-        public function saveTodayWorkout(Request $request)
+        public function saveTodayWorkout(
+            Request $request,
+            ExerciseRankService $exerciseRankService
+        )
             {
             $user = $request->user();
             $today = now()->format('Y-m-d');
@@ -295,6 +308,30 @@ class AddTodayController extends Controller
             );
         }
 
+        $rankUps = [];
+        $rankedExercises = Exercise::query()
+            ->with('rankStandard')
+            ->whereIn('id', collect($validated['exercises'])->pluck('exercise_id'))
+            ->get()
+            ->keyBy('id');
+
+        foreach ($validated['exercises'] as $exerciseData) {
+            $exercise = $rankedExercises->get((int) $exerciseData['exercise_id']);
+            if (!$exercise) {
+                continue;
+            }
+
+            $promotion = $exerciseRankService->evaluate(
+                $user,
+                $exercise,
+                $exerciseData['sets'] ?? []
+            );
+
+            if ($promotion) {
+                $rankUps[] = $promotion;
+            }
+        }
+
         // Achievements and friend activity belong to a finished workout, not a partial autosave.
         $unlocked = [];
         if ($result['justCompleted']) {
@@ -313,6 +350,7 @@ class AddTodayController extends Controller
             return response()->json([
                 'ok' => true,
                 'unlocked' => $unlocked,
+                'rank_ups' => $rankUps,
                 'timing' => $this->workoutTiming($result['log']->fresh()),
             ]);
         }

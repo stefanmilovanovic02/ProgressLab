@@ -8,6 +8,7 @@
   />
   <link rel="stylesheet" href="{{ asset('css/auth.css') }}">
   <link rel="stylesheet" href="{{ asset('css/workout-duration.css') }}">
+  <link rel="stylesheet" href="{{ asset('css/exercise-ranks.css') }}">
 </head>
 <body class="auth-body">
 
@@ -319,15 +320,16 @@
 
   </main>
     @php
-    $workoutsForJs = $workouts->map(function ($w) {
+    $workoutsForJs = $workouts->map(function ($w) use ($exerciseRanks) {
         return [
             'id' => $w->id,
             'name' => $w->name,
-            'exercises' => $w->exercises->map(function ($e) {
+            'exercises' => $w->exercises->map(function ($e) use ($exerciseRanks) {
                 return [
                     'id' => $e->id,
                     'name' => $e->name,
                     'muscle_group' => $e->muscle_group ?? null,
+                    'rank' => $exerciseRanks->get((string) $e->id),
                     'default_sets' => 3,
                 ];
             })->values(),
@@ -452,6 +454,59 @@
         const CSRF     = "{{ csrf_token() }}";
         let timingInterval = null;
         let currentTiming = { status: 'not_started' };
+        const rankUpQueue = [];
+        let rankUpVisible = false;
+
+        function updateExerciseRankChip(rankUp) {
+          const card = list.querySelector(`.ws-ex[data-exercise-id="${rankUp.exercise_id}"]`);
+          const chip = card?.querySelector('[data-exercise-rank]');
+          if (!chip) return;
+
+          chip.hidden = false;
+          chip.dataset.rank = rankUp.rank_slug;
+          chip.style.setProperty('--exercise-rank-color', rankUp.color);
+          chip.innerHTML = `<img src="${esc(rankUp.icon)}" alt="" width="30" height="30"><span>${esc(rankUp.rank)}</span>`;
+        }
+
+        function queueRankUps(rankUps = []) {
+          rankUps.forEach(rankUp => {
+            updateExerciseRankChip(rankUp);
+            rankUpQueue.push(rankUp);
+          });
+          showNextRankUp();
+        }
+
+        function showNextRankUp() {
+          const overlay = document.getElementById('exerciseRankUp');
+          if (rankUpVisible || !overlay || rankUpQueue.length === 0) return;
+
+          rankUpVisible = true;
+          const rankUp = rankUpQueue.shift();
+          overlay.style.setProperty('--rank-up-color', rankUp.color);
+          overlay.querySelector('[data-rank-up-image]').src = rankUp.icon;
+          overlay.querySelector('[data-rank-up-image]').alt = `${rankUp.rank} rank badge`;
+          overlay.querySelector('[data-rank-up-name]').textContent = rankUp.rank;
+          overlay.querySelector('[data-rank-up-exercise]').textContent = rankUp.exercise_name;
+          overlay.querySelector('[data-rank-up-score]').textContent = `${rankUp.score} / 100 strength score`;
+          overlay.hidden = false;
+
+          requestAnimationFrame(() => overlay.classList.add('is-visible'));
+
+          const close = () => {
+            overlay.classList.remove('is-visible');
+            window.setTimeout(() => {
+              overlay.hidden = true;
+              rankUpVisible = false;
+              showNextRankUp();
+            }, 350);
+          };
+
+          const timeout = window.setTimeout(close, 3600);
+          overlay.querySelector('[data-rank-up-close]').onclick = () => {
+            window.clearTimeout(timeout);
+            close();
+          };
+        }
 
         function esc(s){
           return String(s).replace(/[&<>"']/g, m => ({
@@ -564,6 +619,7 @@
           if (window.showAchievementToasts) {
             window.showAchievementToasts(data.unlocked || []);
           }
+          queueRankUps(data.rank_ups || []);
 
             // Optional: debug errors
             if (!res.ok) {
@@ -613,6 +669,7 @@
         // =========
         function buildExerciseCard(ex, savedSets = null) {
           const history = exerciseHistory[String(ex.id)] || null;
+          const rank = ex.rank || null;
           const wrap = document.createElement('div');
           wrap.className = 'ws-ex';
           wrap.dataset.exerciseId = ex.id;
@@ -626,7 +683,18 @@
                   <span class="ws-ex__sets">(${savedSets ? savedSets.length : (ex.default_sets || 3)} sets)</span>
                 </div>
               </div>
-              <div class="ws-ex__chev">⌄</div>
+              <div class="ws-ex__right">
+                <span
+                  class="ws-ex__rank"
+                  data-exercise-rank
+                  data-rank="${rank ? esc(rank.rank_slug) : ''}"
+                  style="${rank ? `--exercise-rank-color: ${rank.color}` : ''}"
+                  ${rank ? '' : 'hidden'}
+                >
+                  ${rank ? `<img src="${esc(rank.icon)}" alt="" width="30" height="30"><span>${esc(rank.rank)}</span>` : ''}
+                </span>
+                <div class="ws-ex__chev">⌄</div>
+              </div>
             </button>
 
             <div class="ws-ex__body">
@@ -980,6 +1048,17 @@
       })();
       </script>
 
+<div class="exercise-rank-up" id="exerciseRankUp" hidden role="dialog" aria-modal="true" aria-labelledby="exerciseRankUpTitle">
+  <div class="exercise-rank-up__light" aria-hidden="true"></div>
+  <div class="exercise-rank-up__content">
+    <div class="exercise-rank-up__eyebrow">Exercise rank upgraded</div>
+    <img class="exercise-rank-up__badge" data-rank-up-image src="" alt="" width="260" height="260">
+    <h2 class="exercise-rank-up__rank" id="exerciseRankUpTitle" data-rank-up-name></h2>
+    <p class="exercise-rank-up__exercise" data-rank-up-exercise></p>
+    <p class="exercise-rank-up__score" data-rank-up-score></p>
+    <button class="exercise-rank-up__close" type="button" data-rank-up-close>Continue</button>
+  </div>
+</div>
 
 <x-achievement-toasts />
 <x-footer />

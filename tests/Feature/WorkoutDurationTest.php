@@ -44,6 +44,29 @@ class WorkoutDurationTest extends TestCase
             $table->timestamps();
         });
 
+        Schema::create('exercise_rank_standards', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('exercise_id')->unique();
+            $table->string('scoring_type');
+            $table->decimal('olympian_target', 8, 2)->nullable();
+            $table->string('unit');
+            $table->boolean('is_active')->default(true);
+            $table->timestamps();
+        });
+
+        Schema::create('user_exercise_ranks', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('user_id');
+            $table->unsignedBigInteger('exercise_id');
+            $table->decimal('best_value', 10, 3);
+            $table->decimal('best_estimated_1rm', 10, 2)->nullable();
+            $table->decimal('score', 6, 2);
+            $table->string('rank');
+            $table->timestamp('ranked_at')->nullable();
+            $table->timestamps();
+            $table->unique(['user_id', 'exercise_id']);
+        });
+
         Schema::create('workout_logs', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('user_id');
@@ -103,6 +126,8 @@ class WorkoutDurationTest extends TestCase
         Schema::dropIfExists('workout_log_sets');
         Schema::dropIfExists('workout_log_exercises');
         Schema::dropIfExists('workout_logs');
+        Schema::dropIfExists('user_exercise_ranks');
+        Schema::dropIfExists('exercise_rank_standards');
         Schema::dropIfExists('exercises');
         Schema::dropIfExists('workouts');
         Schema::dropIfExists('users');
@@ -124,6 +149,15 @@ class WorkoutDurationTest extends TestCase
         ]);
         $exerciseId = DB::table('exercises')->insertGetId([
             'name' => 'Bench Press',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('exercise_rank_standards')->insert([
+            'exercise_id' => $exerciseId,
+            'scoring_type' => 'estimated_1rm_absolute',
+            'olympian_target' => 150,
+            'unit' => 'kg',
+            'is_active' => true,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -169,6 +203,7 @@ class WorkoutDurationTest extends TestCase
         $this->assertSame('15 min', $workout->fresh()->estimated_duration_label);
         $this->assertSame(1, DB::table('friend_activities')->count());
         $this->assertSame(2, DB::table('experience_events')->count());
+        $this->assertSame(1, DB::table('user_exercise_ranks')->count());
 
         Carbon::setTestNow('2026-07-24 18:30:00');
         $this->actingAs($user)
@@ -179,6 +214,7 @@ class WorkoutDurationTest extends TestCase
         $this->assertSame(900, $workout->fresh()->estimated_duration_seconds);
         $this->assertSame(1, DB::table('friend_activities')->count());
         $this->assertSame(2, DB::table('experience_events')->count());
+        $this->assertSame(1, DB::table('user_exercise_ranks')->count());
     }
 
     private function payload(Workout $workout, int $exerciseId, array $sets): array

@@ -14,4 +14,14 @@ class Exercise extends Model
       ->withPivot('sort_order')
       ->withTimestamps();
   }
+
+  public function rankStandard()
+  {
+    return $this->hasOne(ExerciseRankStandard::class);
+  }
+
+  public function userRanks()
+  {
+    return $this->hasMany(UserExerciseRank::class);
+  }
 }

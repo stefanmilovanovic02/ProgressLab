@@ -100,6 +100,11 @@ class User extends Authenticatable
         return $this->hasMany(\App\Models\ExperienceEvent::class);
     }
 
+    public function exerciseRanks()
+    {
+        return $this->hasMany(\App\Models\UserExerciseRank::class);
+    }
+
     public function getAvatarUrlAttribute(): string
         {
             if (!$this->avatar_path) {
