@@ -22,6 +22,12 @@
 
     {{-- Center/Right: Links --}}
     <div class="pl-nav__menu" data-pl-nav-menu>
+      @if(auth()->user()?->isAdmin())
+        <a class="pl-nav__link pl-nav__link--admin {{ request()->routeIs('admin.*') ? 'is-active' : '' }}" href="{{ route('admin.dashboard') }}">
+          <span aria-hidden="true">⚙</span>
+          {{ auth()->user()->isOwner() ? 'Owner Panel' : 'Admin Panel' }}
+        </a>
+      @endif
       <a class="pl-nav__link {{ request()->routeIs('home') ? 'is-active' : '' }}" href="{{ route('home') }}">Home</a>
       <a class="pl-nav__link {{ request()->routeIs('add-today') ? 'is-active' : '' }}" href="{{ route('add-today') }}">Add Today</a>
       <a class="pl-nav__link {{ request()->routeIs('workouts.*') ? 'is-active' : '' }}" href="{{ route('workouts.index') }}">Workouts</a>
@@ -31,10 +37,6 @@
       <a class="pl-nav__link {{ request()->routeIs('friends.*') ? 'is-active' : '' }}" href="{{ route('friends.index') }}">Friends</a>
       <a class="pl-nav__link {{ request()->routeIs('leaderboards.*') ? 'is-active' : '' }}" href="{{ route('leaderboards.index') }}">Leaderboard</a>
       <a class="pl-nav__link {{ request()->routeIs('profile.*') ? 'is-active' : '' }}" href="{{ route('profile.show') }}">Profile</a>
-      @if(auth()->user()?->isAdmin())
-        <a class="pl-nav__link {{ request()->routeIs('admin.*') ? 'is-active' : '' }}" href="{{ route('admin.dashboard') }}">Admin</a>
-      @endif
-
       <a
         class="pl-nav__notifications {{ request()->routeIs('notifications.*') ? 'is-active' : '' }}"
         href="{{ route('notifications.index') }}"
