@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <x-seo title="Manage Users" description="ProgressLab user administration." robots="noindex, nofollow, noarchive" />
-  <link rel="stylesheet" href="{{ asset('css/auth.css') }}">
-  <link rel="stylesheet" href="{{ asset('css/admin.css') }}">
+  <link rel="stylesheet" href="{{ asset('css/auth.css') }}?v={{ filemtime(public_path('css/auth.css')) }}">
+  <link rel="stylesheet" href="{{ asset('css/admin.css') }}?v={{ filemtime(public_path('css/admin.css')) }}">
 </head>
 <body class="auth-body">
   <x-navbar />

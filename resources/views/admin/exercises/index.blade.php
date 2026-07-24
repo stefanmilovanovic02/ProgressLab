@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en">
-<head><x-seo title="Manage Exercises" description="ProgressLab exercise administration." robots="noindex, nofollow, noarchive" /><link rel="stylesheet" href="{{ asset('css/auth.css') }}"><link rel="stylesheet" href="{{ asset('css/admin.css') }}"></head>
+<head><x-seo title="Manage Exercises" description="ProgressLab exercise administration." robots="noindex, nofollow, noarchive" /><link rel="stylesheet" href="{{ asset('css/auth.css') }}?v={{ filemtime(public_path('css/auth.css')) }}"><link rel="stylesheet" href="{{ asset('css/admin.css') }}?v={{ filemtime(public_path('css/admin.css')) }}"></head>
 <body class="auth-body"><x-navbar /><main class="pl-container ad-wrap">
   <header class="ad-head"><div><span class="ad-eyebrow">Administration</span><h1>Exercises</h1><p>Manage the global exercise catalogue and strength standards.</p></div><a class="ad-button" href="{{ route('admin.exercises.create') }}">＋ New exercise</a></header>
   @include('admin.partials.navigation')

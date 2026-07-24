@@ -2,8 +2,8 @@
 <html lang="en">
 <head>
   <x-seo title="User Statistics" description="ProgressLab user statistics." robots="noindex, nofollow, noarchive" />
-  <link rel="stylesheet" href="{{ asset('css/auth.css') }}">
-  <link rel="stylesheet" href="{{ asset('css/admin.css') }}">
+  <link rel="stylesheet" href="{{ asset('css/auth.css') }}?v={{ filemtime(public_path('css/auth.css')) }}">
+  <link rel="stylesheet" href="{{ asset('css/admin.css') }}?v={{ filemtime(public_path('css/admin.css')) }}">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body class="auth-body">

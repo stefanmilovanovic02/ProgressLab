@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en">
-<head><x-seo title="Subscriptions" description="ProgressLab owner subscription management." robots="noindex, nofollow, noarchive" /><link rel="stylesheet" href="{{ asset('css/auth.css') }}"><link rel="stylesheet" href="{{ asset('css/admin.css') }}"></head>
+<head><x-seo title="Subscriptions" description="ProgressLab owner subscription management." robots="noindex, nofollow, noarchive" /><link rel="stylesheet" href="{{ asset('css/auth.css') }}?v={{ filemtime(public_path('css/auth.css')) }}"><link rel="stylesheet" href="{{ asset('css/admin.css') }}?v={{ filemtime(public_path('css/admin.css')) }}"></head>
 <body class="auth-body"><x-navbar /><main class="pl-container ad-wrap">
   <header class="ad-head"><div><span class="ad-eyebrow">Owner only</span><h1>Subscriptions</h1><p>Manage billing records used by the business overview.</p></div><a class="ad-button" href="{{ route('admin.subscriptions.create') }}">＋ New subscription</a></header>
   @include('admin.partials.navigation')

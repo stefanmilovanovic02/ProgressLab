@@ -731,7 +731,32 @@ body{
    Navbar responsiveness
    ============================ */
 
-@media (max-width: 1240px){
+@media (min-width: 921px) and (max-width: 1350px){
+  .pl-nav__inner{
+    max-width: none;
+    gap: 10px;
+    padding-inline: 12px;
+  }
+
+  .pl-nav__brand-text{
+    display: none;
+  }
+
+  .pl-nav__menu{
+    gap: 10px;
+  }
+
+  .pl-nav__link,
+  .pl-nav__logout-btn{
+    font-size: 12px;
+  }
+
+  .pl-nav__link--admin{
+    padding: 7px 8px;
+  }
+}
+
+@media (max-width: 920px){
   .pl-nav__toggle{
     display: inline-block;
   }

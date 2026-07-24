@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="en">
-<head><x-seo title="Edit Subscription" description="Edit a ProgressLab subscription record." robots="noindex, nofollow, noarchive" /><link rel="stylesheet" href="{{ asset('css/auth.css') }}"><link rel="stylesheet" href="{{ asset('css/admin.css') }}"></head>
+<head><x-seo title="Edit Subscription" description="Edit a ProgressLab subscription record." robots="noindex, nofollow, noarchive" /><link rel="stylesheet" href="{{ asset('css/auth.css') }}?v={{ filemtime(public_path('css/auth.css')) }}"><link rel="stylesheet" href="{{ asset('css/admin.css') }}?v={{ filemtime(public_path('css/admin.css')) }}"></head>
 <body class="auth-body"><x-navbar /><main class="pl-container ad-wrap">
   <header class="ad-head"><div><span class="ad-eyebrow">Owner only</span><h1>Edit subscription</h1><p>Update the plan, dates, status, or payment record.</p></div></header>
   @include('admin.partials.navigation')
