@@ -31,6 +31,9 @@
       <a class="pl-nav__link {{ request()->routeIs('friends.*') ? 'is-active' : '' }}" href="{{ route('friends.index') }}">Friends</a>
       <a class="pl-nav__link {{ request()->routeIs('leaderboards.*') ? 'is-active' : '' }}" href="{{ route('leaderboards.index') }}">Leaderboard</a>
       <a class="pl-nav__link {{ request()->routeIs('profile.*') ? 'is-active' : '' }}" href="{{ route('profile.show') }}">Profile</a>
+      @if(auth()->user()?->isAdmin())
+        <a class="pl-nav__link {{ request()->routeIs('admin.*') ? 'is-active' : '' }}" href="{{ route('admin.dashboard') }}">Admin</a>
+      @endif
 
       <a
         class="pl-nav__notifications {{ request()->routeIs('notifications.*') ? 'is-active' : '' }}"

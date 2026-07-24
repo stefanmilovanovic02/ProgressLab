@@ -20,6 +20,9 @@ use App\Http\Controllers\NotificationsController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\ProgressPhotoController;
 use App\Http\Controllers\LeaderboardController;
+use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
+use App\Http\Controllers\Admin\UserController as AdminUserController;
+use App\Http\Controllers\Admin\ExerciseController as AdminExerciseController;
 
 // Guest (Not logged in)
  Route::middleware('guest')->group(function () {
@@ -147,5 +150,14 @@ Route::middleware(['auth', 'track.daily.login'])->group(function () {
     Route::get('/profile/password', [\App\Http\Controllers\PasswordController::class, 'edit'])->name('password.edit');
     Route::put('/profile/password', [\App\Http\Controllers\PasswordController::class, 'update'])->name('profile.password.update');
     Route::delete('/profile', [\App\Http\Controllers\ProfileController::class, 'destroy'])->name('profile.destroy');
+
+    Route::prefix('admin')
+        ->name('admin.')
+        ->middleware('role:admin,owner')
+        ->group(function () {
+            Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
+            Route::resource('users', AdminUserController::class);
+            Route::resource('exercises', AdminExerciseController::class)->except('show');
+        });
 
 });

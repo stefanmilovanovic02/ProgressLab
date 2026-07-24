@@ -1,0 +1,55 @@
+<?php
+
+namespace App\Http\Controllers\Admin;
+
+use App\Enums\UserRole;
+use App\Http\Controllers\Controller;
+use App\Models\User;
+use Illuminate\Support\Facades\DB;
+
+class DashboardController extends Controller
+{
+    public function index()
+    {
+        $stats = [
+            'users' => User::query()->count(),
+            'paid' => User::query()->where('role', UserRole::Paid->value)->count(),
+            'trainers' => User::query()->where('role', UserRole::Trainer->value)->count(),
+            'staff' => User::query()->whereIn('role', [UserRole::Admin->value, UserRole::Owner->value])->count(),
+            'exercises' => DB::table('exercises')->count(),
+            'workouts' => DB::table('workout_logs')->count(),
+        ];
+
+        $roleCounts = User::query()
+            ->selectRaw('role, COUNT(*) as total')
+            ->groupBy('role')
+            ->pluck('total', 'role');
+
+        $activity = DB::table('login_logs')
+            ->whereDate('login_date', '>=', now()->subDays(13)->toDateString())
+            ->selectRaw('date(login_date) as day, COUNT(DISTINCT user_id) as total')
+            ->groupByRaw('date(login_date)')
+            ->pluck('total', 'day');
+
+        $activityLabels = [];
+        $activityValues = [];
+        for ($day = 13; $day >= 0; $day--) {
+            $date = now()->subDays($day);
+            $activityLabels[] = $date->format('M j');
+            $activityValues[] = (int) ($activity[$date->toDateString()] ?? 0);
+        }
+
+        $recentUsers = User::query()
+            ->latest()
+            ->limit(8)
+            ->get(['id', 'name', 'full_name', 'username', 'email', 'role', 'created_at']);
+
+        return view('admin.dashboard', compact(
+            'stats',
+            'roleCounts',
+            'activityLabels',
+            'activityValues',
+            'recentUsers'
+        ));
+    }
+}
