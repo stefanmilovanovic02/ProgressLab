@@ -37,18 +37,28 @@
           <div class="lb-metrics" aria-label="Ranking type">
             <button class="lb-filter is-active" type="button" aria-pressed="true" data-metric="login">Login streak</button>
             <button class="lb-filter" type="button" aria-pressed="false" data-metric="active">Last online</button>
+            <button class="lb-filter" type="button" aria-pressed="false" data-metric="ranked">Account rank</button>
             <button class="lb-filter" type="button" aria-pressed="false" data-metric="exercise">Exercise strength</button>
           </div>
         </div>
 
-        <label class="lb-exercise" data-exercise-filter hidden>
-          <span class="lb-label">Exercise</span>
-          <select data-exercise-select>
-            @foreach($exercises as $exercise)
-              <option value="{{ $exercise->id }}">{{ $exercise->name }}</option>
-            @endforeach
-          </select>
-        </label>
+        <div class="lb-exercise-controls" data-exercise-filter hidden>
+          <label class="lb-exercise">
+            <span class="lb-label">Exercise</span>
+            <select data-exercise-select>
+              @foreach($exercises as $exercise)
+                <option value="{{ $exercise->id }}">{{ $exercise->name }}</option>
+              @endforeach
+            </select>
+          </label>
+          <div>
+            <span class="lb-label">Compare by</span>
+            <div class="lb-mode" aria-label="Exercise comparison type">
+              <button class="lb-mode__button is-active" type="button" aria-pressed="true" data-exercise-mode="weight">Weight</button>
+              <button class="lb-mode__button" type="button" aria-pressed="false" data-exercise-mode="ranked">Rank</button>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="lb-titlebar">
@@ -78,7 +88,7 @@
       const scopeLabel = root.querySelector('[data-scope-label]');
       const exerciseWrap = root.querySelector('[data-exercise-filter]');
       const exerciseSelect = root.querySelector('[data-exercise-select]');
-      const state = { scope: 'friends', metric: 'login' };
+      const state = { scope: 'friends', metric: 'login', exerciseMode: 'weight' };
       let activeRequest;
 
       const text = (tag, className, value) => {
@@ -96,11 +106,22 @@
       };
 
       const emptyState = () => {
+        const rankedExercise = state.metric === 'exercise' && state.exerciseMode === 'ranked';
         const empty = document.createElement('div');
         empty.className = 'lb-empty';
-        empty.append(text('div', 'lb-empty__icon', state.metric === 'exercise' ? '🏋️' : '🏆'));
+        empty.append(text('div', 'lb-empty__icon', state.metric === 'exercise' || state.metric === 'ranked' ? '🏋️' : '🏆'));
         empty.append(text('h3', '', state.metric === 'exercise' ? 'No strength records yet' : state.scope === 'friends' ? 'No friends to rank yet' : 'No leaderboard activity yet'));
-        empty.append(text('p', '', state.metric === 'exercise' ? 'Only people who logged weight for this exercise appear here.' : state.scope === 'friends' ? 'Add friends to start your private leaderboard.' : 'Check back after the community logs some activity.'));
+        empty.append(text(
+          'p',
+          '',
+          state.metric === 'exercise'
+            ? rankedExercise
+              ? 'Only people who earned a rank for this exercise appear here.'
+              : 'Only people who logged weight for this exercise appear here.'
+            : state.scope === 'friends'
+              ? 'Add friends to start your private leaderboard.'
+              : 'Check back after the community logs some activity.'
+        ));
         if (state.scope === 'friends' && state.metric !== 'exercise') {
           const link = text('a', 'lb-empty__action', 'Find friends');
           link.href = root.dataset.friendsUrl;
@@ -133,8 +154,21 @@
 
         const result = document.createElement('div');
         result.className = 'lb-result';
-        result.append(text('strong', '', row.value));
-        result.append(text('span', '', row.detail));
+        if (row.badge_url) {
+          const badge = document.createElement('img');
+          badge.className = 'lb-result__badge';
+          badge.src = row.badge_url;
+          badge.alt = '';
+          badge.width = 54;
+          badge.height = 54;
+          badge.style.setProperty('--leaderboard-rank-color', row.badge_color);
+          result.append(badge);
+        }
+        const resultCopy = document.createElement('div');
+        resultCopy.className = 'lb-result__copy';
+        resultCopy.append(text('strong', '', row.value));
+        resultCopy.append(text('span', '', row.detail));
+        result.append(resultCopy);
 
         item.append(rank, avatar, identity, result);
         return item;
@@ -146,7 +180,10 @@
         showLoading();
 
         const params = new URLSearchParams({ scope: state.scope, metric: state.metric });
-        if (state.metric === 'exercise' && exerciseSelect.value) params.set('exercise_id', exerciseSelect.value);
+        if (state.metric === 'exercise' && exerciseSelect.value) {
+          params.set('exercise_id', exerciseSelect.value);
+          params.set('exercise_mode', state.exerciseMode);
+        }
 
         try {
           const response = await fetch(`${root.dataset.endpoint}?${params}`, {
@@ -157,7 +194,13 @@
           const data = await response.json();
 
           scopeLabel.textContent = `${state.scope === 'friends' ? 'Friends' : 'Global'} leaderboard`;
-          title.textContent = state.metric === 'login' ? 'Login streak' : state.metric === 'active' ? 'Last online' : data.meta.exercise_name;
+          title.textContent = state.metric === 'login'
+            ? 'Login streak'
+            : state.metric === 'active'
+              ? 'Last online'
+              : state.metric === 'ranked'
+                ? 'Account rank'
+                : `${data.meta.exercise_name} · ${state.exerciseMode === 'ranked' ? 'Rank' : 'Weight'}`;
           count.textContent = `${data.rows.length} ${data.rows.length === 1 ? 'person' : 'people'}`;
           list.setAttribute('aria-busy', 'false');
           if (!data.rows.length) return emptyState();
@@ -198,6 +241,15 @@
       }));
 
       exerciseSelect.addEventListener('change', load);
+      root.querySelectorAll('[data-exercise-mode]').forEach(button => button.addEventListener('click', () => {
+        state.exerciseMode = button.dataset.exerciseMode;
+        root.querySelectorAll('[data-exercise-mode]').forEach(item => {
+          const selected = item === button;
+          item.classList.toggle('is-active', selected);
+          item.setAttribute('aria-pressed', selected ? 'true' : 'false');
+        });
+        load();
+      }));
       load();
     })();
   </script>

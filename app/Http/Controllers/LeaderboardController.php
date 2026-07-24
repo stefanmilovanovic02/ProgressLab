@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\User;
+use App\Services\ExperienceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -20,11 +21,15 @@ class LeaderboardController extends Controller
         return view('leaderboards.index', compact('exercises'));
     }
 
-    public function data(Request $request)
+    public function data(Request $request, ExperienceService $experienceService)
     {
         $validated = $request->validate([
             'scope' => ['required', Rule::in(['friends', 'global'])],
-            'metric' => ['required', Rule::in(['login', 'active', 'exercise'])],
+            'metric' => ['required', Rule::in(['login', 'active', 'ranked', 'exercise'])],
+            'exercise_mode' => [
+                'nullable',
+                Rule::in(['weight', 'ranked']),
+            ],
             'exercise_id' => [
                 'nullable',
                 'required_if:metric,exercise',
@@ -35,6 +40,7 @@ class LeaderboardController extends Controller
 
         $scope = $validated['scope'];
         $metric = $validated['metric'];
+        $exerciseMode = $validated['exercise_mode'] ?? 'weight';
         $auth = $request->user();
 
         $friendIds = $scope === 'friends'
@@ -48,16 +54,18 @@ class LeaderboardController extends Controller
         if ($users->isEmpty()) {
             return response()->json([
                 'rows' => [],
-                'meta' => $this->meta($scope, $metric, null),
+                'meta' => $this->meta($scope, $metric, null, $exerciseMode),
             ]);
         }
 
         $rows = match ($metric) {
             'active' => $this->activeRows($users, $auth->id),
+            'ranked' => $this->accountRankRows($users, $auth->id, $experienceService),
             'exercise' => $this->exerciseRows(
                 $users,
                 (int) $validated['exercise_id'],
-                $auth->id
+                $auth->id,
+                $exerciseMode
             ),
             default => $this->loginRows($users, $auth->id),
         };
@@ -68,8 +76,33 @@ class LeaderboardController extends Controller
 
         return response()->json([
             'rows' => $this->rank($rows),
-            'meta' => $this->meta($scope, $metric, $exerciseName),
+            'meta' => $this->meta($scope, $metric, $exerciseName, $exerciseMode),
         ]);
+    }
+
+    private function accountRankRows(
+        Collection $users,
+        int $authId,
+        ExperienceService $experienceService
+    ): Collection {
+        $totals = DB::table('experience_events')
+            ->whereIn('user_id', $users->pluck('id'))
+            ->selectRaw('user_id, SUM(points) as total_xp')
+            ->groupBy('user_id')
+            ->pluck('total_xp', 'user_id');
+
+        return $users->map(function (User $user) use ($totals, $authId, $experienceService) {
+            $totalXp = (int) ($totals[$user->id] ?? 0);
+            $progress = $experienceService->progressForXp($totalXp);
+
+            return $this->baseRow($user, $authId) + [
+                '_score' => $totalXp,
+                'value' => $progress['rank'] . ' ' . $this->romanLevel($progress['level']),
+                'detail' => number_format($totalXp) . ' total XP',
+                'badge_url' => asset('images/ranks/' . $progress['rank_slug'] . '.png'),
+                'badge_color' => $progress['color'],
+            ];
+        });
     }
 
     private function loginRows(Collection $users, int $authId): Collection
@@ -113,8 +146,17 @@ class LeaderboardController extends Controller
         });
     }
 
-    private function exerciseRows(Collection $users, int $exerciseId, int $authId): Collection
+    private function exerciseRows(
+        Collection $users,
+        int $exerciseId,
+        int $authId,
+        string $mode
+    ): Collection
     {
+        if ($mode === 'ranked') {
+            return $this->exerciseRankRows($users, $exerciseId, $authId);
+        }
+
         $weights = DB::table('workout_log_sets as sets')
             ->join('workout_log_exercises as logged', 'logged.id', '=', 'sets.workout_log_exercise_id')
             ->join('workout_logs as logs', 'logs.id', '=', 'logged.workout_log_id')
@@ -135,6 +177,31 @@ class LeaderboardController extends Controller
                     '_score' => $weight,
                     'value' => $formatted . ' kg',
                     'detail' => 'Highest logged weight',
+                ];
+            });
+    }
+
+    private function exerciseRankRows(Collection $users, int $exerciseId, int $authId): Collection
+    {
+        $records = DB::table('user_exercise_ranks')
+            ->whereIn('user_id', $users->pluck('id'))
+            ->where('exercise_id', $exerciseId)
+            ->get(['user_id', 'score', 'rank'])
+            ->keyBy('user_id');
+
+        return $users
+            ->filter(fn (User $user) => $records->has($user->id))
+            ->map(function (User $user) use ($records, $authId) {
+                $record = $records->get($user->id);
+                $score = round((float) $record->score, 1);
+                $rankSlug = strtolower((string) $record->rank);
+
+                return $this->baseRow($user, $authId) + [
+                    '_score' => $score,
+                    'value' => (string) $record->rank,
+                    'detail' => $score . ' / 100 strength score',
+                    'badge_url' => asset('images/ranks/' . $rankSlug . '.png'),
+                    'badge_color' => $this->rankColor((string) $record->rank),
                 ];
             });
     }
@@ -222,12 +289,37 @@ class LeaderboardController extends Controller
         return $days . ' day' . ($days === 1 ? '' : 's') . ' ago';
     }
 
-    private function meta(string $scope, string $metric, ?string $exerciseName): array
+    private function meta(
+        string $scope,
+        string $metric,
+        ?string $exerciseName,
+        string $exerciseMode = 'weight'
+    ): array
     {
         return [
             'scope' => $scope,
             'metric' => $metric,
             'exercise_name' => $exerciseName,
+            'exercise_mode' => $exerciseMode,
         ];
+    }
+
+    private function romanLevel(int $level): string
+    {
+        return [1 => 'I', 2 => 'II', 3 => 'III', 4 => 'IV'][$level] ?? 'I';
+    }
+
+    private function rankColor(string $rank): string
+    {
+        return match (strtolower($rank)) {
+            'silver' => '#bfc7d5',
+            'gold' => '#f6c945',
+            'platinum' => '#65e6d4',
+            'diamond' => '#62b7ff',
+            'master' => '#a875ff',
+            'titan' => '#ef5b78',
+            'olympian' => '#fff2a8',
+            default => '#b87333',
+        };
     }
 }

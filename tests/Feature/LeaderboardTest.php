@@ -76,10 +76,32 @@ class LeaderboardTest extends TestCase
             $table->decimal('weight_kg', 6, 2)->nullable();
             $table->timestamps();
         });
+
+        Schema::create('experience_events', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('user_id');
+            $table->string('source_type');
+            $table->string('source_key');
+            $table->unsignedInteger('points');
+            $table->timestamps();
+        });
+
+        Schema::create('user_exercise_ranks', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('user_id');
+            $table->unsignedBigInteger('exercise_id');
+            $table->decimal('best_value', 10, 3);
+            $table->decimal('score', 6, 2);
+            $table->string('rank');
+            $table->timestamps();
+            $table->unique(['user_id', 'exercise_id']);
+        });
     }
 
     protected function tearDown(): void
     {
+        Schema::dropIfExists('user_exercise_ranks');
+        Schema::dropIfExists('experience_events');
         Schema::dropIfExists('workout_log_sets');
         Schema::dropIfExists('workout_log_exercises');
         Schema::dropIfExists('workout_logs');
@@ -149,6 +171,95 @@ class LeaderboardTest extends TestCase
             ->assertJsonCount(2, 'rows');
 
         $this->assertNotContains($friend->name, collect($response->json('rows'))->pluck('name'));
+    }
+
+    public function test_global_account_rank_leaderboard_uses_total_xp_and_badges(): void
+    {
+        $user = $this->createUser('Me', 'me@example.test');
+        $leader = $this->createUser('XP Leader', 'leader@example.test');
+
+        DB::table('experience_events')->insert([
+            [
+                'user_id' => $user->id,
+                'source_type' => 'test',
+                'source_key' => 'mine',
+                'points' => 100,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'user_id' => $leader->id,
+                'source_type' => 'test',
+                'source_key' => 'leader',
+                'points' => 500,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $response = $this->actingAs($user)->getJson(route('leaderboards.data', [
+            'scope' => 'global',
+            'metric' => 'ranked',
+        ]));
+
+        $response->assertOk()
+            ->assertJsonPath('rows.0.name', 'XP Leader')
+            ->assertJsonPath('rows.0.value', 'Bronze IV')
+            ->assertJsonPath('rows.0.detail', '500 total XP')
+            ->assertJsonPath('rows.1.name', 'Me')
+            ->assertJsonPath('rows.1.value', 'Bronze II');
+
+        $this->assertStringContainsString('/images/ranks/bronze.png', $response->json('rows.0.badge_url'));
+    }
+
+    public function test_exercise_rank_mode_orders_scores_and_hides_unranked_users(): void
+    {
+        $user = $this->createUser('Me', 'me@example.test');
+        $leader = $this->createUser('Rank Leader', 'rankleader@example.test');
+        $unranked = $this->createUser('Unranked', 'unranked@example.test');
+        $exerciseId = DB::table('exercises')->insertGetId([
+            'name' => 'Barbell Bench Press',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        DB::table('user_exercise_ranks')->insert([
+            [
+                'user_id' => $user->id,
+                'exercise_id' => $exerciseId,
+                'best_value' => .70,
+                'score' => 70,
+                'rank' => 'Diamond',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+            [
+                'user_id' => $leader->id,
+                'exercise_id' => $exerciseId,
+                'best_value' => .92,
+                'score' => 92,
+                'rank' => 'Titan',
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $response = $this->actingAs($user)->getJson(route('leaderboards.data', [
+            'scope' => 'global',
+            'metric' => 'exercise',
+            'exercise_mode' => 'ranked',
+            'exercise_id' => $exerciseId,
+        ]));
+
+        $response->assertOk()
+            ->assertJsonPath('meta.exercise_mode', 'ranked')
+            ->assertJsonPath('rows.0.name', 'Rank Leader')
+            ->assertJsonPath('rows.0.value', 'Titan')
+            ->assertJsonPath('rows.0.detail', '92 / 100 strength score')
+            ->assertJsonPath('rows.1.value', 'Diamond')
+            ->assertJsonCount(2, 'rows');
+
+        $this->assertNotContains($unranked->name, collect($response->json('rows'))->pluck('name'));
     }
 
     private function createUser(string $name, string $email): User

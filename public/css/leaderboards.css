@@ -21,8 +21,14 @@
 .lb-filter:hover { border-color: rgba(57, 137, 255, .42); color: #f3f7ff; transform: translateY(-1px); }
 .lb-filter.is-active { border-color: #3b82f6; background: #f4f7fc; color: #09101d; box-shadow: 0 7px 22px rgba(59, 130, 246, .2); }
 .lb-exercise { width: min(330px, 100%); }
+.lb-exercise-controls { display: flex; align-items: end; justify-content: flex-end; gap: 10px; width: min(500px, 100%); }
+.lb-exercise-controls[hidden] { display: none; }
 .lb-exercise select { width: 100%; height: 42px; padding: 0 38px 0 13px; border: 1px solid rgba(255, 255, 255, .12); border-radius: 11px; outline: none; background: #141c2b; color: #edf3ff; font: inherit; font-size: 13px; }
 .lb-exercise select:focus { border-color: #438cff; box-shadow: 0 0 0 3px rgba(67, 140, 255, .13); }
+.lb-mode { display: flex; gap: 4px; padding: 3px; border: 1px solid rgba(255, 255, 255, .1); border-radius: 11px; background: rgba(255, 255, 255, .025); }
+.lb-mode__button { min-width: 68px; height: 34px; padding: 0 11px; border: 0; border-radius: 8px; background: transparent; color: #8d98aa; font: inherit; font-size: 12px; font-weight: 850; cursor: pointer; }
+.lb-mode__button:hover { color: #eef4ff; }
+.lb-mode__button.is-active { background: rgba(62, 137, 255, .18); color: #f7faff; box-shadow: inset 0 0 0 1px rgba(74, 145, 255, .25); }
 
 .lb-titlebar { display: flex; align-items: end; justify-content: space-between; gap: 16px; padding: 22px 24px 14px; }
 .lb-titlebar__eyebrow { color: #4b91ff; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .07em; }
@@ -43,7 +49,9 @@
 .lb-person__name { overflow: hidden; color: #f0f4fc; font-size: 15px; font-weight: 850; text-overflow: ellipsis; white-space: nowrap; }
 .lb-person__username { display: block; overflow: hidden; margin-top: 3px; color: #79869a; font-size: 12px; text-overflow: ellipsis; white-space: nowrap; }
 .lb-you { display: inline-block; margin-left: 8px; padding: 3px 7px; border: 1px solid rgba(65, 145, 255, .25); border-radius: 999px; background: rgba(55, 128, 245, .11); color: #69a4ff; font-size: 9px; line-height: 1; text-transform: uppercase; vertical-align: 2px; }
-.lb-result { min-width: 120px; text-align: right; }
+.lb-result { display: flex; align-items: center; justify-content: flex-end; gap: 9px; min-width: 120px; text-align: right; }
+.lb-result__badge { display: block; width: 54px; height: 54px; flex: 0 0 54px; object-fit: contain; filter: drop-shadow(0 7px 12px color-mix(in srgb, var(--leaderboard-rank-color), transparent 70%)); }
+.lb-result__copy { min-width: 0; }
 .lb-result strong { display: block; color: #f8faff; font-size: 17px; }
 .lb-result span { display: block; margin-top: 3px; color: #758196; font-size: 11px; }
 
@@ -58,12 +66,14 @@
   .lb-head { align-items: flex-start; }
   .lb-head__icon { width: 48px; height: 48px; flex-basis: 48px; border-radius: 14px; font-size: 23px; }
   .lb-toolbar { align-items: stretch; flex-direction: column; padding: 18px; }
+  .lb-exercise-controls { align-items: stretch; flex-direction: column; width: 100%; }
   .lb-exercise { width: 100%; }
   .lb-titlebar { padding-inline: 18px; }
   .lb-list { padding: 0 12px 18px; }
   .lb-row { grid-template-columns: 36px 42px minmax(0, 1fr); gap: 10px; padding: 12px 10px; }
   .lb-avatar { width: 42px; height: 42px; }
-  .lb-result { grid-column: 2 / -1; display: flex; align-items: center; justify-content: space-between; padding-top: 9px; border-top: 1px solid rgba(255, 255, 255, .06); text-align: left; }
+  .lb-result { grid-column: 2 / -1; justify-content: flex-start; padding-top: 9px; border-top: 1px solid rgba(255, 255, 255, .06); text-align: left; }
+  .lb-result__copy { display: flex; flex: 1; align-items: center; justify-content: space-between; }
   .lb-result span { margin: 0; }
 }
 
@@ -72,6 +82,6 @@
   .lb-scope__tab { min-height: 47px; font-size: 13px; }
   .lb-metrics { display: grid; grid-template-columns: 1fr 1fr; }
   .lb-filter { padding: 0 10px; }
-  .lb-filter:last-child { grid-column: 1 / -1; }
+  .lb-filter:last-child { grid-column: auto; }
   .lb-titlebar { align-items: flex-start; flex-direction: column; gap: 6px; }
 }

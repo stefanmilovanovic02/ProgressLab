@@ -123,6 +123,13 @@ class ExperienceService
     public function progress(User $user): array
     {
         $totalXp = (int) $user->experienceEvents()->sum('points');
+
+        return $this->progressForXp($totalXp);
+    }
+
+    public function progressForXp(int $totalXp): array
+    {
+        $totalXp = max(0, $totalXp);
         $spentXp = 0;
 
         foreach (self::RANKS as $rankIndex => $rank) {
