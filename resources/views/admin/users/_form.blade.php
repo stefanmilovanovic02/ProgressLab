@@ -9,6 +9,9 @@
         <option value="{{ $roleOption->value }}" @selected(old('role', isset($user) ? $user->role->value : 'user') === $roleOption->value)>{{ $roleOption->label() }}</option>
       @endforeach
     </select>
+    @if(auth()->user()->isOwner())
+      <small class="ad-field-help">Selecting Paid grants access only. It does not create a billable subscription or increase revenue counters.</small>
+    @endif
   </label>
   <label><span class="ad-label">Gender</span>
     <select name="gender"><option value="">Not specified</option><option value="male" @selected(old('gender', $user->gender ?? '') === 'male')>Male</option><option value="female" @selected(old('gender', $user->gender ?? '') === 'female')>Female</option></select>

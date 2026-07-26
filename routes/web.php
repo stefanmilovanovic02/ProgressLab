@@ -25,6 +25,7 @@ use App\Http\Controllers\Admin\UserController as AdminUserController;
 use App\Http\Controllers\Admin\ExerciseController as AdminExerciseController;
 use App\Http\Controllers\Admin\SubscriptionController as AdminSubscriptionController;
 use App\Http\Controllers\Admin\OwnerProgressPhotoController;
+use App\Http\Controllers\Admin\UserChartController as AdminUserChartController;
 
 // Guest (Not logged in)
  Route::middleware('guest')->group(function () {
@@ -158,6 +159,10 @@ Route::middleware(['auth', 'track.daily.login'])->group(function () {
         ->middleware('role:admin,owner')
         ->group(function () {
             Route::get('/', [AdminDashboardController::class, 'index'])->name('dashboard');
+            Route::get('/users/{user}/charts/macros', [AdminUserChartController::class, 'macros'])
+                ->name('users.charts.macros');
+            Route::get('/users/{user}/charts/exercise-data', [AdminUserChartController::class, 'exerciseData'])
+                ->name('users.charts.exercise-data');
             Route::resource('users', AdminUserController::class);
             Route::resource('exercises', AdminExerciseController::class)->except('show');
 

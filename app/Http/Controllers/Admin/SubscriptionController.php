@@ -96,10 +96,11 @@ class SubscriptionController extends Controller
 
     private function validateSubscription(Request $request): array
     {
-        return $request->validate([
+        $validated = $request->validate([
             'user_id' => ['required', 'integer', Rule::exists('users', 'id')],
             'plan' => ['required', Rule::in(array_keys(self::PLANS))],
             'status' => ['required', Rule::in(array_keys(self::STATUSES))],
+            'is_complimentary' => ['nullable', 'boolean'],
             'amount_paid' => ['required', 'numeric', 'min:0', 'max:99999999.99'],
             'currency' => ['required', Rule::in(['EUR'])],
             'starts_on' => ['required', 'date'],
@@ -107,6 +108,14 @@ class SubscriptionController extends Controller
             'paid_at' => ['nullable', 'date'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ]);
+
+        $validated['is_complimentary'] = (bool) ($validated['is_complimentary'] ?? false);
+        if ($validated['is_complimentary']) {
+            $validated['amount_paid'] = 0;
+            $validated['paid_at'] = null;
+        }
+
+        return $validated;
     }
 
     private function eligibleUsers()

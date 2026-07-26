@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Services\AdminUserStatsService;
+use App\Services\UserChartDataService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -63,9 +64,15 @@ class UserController extends Controller
             ->with('status', 'User created successfully.');
     }
 
-    public function show(Request $request, User $user, AdminUserStatsService $statsService)
+    public function show(
+        Request $request,
+        User $user,
+        AdminUserStatsService $statsService,
+        UserChartDataService $chartData
+    )
     {
         $stats = $statsService->build($user);
+        $chartExercises = $chartData->exercises($user);
         $ownerData = null;
 
         if ($request->user()->isOwner()) {
@@ -80,7 +87,7 @@ class UserController extends Controller
             ];
         }
 
-        return view('admin.users.show', compact('user', 'stats', 'ownerData'));
+        return view('admin.users.show', compact('user', 'stats', 'ownerData', 'chartExercises'));
     }
 
     public function edit(Request $request, User $user)

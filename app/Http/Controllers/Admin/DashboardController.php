@@ -48,15 +48,23 @@ class DashboardController extends Controller
         $ownerMetrics = null;
         if ($request->user()->isOwner()) {
             $ownerMetrics = [
-                'subscriptions' => DB::table('subscriptions')->count(),
+                'subscriptions' => DB::table('subscriptions')->where('is_complimentary', false)->count(),
                 'active_subscriptions' => DB::table('subscriptions')
+                    ->where('is_complimentary', false)
+                    ->where('status', 'active')
+                    ->where(fn ($query) => $query->whereNull('ends_on')->orWhereDate('ends_on', '>=', today()))
+                    ->count(),
+                'complimentary_access' => DB::table('subscriptions')
+                    ->where('is_complimentary', true)
                     ->where('status', 'active')
                     ->where(fn ($query) => $query->whereNull('ends_on')->orWhereDate('ends_on', '>=', today()))
                     ->count(),
                 'revenue' => (float) DB::table('subscriptions')
+                    ->where('is_complimentary', false)
                     ->whereNotIn('status', ['refunded'])
                     ->sum('amount_paid'),
                 'monthly_revenue' => (float) DB::table('subscriptions')
+                    ->where('is_complimentary', false)
                     ->whereNotIn('status', ['refunded'])
                     ->whereBetween('paid_at', [now()->startOfMonth(), now()->endOfMonth()])
                     ->sum('amount_paid'),

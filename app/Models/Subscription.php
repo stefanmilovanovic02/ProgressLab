@@ -10,6 +10,7 @@ class Subscription extends Model
         'user_id',
         'plan',
         'status',
+        'is_complimentary',
         'amount_paid',
         'currency',
         'starts_on',
@@ -22,6 +23,7 @@ class Subscription extends Model
     {
         return [
             'amount_paid' => 'decimal:2',
+            'is_complimentary' => 'boolean',
             'starts_on' => 'date',
             'ends_on' => 'date',
             'paid_at' => 'datetime',

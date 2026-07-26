@@ -14,9 +14,9 @@
       @forelse($subscriptions as $subscription)
         <tr>
           <td><strong>{{ $subscription->user->full_name ?? $subscription->user->name }}</strong><small>{{ $subscription->user->email }}</small></td>
-          <td>{{ ucfirst($subscription->plan) }}</td>
+          <td>{{ ucfirst($subscription->plan) }}<small>{{ $subscription->is_complimentary ? 'Complimentary access' : 'Billable subscription' }}</small></td>
           <td><span class="ad-status ad-status--{{ $subscription->status }}">{{ ucfirst($subscription->status) }}</span></td>
-          <td>€{{ number_format((float) $subscription->amount_paid, 2) }}</td>
+          <td>{{ $subscription->is_complimentary ? 'Free' : '€' . number_format((float) $subscription->amount_paid, 2) }}</td>
           <td>{{ $subscription->starts_on->format('M j, Y') }}<small>{{ $subscription->ends_on ? 'to ' . $subscription->ends_on->format('M j, Y') : 'No end date' }}</small></td>
           <td><a class="ad-table-link" href="{{ route('admin.subscriptions.edit', $subscription) }}">Edit</a></td>
         </tr>

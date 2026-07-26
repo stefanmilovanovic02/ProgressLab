@@ -121,6 +121,7 @@ class AdminPanelTest extends TestCase
             $table->unsignedInteger('protein_g')->default(0);
             $table->unsignedInteger('carbs_g')->default(0);
             $table->unsignedInteger('fat_g')->default(0);
+            $table->unsignedInteger('creatine_g')->default(0);
             $table->unsignedInteger('water_ml')->default(0);
             $table->timestamps();
         });
@@ -157,6 +158,7 @@ class AdminPanelTest extends TestCase
             $table->unsignedBigInteger('user_id');
             $table->string('plan');
             $table->string('status');
+            $table->boolean('is_complimentary')->default(false);
             $table->decimal('amount_paid', 10, 2)->default(0);
             $table->string('currency', 3)->default('EUR');
             $table->date('starts_on');
@@ -342,14 +344,94 @@ class AdminPanelTest extends TestCase
         $this->assertDatabaseHas('subscriptions', [
             'user_id' => $member->id,
             'status' => 'active',
+            'is_complimentary' => false,
             'amount_paid' => 29.99,
+        ]);
+
+        $this->actingAs($owner)
+            ->post(route('admin.subscriptions.store'), [
+                'user_id' => $member->id,
+                'plan' => 'paid',
+                'status' => 'active',
+                'is_complimentary' => 1,
+                'amount_paid' => 99,
+                'currency' => 'EUR',
+                'starts_on' => now()->toDateString(),
+                'paid_at' => now()->toDateTimeString(),
+            ])
+            ->assertRedirect();
+
+        $this->assertDatabaseHas('subscriptions', [
+            'user_id' => $member->id,
+            'is_complimentary' => true,
+            'amount_paid' => 0,
+            'paid_at' => null,
         ]);
 
         $this->actingAs($owner)
             ->get(route('admin.dashboard'))
             ->assertOk()
             ->assertSee('Business overview')
+            ->assertSee('Complimentary access')
             ->assertSee('€29.99');
+    }
+
+    public function test_staff_chart_endpoints_show_selected_users_macro_and_exercise_data(): void
+    {
+        $admin = $this->user(UserRole::Admin);
+        $member = $this->user(UserRole::User, 'charts@example.test');
+        $ordinaryUser = $this->user(UserRole::User, 'blocked-charts@example.test');
+
+        DB::table('nutrition_entries')->insert([
+            ['user_id' => $member->id, 'entry_date' => now()->subDay()->toDateString(), 'calories' => 2100, 'protein_g' => 140, 'created_at' => now(), 'updated_at' => now()],
+            ['user_id' => $member->id, 'entry_date' => now()->toDateString(), 'calories' => 2300, 'protein_g' => 160, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+        $exerciseId = DB::table('exercises')->insertGetId([
+            'name' => 'Chart Test Press',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $logId = DB::table('workout_logs')->insertGetId([
+            'user_id' => $member->id,
+            'entry_date' => now()->toDateString(),
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        $loggedExerciseId = DB::table('workout_log_exercises')->insertGetId([
+            'workout_log_id' => $logId,
+            'exercise_id' => $exerciseId,
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+        DB::table('workout_log_sets')->insert([
+            ['workout_log_exercise_id' => $loggedExerciseId, 'reps' => 10, 'weight_kg' => 60, 'created_at' => now(), 'updated_at' => now()],
+            ['workout_log_exercise_id' => $loggedExerciseId, 'reps' => 6, 'weight_kg' => 80, 'created_at' => now(), 'updated_at' => now()],
+        ]);
+
+        $this->actingAs($ordinaryUser)
+            ->getJson(route('admin.users.charts.macros', [$member, 'macro' => 'protein', 'period' => 'month']))
+            ->assertForbidden();
+
+        $this->actingAs($admin)
+            ->getJson(route('admin.users.charts.macros', [$member, 'macro' => 'protein', 'period' => 'month']))
+            ->assertOk()
+            ->assertJsonPath('values.0', 140)
+            ->assertJsonPath('values.1', 160)
+            ->assertJsonPath('insights.latest', 160);
+
+        $this->actingAs($admin)
+            ->getJson(route('admin.users.charts.exercise-data', [$member, 'exercise_id' => $exerciseId, 'period' => 'all']))
+            ->assertOk()
+            ->assertJsonPath('weight.0', 80)
+            ->assertJsonPath('reps.0', 6)
+            ->assertJsonPath('days', 1);
+
+        $this->actingAs($admin)
+            ->get(route('admin.users.show', $member))
+            ->assertOk()
+            ->assertSee('Macronutrient Progress')
+            ->assertSee('Exercise Progress')
+            ->assertSee('Chart Test Press');
     }
 
     public function test_progress_photos_are_available_only_to_owner_routes(): void

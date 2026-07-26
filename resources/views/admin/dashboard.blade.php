@@ -32,6 +32,7 @@
         <div class="ad-owner-metrics">
           <article><span>Total users</span><strong>{{ number_format($stats['users']) }}</strong></article>
           <article><span>Active subscriptions</span><strong>{{ number_format($ownerMetrics['active_subscriptions']) }}</strong><small>{{ number_format($ownerMetrics['subscriptions']) }} recorded</small></article>
+          <article><span>Complimentary access</span><strong>{{ number_format($ownerMetrics['complimentary_access']) }}</strong><small>Not counted as paid</small></article>
           <article><span>Total revenue</span><strong>€{{ number_format($ownerMetrics['revenue'], 2) }}</strong></article>
           <article><span>This month</span><strong>€{{ number_format($ownerMetrics['monthly_revenue'], 2) }}</strong></article>
         </div>
