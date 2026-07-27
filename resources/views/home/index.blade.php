@@ -211,7 +211,7 @@
         <aside class="hm-right">
             <section class="hm-card">
                 <a href="{{ route('notifications.index') }}" class="hm-graph__link">
-                <h2 class="hm-block-title">Friends Activity</h2>
+                <h2 class="hm-block-title">Recent Activity</h2>
 
                 <div class="hm-activity-list">
                     @forelse($friendsActivity as $activity)
@@ -229,12 +229,12 @@
                         </div>
                     @empty
                         <div class="hm-workout__empty">
-                            No friend activity yet.
+                            No recent activity yet.
                         </div>
                     @endforelse
                 </div>
 
-                <span class="hm-btn">View All Activity</span>
+                <span class="hm-btn">View All Notifications</span>
                 </a>
             </section>
 

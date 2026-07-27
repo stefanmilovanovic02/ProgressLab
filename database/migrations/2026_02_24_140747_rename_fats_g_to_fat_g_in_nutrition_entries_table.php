@@ -11,9 +11,14 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::table('nutrition_entries', function (Blueprint $table) {
-            $table->renameColumn('fats_g', 'fat_g');
-        });
+        if (
+            Schema::hasColumn('nutrition_entries', 'fats_g')
+            && !Schema::hasColumn('nutrition_entries', 'fat_g')
+        ) {
+            Schema::table('nutrition_entries', function (Blueprint $table) {
+                $table->renameColumn('fats_g', 'fat_g');
+            });
+        }
     }
 
     /**
@@ -21,8 +26,13 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::table('nutrition_entries', function (Blueprint $table) {
-            $table->renameColumn('fat_g', 'fats_g');
-        });
+        if (
+            Schema::hasColumn('nutrition_entries', 'fat_g')
+            && !Schema::hasColumn('nutrition_entries', 'fats_g')
+        ) {
+            Schema::table('nutrition_entries', function (Blueprint $table) {
+                $table->renameColumn('fat_g', 'fats_g');
+            });
+        }
     }
 };

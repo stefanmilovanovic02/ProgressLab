@@ -11,6 +11,7 @@ use App\Models\WorkoutLogExercise;
 use App\Models\WorkoutLogSet;
 use App\Models\FriendActivity;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Carbon;
 use App\Services\ExerciseHistoryService;
 use App\Services\ExerciseRankService;
@@ -66,15 +67,23 @@ class AddTodayController extends Controller
             $progressPhotoCount = $user->progressPhotoSets()->count();
             $latestProgressPhotoDate = $user->progressPhotoSets()->max('captured_on');
             $exerciseRanks = $exerciseRankService->currentForUser($user);
+            $latestBodyMeasurement = $user->bodyMeasurements()
+                ->latest('recorded_on')
+                ->latest('id')
+                ->first();
+            $currentWeight = $latestBodyMeasurement?->weight_kg ?? $user->metric?->weight_kg;
         
             return view('add-today.index', compact(
                 'entry',
                 'targets',
+                'goal',
                 'workouts',
                 'exerciseHistory',
                 'exerciseRanks',
                 'progressPhotoCount',
-                'latestProgressPhotoDate'
+                'latestProgressPhotoDate',
+                'latestBodyMeasurement',
+                'currentWeight'
             ));
     }
 
@@ -151,8 +160,11 @@ class AddTodayController extends Controller
                 'rank' => $exerciseRanks->get((string) $le->exercise_id),
                 'sets' => $le->sets->sortBy('set_number')->values()->map(fn($s) => [
                 'set_number' => $s->set_number,
+                'set_type' => $s->set_type ?? 'normal',
                 'reps' => $s->reps,
                 'weight_kg' => $s->weight_kg,
+                'drop_reps' => $s->drop_reps ?? null,
+                'drop_weight_kg' => $s->drop_weight_kg ?? null,
                 ]),
             ];
             })->values(),
@@ -177,6 +189,9 @@ class AddTodayController extends Controller
                 'exercises.*.sets.*.set_number' => ['required','integer','min:1','max:50'],
                 'exercises.*.sets.*.reps' => ['nullable','integer','min:0','max:300'],
                 'exercises.*.sets.*.weight_kg' => ['nullable','numeric','min:0','max:999.99'],
+                'exercises.*.sets.*.set_type' => ['nullable','in:normal,warmup,drop'],
+                'exercises.*.sets.*.drop_reps' => ['nullable','integer','min:0','max:300'],
+                'exercises.*.sets.*.drop_weight_kg' => ['nullable','numeric','min:0','max:999.99'],
             ]);
 
             $workoutId = (int) $validated['workout_id'];
@@ -184,7 +199,18 @@ class AddTodayController extends Controller
                 ->where('user_id', $user->id)
                 ->findOrFail($workoutId);
 
-            $result = DB::transaction(function () use ($user, $today, $workout, $validated) {
+            $supportsSetTypes = Schema::hasColumn('workout_log_sets', 'set_type');
+            $supportsDropDetails = Schema::hasColumn('workout_log_sets', 'drop_reps')
+                && Schema::hasColumn('workout_log_sets', 'drop_weight_kg');
+
+            $result = DB::transaction(function () use (
+                $user,
+                $today,
+                $workout,
+                $validated,
+                $supportsSetTypes,
+                $supportsDropDetails
+            ) {
 
                 // One workout per day per user (unique index)
                 $log = WorkoutLog::firstOrCreate(
@@ -230,12 +256,30 @@ class AddTodayController extends Controller
 
                 // upsert sets
                 foreach ($ex['sets'] as $set) {
-                    WorkoutLogSet::updateOrCreate(
-                    ['workout_log_exercise_id' => $logEx->id, 'set_number' => (int)$set['set_number']],
-                    [
+                    $setType = in_array($set['set_type'] ?? 'normal', ['normal', 'warmup', 'drop'], true)
+                        ? ($set['set_type'] ?? 'normal')
+                        : 'normal';
+                    $values = [
                         'reps' => isset($set['reps']) ? (int)$set['reps'] : null,
                         'weight_kg' => isset($set['weight_kg']) ? (float)$set['weight_kg'] : null,
-                    ]
+                    ];
+
+                    if ($supportsSetTypes) {
+                        $values['set_type'] = $setType;
+                    }
+
+                    if ($supportsDropDetails) {
+                        $values['drop_reps'] = $setType === 'drop' && isset($set['drop_reps'])
+                            ? (int) $set['drop_reps']
+                            : null;
+                        $values['drop_weight_kg'] = $setType === 'drop' && isset($set['drop_weight_kg'])
+                            ? (float) $set['drop_weight_kg']
+                            : null;
+                    }
+
+                    WorkoutLogSet::updateOrCreate(
+                    ['workout_log_exercise_id' => $logEx->id, 'set_number' => (int)$set['set_number']],
+                    $values
                     );
                 }
                 }

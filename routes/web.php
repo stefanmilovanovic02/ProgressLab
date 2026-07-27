@@ -19,6 +19,8 @@ use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\NotificationsController;
 use App\Http\Controllers\PushSubscriptionController;
 use App\Http\Controllers\ProgressPhotoController;
+use App\Http\Controllers\MeasurementsController;
+use App\Http\Controllers\WeeklyReportController;
 use App\Http\Controllers\LeaderboardController;
 use App\Http\Controllers\Admin\DashboardController as AdminDashboardController;
 use App\Http\Controllers\Admin\UserController as AdminUserController;
@@ -26,17 +28,27 @@ use App\Http\Controllers\Admin\ExerciseController as AdminExerciseController;
 use App\Http\Controllers\Admin\SubscriptionController as AdminSubscriptionController;
 use App\Http\Controllers\Admin\OwnerProgressPhotoController;
 use App\Http\Controllers\Admin\UserChartController as AdminUserChartController;
+use App\Http\Controllers\TrainerRelationshipController;
+use App\Http\Controllers\Trainer\DashboardController as TrainerDashboardController;
+use App\Http\Controllers\Trainer\ChartController as TrainerChartController;
+use App\Http\Controllers\Trainer\ClientManagementController as TrainerClientManagementController;
+use App\Http\Controllers\SubscriptionPlansController;
+use App\Http\Controllers\Admin\SubscriptionRequestController as AdminSubscriptionRequestController;
 
 // Guest (Not logged in)
  Route::middleware('guest')->group(function () {
 
     // Login
     Route::get('/login', [LoginController::class, 'show'])->name('login');
-    Route::post('/login', [LoginController::class, 'store'])->name('login.store');
+    Route::post('/login', [LoginController::class, 'store'])
+        ->middleware('throttle:login')
+        ->name('login.store');
 
     // Register (basic info + multi-step macros wizard)
     Route::get('/register', [RegisterController::class, 'showStep1'])->name('register');
-    Route::post('/register', [RegisterController::class, 'storeStep1'])->name('register.store.step1');
+    Route::post('/register', [RegisterController::class, 'storeStep1'])
+        ->middleware('throttle:registration')
+        ->name('register.store.step1');
 
     Route::get('/register/macros', [RegisterController::class, 'showMacros'])->name('register.macros');
     Route::post('/register/macros', [RegisterController::class, 'storeMacros'])->name('register.store.macros');
@@ -50,12 +62,14 @@ Route::post('/register/goal', [RegisterController::class, 'storeGoal'])->name('r
     Route::get('/forgot-password', [ForgotPasswordController::class, 'show'])
         ->name('password.request');
     Route::post('/forgot-password', [ForgotPasswordController::class, 'send'])
+        ->middleware('throttle:password-reset')
         ->name('password.email');
 
     // Reset Password (user arrives here from email link)
     Route::get('/reset-password/{token}', [ResetPasswordController::class, 'show'])
         ->name('password.reset');
     Route::post('/reset-password', [ResetPasswordController::class, 'update'])
+        ->middleware('throttle:password-reset')
         ->name('password.update');
 });
 
@@ -79,6 +93,10 @@ Route::middleware(['auth', 'track.daily.login'])->group(function () {
     Route::post('/add-today/workout', [AddTodayController::class, 'storeWorkout'])->name('add-today.workout.store');
     Route::get('/add-today/workout/today', [AddTodayController::class, 'getTodayWorkout'])->name('add-today.workout.today');
     Route::post('/add-today/workout/save', [AddTodayController::class, 'saveTodayWorkout'])->name('add-today.workout.save');
+    Route::post('/add-today/measurements/goals', [MeasurementsController::class, 'updateGoals'])
+        ->name('add-today.measurements.goals');
+    Route::post('/add-today/measurements/body', [MeasurementsController::class, 'storeBody'])
+        ->name('add-today.measurements.body');
     Route::post('/progress-photos', [ProgressPhotoController::class, 'store'])->name('progress-photos.store');
     Route::get('/progress-photos/{progressPhoto}/{view}', [ProgressPhotoController::class, 'show'])
         ->where('view', 'front|side|back')
@@ -102,6 +120,8 @@ Route::middleware(['auth', 'track.daily.login'])->group(function () {
     Route::get('/charts', [ChartsController::class, 'index'])->name('charts.index');
     Route::get('/charts/macros', [ChartsController::class, 'macros'])->name('charts.macros');
     Route::get('/charts/exercise-data', [ChartsController::class, 'exerciseData'])->name('charts.exercise-data');
+    Route::get('/charts/weekly-report.pdf', [WeeklyReportController::class, 'download'])
+        ->name('charts.weekly-report.download');
 
     // 7) Streaks
     Route::get('/streaks', [StreaksController::class, 'index'])->name('streaks.index');
@@ -109,6 +129,10 @@ Route::middleware(['auth', 'track.daily.login'])->group(function () {
     // Leaderboards
     Route::get('/leaderboards', [LeaderboardController::class, 'index'])->name('leaderboards.index');
     Route::get('/leaderboards/data', [LeaderboardController::class, 'data'])->name('leaderboards.data');
+
+    Route::get('/plans', [SubscriptionPlansController::class, 'index'])->name('plans.index');
+    Route::post('/plans/request-activation', [SubscriptionPlansController::class, 'requestActivation'])
+        ->name('plans.request-activation');
 
     // 8) Achievements
     Route::get('/achievements', [AchievementsController::class, 'index'])->name('achievements.index');
@@ -143,7 +167,33 @@ Route::middleware(['auth', 'track.daily.login'])->group(function () {
 
     Route::get('/friends/{user}/exercise-comparison', [FriendsController::class, 'exerciseComparison'])
         ->name('friends.exercise-comparison');
+
+    Route::post('/friends/{user}/trainer-invitation', [TrainerRelationshipController::class, 'invite'])
+        ->name('trainer-invitations.store');
+    Route::post('/trainer-invitations/{trainerClient}/accept', [TrainerRelationshipController::class, 'accept'])
+        ->name('trainer-invitations.accept');
+    Route::post('/trainer-invitations/{trainerClient}/decline', [TrainerRelationshipController::class, 'decline'])
+        ->name('trainer-invitations.decline');
+    Route::patch('/trainer-access/{trainerClient}', [TrainerRelationshipController::class, 'updatePermissions'])
+        ->name('trainer-access.update');
+    Route::delete('/trainer-access/{trainerClient}', [TrainerRelationshipController::class, 'destroy'])
+        ->name('trainer-access.destroy');
     });
+
+    Route::prefix('trainer')
+        ->name('trainer.')
+        ->middleware('role:trainer')
+        ->group(function () {
+            Route::get('/', [TrainerDashboardController::class, 'index'])->name('dashboard');
+            Route::get('/clients/{user}', [TrainerDashboardController::class, 'show'])->name('clients.show');
+            Route::patch('/clients/{user}/notes', [TrainerDashboardController::class, 'updateNotes'])->name('clients.notes');
+            Route::post('/clients/{user}/workouts', [TrainerClientManagementController::class, 'assignWorkout'])->name('clients.workouts.store');
+            Route::patch('/clients/{user}/nutrition-targets', [TrainerClientManagementController::class, 'updateNutrition'])->name('clients.nutrition-targets.update');
+            Route::get('/clients/{user}/weekly-report.pdf', [TrainerClientManagementController::class, 'report'])->name('clients.weekly-report');
+            Route::get('/clients/{user}/charts/macros', [TrainerChartController::class, 'macros'])->name('clients.charts.macros');
+            Route::get('/clients/{user}/charts/exercise-data', [TrainerChartController::class, 'exerciseData'])->name('clients.charts.exercise-data');
+            Route::get('/clients/{user}/charts/weight', [TrainerChartController::class, 'weight'])->name('clients.charts.weight');
+        });
     
     // 10) Profile (view + update)
     Route::get('/profile', [ProfileController::class, 'show'])->name('profile.show');
@@ -168,6 +218,10 @@ Route::middleware(['auth', 'track.daily.login'])->group(function () {
 
             Route::middleware('role:owner')->group(function () {
                 Route::resource('subscriptions', AdminSubscriptionController::class)->except('show');
+                Route::post('/subscription-requests/{subscriptionRequest}/approve', [AdminSubscriptionRequestController::class, 'approve'])
+                    ->name('subscription-requests.approve');
+                Route::post('/subscription-requests/{subscriptionRequest}/reject', [AdminSubscriptionRequestController::class, 'reject'])
+                    ->name('subscription-requests.reject');
                 Route::get('/progress-photos/{progressPhoto}/{view}', [OwnerProgressPhotoController::class, 'show'])
                     ->where('view', 'front|side|back')
                     ->name('progress-photos.show');

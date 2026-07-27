@@ -28,6 +28,12 @@
           {{ auth()->user()->isOwner() ? 'Owner Panel' : 'Admin Panel' }}
         </a>
       @endif
+      @if(auth()->user()?->isTrainer())
+        <a class="pl-nav__link pl-nav__link--admin {{ request()->routeIs('trainer.*') ? 'is-active' : '' }}" href="{{ route('trainer.dashboard') }}">
+          <span aria-hidden="true">🤝</span>
+          Clients
+        </a>
+      @endif
       <a class="pl-nav__link {{ request()->routeIs('home') ? 'is-active' : '' }}" href="{{ route('home') }}">Home</a>
       <a class="pl-nav__link {{ request()->routeIs('add-today') ? 'is-active' : '' }}" href="{{ route('add-today') }}">Add Today</a>
       <a class="pl-nav__link {{ request()->routeIs('workouts.*') ? 'is-active' : '' }}" href="{{ route('workouts.index') }}">Workouts</a>

@@ -8,6 +8,7 @@ use App\Models\FriendActivity;
 use App\Models\FriendRequest;
 use App\Models\User;
 use App\Models\UserAchievement;
+use App\Models\TrainerClient;
 use Illuminate\Support\Facades\Schema;
 
 class NotificationService
@@ -83,6 +84,38 @@ class NotificationService
         }
 
         return $notification;
+    }
+
+    public function notifyTrainerInvitation(TrainerClient $relationship): AppNotification
+    {
+        $relationship->loadMissing('trainer');
+        $name = $relationship->trainer?->full_name
+            ?: $relationship->trainer?->name
+            ?: 'A trainer';
+
+        return $this->sendRelationshipNotification(
+            $relationship->client,
+            $relationship,
+            'Trainer invitation',
+            $name . ' invited you to become their client.',
+            route('friends.index', ['open_friend' => $relationship->trainer_id], false)
+        );
+    }
+
+    public function notifyTrainerInvitationAccepted(TrainerClient $relationship): AppNotification
+    {
+        $relationship->loadMissing('client');
+        $name = $relationship->client?->full_name
+            ?: $relationship->client?->name
+            ?: 'A client';
+
+        return $this->sendRelationshipNotification(
+            $relationship->trainer,
+            $relationship,
+            'Client invitation accepted',
+            $name . ' accepted your Trainer invitation.',
+            route('trainer.clients.show', $relationship->client_id, false)
+        );
     }
 
     public function notifyAchievementUnlocked(
@@ -223,6 +256,35 @@ class NotificationService
             'category' => $notification->category,
             'badgeCount' => $this->unreadCount($user),
         ]);
+    }
+
+    private function sendRelationshipNotification(
+        User $user,
+        TrainerClient $relationship,
+        string $title,
+        string $message,
+        string $actionUrl
+    ): AppNotification {
+        $notification = AppNotification::query()->updateOrCreate(
+            [
+                'user_id' => $user->id,
+                'source_type' => 'trainer_client',
+                'source_id' => $relationship->id,
+            ],
+            [
+                'category' => 'system',
+                'title' => $title,
+                'message' => $message,
+                'icon' => '🤝',
+                'action_url' => $actionUrl,
+                'data' => ['trainer_client_id' => $relationship->id],
+                'read_at' => null,
+            ]
+        );
+
+        $this->deliver($user, $notification);
+
+        return $notification;
     }
 
     private function welcomeNotification(User $user): array

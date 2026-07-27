@@ -13,7 +13,7 @@ class WorkoutController extends Controller
   {
     $workouts = Workout::query()
       ->where('user_id', $request->user()->id)
-      ->with(['exercises:id,name,muscle_group'])
+      ->with(['exercises:id,name,muscle_group', 'trainerAssignment.relationship.trainer:id,name,full_name'])
       ->latest()
       ->get();
 

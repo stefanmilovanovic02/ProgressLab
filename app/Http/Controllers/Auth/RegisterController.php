@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\UserMetric;
 use App\Models\NutritionGoal;
+use App\Models\WeightEntry;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
@@ -165,6 +166,13 @@ class RegisterController extends Controller
                 'activity_multiplier' => $step2['activity_multiplier'],
                 'bmr' => $bmr,
                 'tdee' => $tdee,
+            ]);
+
+            WeightEntry::create([
+                'user_id' => $user->id,
+                'recorded_on' => now()->toDateString(),
+                'weight_kg' => $step2['weight_kg'],
+                'source' => 'registration',
             ]);
 
             NutritionGoal::create([

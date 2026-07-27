@@ -1,1 +1,4 @@
 *.sqlite*
+*.bak
+recovered-*.sql
+recovery-tools/

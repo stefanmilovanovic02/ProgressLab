@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
+use App\Models\TrainerClient;
 
 class FriendsController extends Controller
 {
@@ -318,6 +319,21 @@ private function humanLastSeen($timestamp): string
                         ->where('receiver_id', $auth->id);
                 })
                 ->delete();
+
+            if (Schema::hasTable('trainer_clients')) {
+                TrainerClient::query()
+                    ->where(function ($query) use ($auth, $user) {
+                        $query->where('trainer_id', $auth->id)->where('client_id', $user->id);
+                    })
+                    ->orWhere(function ($query) use ($auth, $user) {
+                        $query->where('trainer_id', $user->id)->where('client_id', $auth->id);
+                    })
+                    ->update([
+                        'status' => TrainerClient::STATUS_REVOKED,
+                        'revoked_at' => now(),
+                        'updated_at' => now(),
+                    ]);
+            }
         });
 
         return response()->json([
@@ -410,6 +426,32 @@ public function summary(Request $request, User $user)
 
     $isFriend = $auth->friends()->where('users.id', $user->id)->exists();
     if (!$isFriend && $auth->id !== $user->id) abort(403);
+
+    $trainerAccess = null;
+    if (Schema::hasTable('trainer_clients')) {
+        $relationship = $auth->isTrainer()
+            ? TrainerClient::query()->where('trainer_id', $auth->id)->where('client_id', $user->id)->first()
+            : ($user->isTrainer()
+                ? TrainerClient::query()->where('trainer_id', $user->id)->where('client_id', $auth->id)->first()
+                : null);
+
+        $trainerAccess = [
+            'viewer_mode' => $auth->isTrainer() ? 'trainer' : ($user->isTrainer() ? 'client' : 'none'),
+            'target_can_be_client' => $user->hasAnyRole([\App\Enums\UserRole::User, \App\Enums\UserRole::Paid]),
+            'id' => $relationship?->id,
+            'status' => $relationship?->status ?? 'none',
+            'dashboard_url' => $relationship?->isAccepted() && $auth->isTrainer()
+                ? route('trainer.clients.show', $user, false)
+                : null,
+            'permissions' => [
+                'nutrition' => (bool) ($relationship?->can_view_nutrition ?? true),
+                'exercises' => (bool) ($relationship?->can_view_exercises ?? true),
+                'weight' => (bool) ($relationship?->can_view_weight ?? true),
+                'streaks' => (bool) ($relationship?->can_view_streaks ?? true),
+                'progress_photos' => false,
+            ],
+        ];
+    }
 
     // LAST ACTIVE (your login_logs are per-day; updated_at is newest activity)
     $lastActive = DB::table('login_logs')
@@ -557,6 +599,7 @@ public function summary(Request $request, User $user)
         ],
         'achievements' => $achievements,
         'achievements_unlocked' => $achUnlockedCount,
+        'trainer_access' => $trainerAccess,
     ]);
 }
 

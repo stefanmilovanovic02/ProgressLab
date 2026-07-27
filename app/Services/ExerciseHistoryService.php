@@ -41,16 +41,20 @@ class ExerciseHistoryService
                 $sets = $logExercise->sets
                     ->map(fn ($set) => [
                         'set_number' => (int) $set->set_number,
+                        'set_type' => $set->set_type ?? 'normal',
                         'reps' => $set->reps === null ? null : (int) $set->reps,
                         'weight_kg' => $set->weight_kg === null ? null : (float) $set->weight_kg,
+                        'drop_reps' => ($set->drop_reps ?? null) === null ? null : (int) $set->drop_reps,
+                        'drop_weight_kg' => ($set->drop_weight_kg ?? null) === null ? null : (float) $set->drop_weight_kg,
                     ])
                     ->values();
+                $workingSets = $sets->where('set_type', '!=', 'warmup');
 
                 return [(string) $logExercise->exercise_id => [
                     'date' => Carbon::parse($logExercise->history_entry_date)->toDateString(),
                     'sets' => $sets->all(),
-                    'max_reps' => $sets->pluck('reps')->filter(fn ($value) => $value !== null)->max(),
-                    'max_weight_kg' => $sets->pluck('weight_kg')->filter(fn ($value) => $value !== null)->max(),
+                    'max_reps' => $workingSets->pluck('reps')->filter(fn ($value) => $value !== null)->max(),
+                    'max_weight_kg' => $workingSets->pluck('weight_kg')->filter(fn ($value) => $value !== null)->max(),
                 ]];
             })
             ->all();

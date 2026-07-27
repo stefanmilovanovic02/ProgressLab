@@ -5,10 +5,11 @@ namespace App\Http\Controllers;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use App\Models\NutritionEntry;
-use App\Models\FriendActivity;
 use App\Models\UserAchievement;
 use App\Services\ExperienceService;
+use App\Services\NotificationService;
 
 class HomeController extends Controller
 {
@@ -110,15 +111,27 @@ class HomeController extends Controller
 
             $exerciseIds = $exerciseRows->pluck('workout_log_exercise_id');
 
+            $setColumns = [
+                'workout_log_exercise_id',
+                'set_number',
+                'reps',
+                'weight_kg',
+            ];
+            if (Schema::hasColumn('workout_log_sets', 'set_type')) {
+                $setColumns[] = 'set_type';
+            }
+            if (
+                Schema::hasColumn('workout_log_sets', 'drop_reps')
+                && Schema::hasColumn('workout_log_sets', 'drop_weight_kg')
+            ) {
+                $setColumns[] = 'drop_reps';
+                $setColumns[] = 'drop_weight_kg';
+            }
+
             $setRows = DB::table('workout_log_sets')
                 ->whereIn('workout_log_exercise_id', $exerciseIds)
                 ->orderBy('set_number')
-                ->get([
-                    'workout_log_exercise_id',
-                    'set_number',
-                    'reps',
-                    'weight_kg',
-                ])
+                ->get($setColumns)
                 ->groupBy('workout_log_exercise_id');
 
             $todayWorkout = [
@@ -128,7 +141,15 @@ class HomeController extends Controller
                     $sets = collect($setRows[$exercise->workout_log_exercise_id] ?? [])->map(function ($set) {
                         $reps = $set->reps ?? 0;
                         $weight = $set->weight_kg ?? 0;
-                        return "{$reps} × {$weight}kg";
+                        $type = $set->set_type ?? 'normal';
+                        $label = $type === 'warmup' ? 'Warm-up: ' : '';
+                        $summary = "{$label}{$reps} × {$weight}kg";
+
+                        if ($type === 'drop' && isset($set->drop_reps, $set->drop_weight_kg)) {
+                            $summary .= " → {$set->drop_reps} × {$set->drop_weight_kg}kg drop";
+                        }
+
+                        return $summary;
                     })->values()->all();
 
                     return [
@@ -143,6 +164,11 @@ class HomeController extends Controller
         $weekStart = now()->startOfWeek(Carbon::MONDAY);
         $weekEnd = now()->endOfWeek(Carbon::SUNDAY);
 
+        $volumeExpression = Schema::hasColumn('workout_log_sets', 'drop_reps')
+            && Schema::hasColumn('workout_log_sets', 'drop_weight_kg')
+            ? '(COALESCE(s.reps, 0) * COALESCE(s.weight_kg, 0)) + (COALESCE(s.drop_reps, 0) * COALESCE(s.drop_weight_kg, 0))'
+            : 'COALESCE(s.reps, 0) * COALESCE(s.weight_kg, 0)';
+
         $volumeRows = DB::table('workout_log_sets as s')
             ->join('workout_log_exercises as e', 'e.id', '=', 's.workout_log_exercise_id')
             ->join('workout_logs as l', 'l.id', '=', 'e.workout_log_id')
@@ -150,7 +176,7 @@ class HomeController extends Controller
             ->whereDate('l.entry_date', '>=', $weekStart->toDateString())
             ->whereDate('l.entry_date', '<=', $weekEnd->toDateString())
             ->selectRaw('date(l.entry_date) as day')
-            ->selectRaw('SUM(COALESCE(s.reps, 0) * COALESCE(s.weight_kg, 0)) as total_volume')
+            ->selectRaw("SUM({$volumeExpression}) as total_volume")
             ->groupByRaw('date(l.entry_date)')
             ->pluck('total_volume', 'day');
 
@@ -184,7 +210,7 @@ class HomeController extends Controller
                 ->where('l.user_id', $user->id)
                 ->whereDate('l.entry_date', '>=', $lastWeekStart->toDateString())
                 ->whereDate('l.entry_date', '<=', $lastWeekEnd->toDateString())
-                ->selectRaw('SUM(COALESCE(s.reps, 0) * COALESCE(s.weight_kg, 0)) as total_volume')
+                ->selectRaw("SUM({$volumeExpression}) as total_volume")
                 ->value('total_volume') ?? 0
         );
 
@@ -201,24 +227,22 @@ class HomeController extends Controller
             'vs_last_week' => $vsLastWeek,
         ];
 
-        // Friend Logic
-        $friendIds = DB::table('friends')
-            ->where('user_id', $user->id)
-            ->pluck('friend_id');
+        // Combine friend updates with achievements, requests, reminders,
+        // subscription notices, and other recent notifications.
+        app(NotificationService::class)->syncForUser($user);
 
-        $friendsActivity = FriendActivity::query()
-            ->with('user:id,full_name,name,avatar_path')
-            ->whereIn('user_id', $friendIds)
+        $friendsActivity = $user->appNotifications()
             ->latest()
             ->limit(6)
             ->get()
             ->map(function ($activity) {
-                $friendName = $activity->user?->full_name ?? $activity->user?->name ?? 'Friend';
+                $data = $activity->data ?? [];
 
                 return [
-                    'text' => $friendName . ' ' . $activity->text,
+                    'text' => $activity->message ?: $activity->title,
+                    'avatar' => $data['actor_avatar'] ?? asset('images/default-avatar.png'),
                     'time' => $activity->created_at ? $activity->created_at->diffForHumans() : '',
-                    'icon' => match ($activity->type) {
+                    'icon' => $activity->icon ?: match ($activity->category) {
                         'achievement' => '🏆',
                         'workout' => '🏋️',
                         'nutrition' => '🍽️',

@@ -92,6 +92,8 @@ class ExerciseRankService
     private function measurement(User $user, string $type, array $sets): ?array
     {
         $validSets = collect($sets)->filter(fn (array $set) =>
+            ($set['set_type'] ?? 'normal') !== 'warmup'
+            &&
             isset($set['reps'])
             && is_numeric($set['reps'])
             && (float) $set['reps'] > 0

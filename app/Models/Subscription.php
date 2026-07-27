@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 
 class Subscription extends Model
 {
@@ -33,5 +34,18 @@ class Subscription extends Model
     public function user()
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function scopeCurrentlyActive(Builder $query, $date = null): Builder
+    {
+        $date = $date ?: today();
+
+        return $query
+            ->whereIn('status', ['active', 'trial'])
+            ->whereDate('starts_on', '<=', $date)
+            ->where(function (Builder $query) use ($date) {
+                $query->whereNull('ends_on')
+                    ->orWhereDate('ends_on', '>=', $date);
+            });
     }
 }

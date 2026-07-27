@@ -5,8 +5,10 @@ namespace App\Http\Controllers\Admin;
 use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\User;
+use App\Models\SubscriptionRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class DashboardController extends Controller
 {
@@ -46,6 +48,7 @@ class DashboardController extends Controller
             ->get(['id', 'name', 'full_name', 'username', 'email', 'role', 'created_at']);
 
         $ownerMetrics = null;
+        $pendingPaymentRequests = collect();
         if ($request->user()->isOwner()) {
             $ownerMetrics = [
                 'subscriptions' => DB::table('subscriptions')->where('is_complimentary', false)->count(),
@@ -68,7 +71,19 @@ class DashboardController extends Controller
                     ->whereNotIn('status', ['refunded'])
                     ->whereBetween('paid_at', [now()->startOfMonth(), now()->endOfMonth()])
                     ->sum('amount_paid'),
+                'pending_requests' => Schema::hasTable('subscription_requests')
+                    ? DB::table('subscription_requests')->where('status', 'pending')->count()
+                    : 0,
             ];
+
+            if (Schema::hasTable('subscription_requests')) {
+                $pendingPaymentRequests = SubscriptionRequest::query()
+                    ->with('user:id,name,full_name,username,email')
+                    ->where('status', 'pending')
+                    ->oldest()
+                    ->limit(20)
+                    ->get();
+            }
         }
 
         return view('admin.dashboard', compact(
@@ -77,7 +92,8 @@ class DashboardController extends Controller
             'roleCounts',
             'activityLabels',
             'activityValues',
-            'recentUsers'
+            'recentUsers',
+            'pendingPaymentRequests'
         ));
     }
 }

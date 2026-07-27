@@ -8,6 +8,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
+use App\Models\WeightEntry;
 
 class ProfileController extends Controller
 {
@@ -95,6 +96,13 @@ class ProfileController extends Controller
                 'activity_multiplier' => $validated['activity_multiplier'] ?? $metric->activity_multiplier,
             ]);
             $metric->save();
+
+            if (array_key_exists('weight_kg', $validated) && $validated['weight_kg'] !== null) {
+                WeightEntry::query()->updateOrCreate(
+                    ['user_id' => $user->id, 'recorded_on' => now()->toDateString()],
+                    ['weight_kg' => $validated['weight_kg'], 'source' => 'profile']
+                );
+            }
 
             $goal = $user->nutritionGoal()->firstOrCreate(['user_id' => $user->id]);
             $goal->fill([

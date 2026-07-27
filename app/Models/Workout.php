@@ -48,4 +48,9 @@ class Workout extends Model
   {
     return $this->belongsTo(User::class);
   }
+
+  public function trainerAssignment()
+  {
+    return $this->hasOne(TrainerWorkoutAssignment::class, 'client_workout_id');
+  }
 }

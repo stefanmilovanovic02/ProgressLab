@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class AdminUserStatsService
 {
@@ -20,13 +21,18 @@ class AdminUserStatsService
             ->orderBy('entry_date')
             ->get(['entry_date', 'calories', 'protein_g', 'carbs_g', 'fat_g']);
 
+        $volumeExpression = Schema::hasColumn('workout_log_sets', 'drop_reps')
+            && Schema::hasColumn('workout_log_sets', 'drop_weight_kg')
+            ? '(COALESCE(sets.reps, 0) * COALESCE(sets.weight_kg, 0)) + (COALESCE(sets.drop_reps, 0) * COALESCE(sets.drop_weight_kg, 0))'
+            : 'COALESCE(sets.reps, 0) * COALESCE(sets.weight_kg, 0)';
+
         $volumes = DB::table('workout_logs as logs')
             ->leftJoin('workout_log_exercises as logged', 'logged.workout_log_id', '=', 'logs.id')
             ->leftJoin('workout_log_sets as sets', 'sets.workout_log_exercise_id', '=', 'logged.id')
             ->where('logs.user_id', $user->id)
             ->whereDate('logs.entry_date', '>=', $start->toDateString())
             ->groupBy('logs.entry_date')
-            ->selectRaw('logs.entry_date, SUM(COALESCE(sets.reps, 0) * COALESCE(sets.weight_kg, 0)) as volume')
+            ->selectRaw("logs.entry_date, SUM({$volumeExpression}) as volume")
             ->pluck('volume', 'entry_date');
 
         $nutritionByDate = $nutrition->keyBy(

@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use App\Enums\UserRole;
+use App\Notifications\ResetPasswordNotification;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -51,6 +52,11 @@ class User extends Authenticatable
     public function nutritionGoal()
     {
         return $this->hasOne(\App\Models\NutritionGoal::class);
+    }
+
+    public function bodyMeasurements()
+    {
+        return $this->hasMany(\App\Models\BodyMeasurement::class);
     }
     /**
      * Get the attributes that should be cast.
@@ -137,6 +143,11 @@ class User extends Authenticatable
         return $this->hasMany(\App\Models\Subscription::class);
     }
 
+    public function subscriptionRequests()
+    {
+        return $this->hasMany(SubscriptionRequest::class);
+    }
+
     public function experienceEvents()
     {
         return $this->hasMany(\App\Models\ExperienceEvent::class);
@@ -145,6 +156,36 @@ class User extends Authenticatable
     public function exerciseRanks()
     {
         return $this->hasMany(\App\Models\UserExerciseRank::class);
+    }
+
+    public function trainerClients()
+    {
+        return $this->hasMany(TrainerClient::class, 'trainer_id');
+    }
+
+    public function trainerRelationships()
+    {
+        return $this->hasMany(TrainerClient::class, 'client_id');
+    }
+
+    public function weightEntries()
+    {
+        return $this->hasMany(WeightEntry::class);
+    }
+
+    public function hasFullChartAccess(): bool
+    {
+        return $this->hasAnyRole([
+            UserRole::Paid,
+            UserRole::Trainer,
+            UserRole::Admin,
+            UserRole::Owner,
+        ]);
+    }
+
+    public function sendPasswordResetNotification($token): void
+    {
+        $this->notify(new ResetPasswordNotification($token));
     }
 
     public function getAvatarUrlAttribute(): string

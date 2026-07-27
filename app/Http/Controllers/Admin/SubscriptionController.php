@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Subscription;
 use App\Models\User;
+use App\Services\SubscriptionAccessService;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
 
@@ -60,9 +61,10 @@ class SubscriptionController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, SubscriptionAccessService $access)
     {
         $subscription = Subscription::query()->create($this->validateSubscription($request));
+        $access->syncUserAccess($subscription->user, true);
 
         return redirect()->route('admin.subscriptions.edit', $subscription)
             ->with('status', 'Subscription created successfully.');
@@ -78,17 +80,34 @@ class SubscriptionController extends Controller
         ]);
     }
 
-    public function update(Request $request, Subscription $subscription)
+    public function update(
+        Request $request,
+        Subscription $subscription,
+        SubscriptionAccessService $access
+    )
     {
+        $previousUserId = $subscription->user_id;
         $subscription->update($this->validateSubscription($request));
+        $access->syncUserAccess($subscription->user, true);
+
+        if ($previousUserId !== $subscription->user_id) {
+            $previousUser = User::query()->find($previousUserId);
+            if ($previousUser) {
+                $access->syncUserAccess($previousUser, true);
+            }
+        }
 
         return redirect()->route('admin.subscriptions.edit', $subscription)
             ->with('status', 'Subscription updated successfully.');
     }
 
-    public function destroy(Subscription $subscription)
+    public function destroy(Subscription $subscription, SubscriptionAccessService $access)
     {
+        $user = $subscription->user;
         $subscription->delete();
+        if ($user) {
+            $access->syncUserAccess($user, true);
+        }
 
         return redirect()->route('admin.subscriptions.index')
             ->with('status', 'Subscription removed successfully.');

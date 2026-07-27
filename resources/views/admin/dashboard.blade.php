@@ -35,6 +35,46 @@
           <article><span>Complimentary access</span><strong>{{ number_format($ownerMetrics['complimentary_access']) }}</strong><small>Not counted as paid</small></article>
           <article><span>Total revenue</span><strong>€{{ number_format($ownerMetrics['revenue'], 2) }}</strong></article>
           <article><span>This month</span><strong>€{{ number_format($ownerMetrics['monthly_revenue'], 2) }}</strong></article>
+          <article><span>Pending payments</span><strong>{{ number_format($ownerMetrics['pending_requests']) }}</strong><small>Needs verification</small></article>
+        </div>
+      </section>
+
+      <section class="ad-card">
+        <div class="ad-card__head">
+          <div><span class="ad-eyebrow">Owner only · verify in PayPal</span><h2>Activation requests</h2></div>
+          <span class="ad-lock">{{ $pendingPaymentRequests->count() }} pending</span>
+        </div>
+        <p class="ad-section-copy">Approve only after the PayPal email, exact amount, and transaction ID match a completed payment in your PayPal Activity.</p>
+        <div class="ad-table-wrap">
+          <table class="ad-table">
+            <thead><tr><th>User</th><th>Plan</th><th>Amount</th><th>PayPal details</th><th>Submitted</th><th>Review</th></tr></thead>
+            <tbody>
+              @forelse($pendingPaymentRequests as $paymentRequest)
+                <tr>
+                  <td><strong>{{ $paymentRequest->user->full_name ?? $paymentRequest->user->name }}</strong><small>{{ $paymentRequest->user->email }}</small></td>
+                  <td><span class="ad-role-pill ad-role-pill--{{ $paymentRequest->plan }}">{{ $paymentRequest->plan === 'trainer' ? 'Trainer' : 'ProgressLab+' }}</span></td>
+                  <td>€{{ number_format((float) $paymentRequest->amount, 2) }}</td>
+                  <td><strong>{{ $paymentRequest->paypal_transaction_id }}</strong><small>{{ $paymentRequest->paypal_email }}</small></td>
+                  <td>{{ $paymentRequest->created_at->diffForHumans() }}</td>
+                  <td>
+                    <div class="ad-payment-actions">
+                      <form method="POST" action="{{ route('admin.subscription-requests.approve', $paymentRequest) }}" onsubmit="return confirm('I verified this completed PayPal payment. Activate the account for 30 days?')">
+                        @csrf
+                        <button class="ad-button" type="submit">Verify & activate</button>
+                      </form>
+                      <form method="POST" action="{{ route('admin.subscription-requests.reject', $paymentRequest) }}" onsubmit="return confirm('Reject this activation request?')">
+                        @csrf
+                        <input type="hidden" name="owner_notes" value="Payment could not be verified.">
+                        <button class="ad-button ad-button--danger" type="submit">Reject</button>
+                      </form>
+                    </div>
+                  </td>
+                </tr>
+              @empty
+                <tr><td colspan="6" class="ad-empty">No payment claims are waiting for verification.</td></tr>
+              @endforelse
+            </tbody>
+          </table>
         </div>
       </section>
     @endif

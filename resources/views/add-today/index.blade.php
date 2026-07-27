@@ -211,6 +211,193 @@
 
       </section>
 
+      @php
+        $measurementTab = $errors->getBag('body')->any()
+          ? 'body'
+          : session('measurement_tab', 'goals');
+      @endphp
+
+      <section
+        class="pl-card bm-card"
+        id="measurements"
+        aria-labelledby="measurements-title"
+        data-measurements-card
+        data-default-tab="{{ $measurementTab }}"
+      >
+        <div class="bm-head">
+          <div class="bm-head__icon" aria-hidden="true">&#128207;</div>
+          <div>
+            <span class="bm-eyebrow">Profile & body check-in</span>
+            <h2 id="measurements-title">Goals & Measurements</h2>
+          </div>
+        </div>
+
+        <p class="bm-intro">
+          Update your daily nutrition targets or save today’s body measurements without leaving this page.
+        </p>
+
+        @if(session('measurement_status'))
+          <div class="bm-success" role="status">{{ session('measurement_status') }}</div>
+        @endif
+
+        <div class="bm-tabs" role="tablist" aria-label="Measurement sections">
+          <button
+            class="bm-tab {{ $measurementTab === 'goals' ? 'is-active' : '' }}"
+            id="bm-tab-goals"
+            type="button"
+            role="tab"
+            aria-controls="bm-panel-goals"
+            aria-selected="{{ $measurementTab === 'goals' ? 'true' : 'false' }}"
+            data-bm-tab="goals"
+          >
+            Nutrition Goals
+          </button>
+          <button
+            class="bm-tab {{ $measurementTab === 'body' ? 'is-active' : '' }}"
+            id="bm-tab-body"
+            type="button"
+            role="tab"
+            aria-controls="bm-panel-body"
+            aria-selected="{{ $measurementTab === 'body' ? 'true' : 'false' }}"
+            data-bm-tab="body"
+          >
+            Body Measurements
+          </button>
+        </div>
+
+        <div
+          class="bm-panel {{ $measurementTab === 'goals' ? 'is-active' : '' }}"
+          id="bm-panel-goals"
+          role="tabpanel"
+          aria-labelledby="bm-tab-goals"
+          data-bm-panel="goals"
+          {{ $measurementTab === 'goals' ? '' : 'hidden' }}
+        >
+          <div class="bm-panel__head">
+            <div>
+              <h3>Daily targets</h3>
+              <p>These values also update the targets shown across your Home and Add Today pages.</p>
+            </div>
+          </div>
+
+          @if($errors->getBag('goals')->any())
+            <div class="bm-error" role="alert">{{ $errors->getBag('goals')->first() }}</div>
+          @endif
+
+          <form action="{{ route('add-today.measurements.goals') }}" method="POST">
+            @csrf
+            <div class="bm-grid">
+              <label class="bm-field">
+                <span>Goal</span>
+                <select name="goal" required>
+                  <option value="bulk" @selected(old('goal', $goal?->goal) === 'bulk')>Build muscle</option>
+                  <option value="cut" @selected(old('goal', $goal?->goal) === 'cut')>Lose fat</option>
+                  <option value="recomp" @selected(old('goal', $goal?->goal) === 'recomp')>Body recomposition</option>
+                </select>
+              </label>
+
+              <label class="bm-field">
+                <span>Calories <small>kcal</small></span>
+                <input type="number" inputmode="numeric" name="calorie_target" min="800" max="8000" step="1" required value="{{ old('calorie_target', $goal?->calorie_target) }}">
+              </label>
+
+              <label class="bm-field">
+                <span>Protein <small>g</small></span>
+                <input type="number" inputmode="numeric" name="protein_g" min="0" max="500" step="1" required value="{{ old('protein_g', $goal?->protein_g) }}">
+              </label>
+
+              <label class="bm-field">
+                <span>Carbohydrates <small>g</small></span>
+                <input type="number" inputmode="numeric" name="carbs_g" min="0" max="1200" step="1" required value="{{ old('carbs_g', $goal?->carbs_g) }}">
+              </label>
+
+              <label class="bm-field">
+                <span>Fat <small>g</small></span>
+                <input type="number" inputmode="numeric" name="fat_g" min="0" max="400" step="1" required value="{{ old('fat_g', $goal?->fat_g) }}">
+              </label>
+
+              <label class="bm-field">
+                <span>Water <small>L/day</small></span>
+                <input type="number" inputmode="decimal" name="water_l" min="0" max="10" step="0.1" value="{{ old('water_l', $goal?->water_l) }}">
+              </label>
+
+              <label class="bm-field">
+                <span>Creatine <small>g/day</small></span>
+                <input type="number" inputmode="decimal" name="creatine_g" min="0" max="20" step="0.1" value="{{ old('creatine_g', $goal?->creatine_g) }}">
+              </label>
+            </div>
+
+            <div class="bm-actions">
+              <span>Changes apply immediately to your current profile goals.</span>
+              <button type="submit">Save nutrition goals</button>
+            </div>
+          </form>
+        </div>
+
+        <div
+          class="bm-panel {{ $measurementTab === 'body' ? 'is-active' : '' }}"
+          id="bm-panel-body"
+          role="tabpanel"
+          aria-labelledby="bm-tab-body"
+          data-bm-panel="body"
+          {{ $measurementTab === 'body' ? '' : 'hidden' }}
+        >
+          <div class="bm-panel__head">
+            <div>
+              <h3>Today’s body check-in</h3>
+              <p>Measure consistently, ideally at the same time of day and without flexing.</p>
+            </div>
+            @if($latestBodyMeasurement)
+              <span class="bm-last">Last saved {{ \Illuminate\Support\Carbon::parse($latestBodyMeasurement->recorded_on)->format('M j, Y') }}</span>
+            @endif
+          </div>
+
+          @if($errors->getBag('body')->any())
+            <div class="bm-error" role="alert">{{ $errors->getBag('body')->first() }}</div>
+          @endif
+
+          <form action="{{ route('add-today.measurements.body') }}" method="POST">
+            @csrf
+            <div class="bm-grid">
+              <label class="bm-field">
+                <span>Weight <small>kg</small></span>
+                <input type="number" inputmode="decimal" name="weight_kg" min="20" max="400" step="0.1" placeholder="e.g. 82.5" value="{{ old('weight_kg', $currentWeight) }}">
+              </label>
+
+              <label class="bm-field">
+                <span>Waist <small>cm</small></span>
+                <input type="number" inputmode="decimal" name="waist_cm" min="30" max="250" step="0.1" placeholder="e.g. 84" value="{{ old('waist_cm', $latestBodyMeasurement?->waist_cm) }}">
+              </label>
+
+              <label class="bm-field">
+                <span>Arms <small>cm</small></span>
+                <input type="number" inputmode="decimal" name="arms_cm" min="10" max="100" step="0.1" placeholder="e.g. 39" value="{{ old('arms_cm', $latestBodyMeasurement?->arms_cm) }}">
+              </label>
+
+              <label class="bm-field">
+                <span>Thighs <small>cm</small></span>
+                <input type="number" inputmode="decimal" name="thighs_cm" min="20" max="150" step="0.1" placeholder="e.g. 61" value="{{ old('thighs_cm', $latestBodyMeasurement?->thighs_cm) }}">
+              </label>
+
+              <label class="bm-field">
+                <span>Hips <small>cm</small></span>
+                <input type="number" inputmode="decimal" name="hips_cm" min="30" max="250" step="0.1" placeholder="e.g. 96" value="{{ old('hips_cm', $latestBodyMeasurement?->hips_cm) }}">
+              </label>
+
+              <label class="bm-field">
+                <span>Glutes / Seat <small>cm</small></span>
+                <input type="number" inputmode="decimal" name="glutes_cm" min="30" max="250" step="0.1" placeholder="e.g. 101" value="{{ old('glutes_cm', $latestBodyMeasurement?->glutes_cm) }}">
+              </label>
+            </div>
+
+            <div class="bm-actions">
+              <span>Saving weight also updates your weight chart and current profile weight.</span>
+              <button type="submit">Save today’s measurements</button>
+            </div>
+          </form>
+        </div>
+      </section>
+
       <section class="pl-card pp-card" id="progress-photos" aria-labelledby="progress-photos-title">
         <div class="pp-head">
           <div class="pp-head__title">
@@ -575,14 +762,19 @@
             const exerciseId = Number(exCard.dataset.exerciseId);
 
             const rows = Array.from(exCard.querySelectorAll('.ws-sets .ws-row')).map((row, idx) => {
-              const inputs = row.querySelectorAll('input.ws-in');
-              const repsVal = inputs[0]?.value ?? '';
-              const wVal    = inputs[1]?.value ?? '';
+              const repsVal = row.querySelector('.ws-reps')?.value ?? '';
+              const wVal = row.querySelector('.ws-weight')?.value ?? '';
+              const setType = row.querySelector('.ws-settype')?.value ?? 'normal';
+              const dropRepsVal = row.querySelector('.ws-drop-reps')?.value ?? '';
+              const dropWeightVal = row.querySelector('.ws-drop-weight')?.value ?? '';
 
               return {
                 set_number: idx + 1,
+                set_type: setType,
                 reps: repsVal === '' ? null : Number(repsVal),
                 weight_kg: wVal === '' ? null : Number(wVal),
+                drop_reps: setType === 'drop' && dropRepsVal !== '' ? Number(dropRepsVal) : null,
+                drop_weight_kg: setType === 'drop' && dropWeightVal !== '' ? Number(dropWeightVal) : null,
               };
             });
 
@@ -640,12 +832,12 @@
         // Save on typing reps/weight
         document.addEventListener('input', (e) => {
           if (e.target.closest('.ws-card') && e.target.classList.contains('ws-in')) {
-            const rowInputs = e.target.closest('.ws-row')?.querySelectorAll('input.ws-in');
+            const row = e.target.closest('.ws-row');
 
             if (
               currentTiming.status === 'not_started'
-              && rowInputs?.[0]?.value !== ''
-              && rowInputs?.[1]?.value !== ''
+              && row?.querySelector('.ws-reps')?.value !== ''
+              && row?.querySelector('.ws-weight')?.value !== ''
             ) {
               applyTiming({
                 status: 'running',
@@ -653,6 +845,13 @@
               });
             }
 
+            scheduleSave();
+          }
+        });
+
+        document.addEventListener('change', (e) => {
+          if (e.target.closest('.ws-card') && e.target.classList.contains('ws-settype')) {
+            syncSetType(e.target.closest('.ws-row'));
             scheduleSave();
           }
         });
@@ -702,6 +901,7 @@
                 <div>Set</div>
                 <div>Reps</div>
                 <div>Weight (kg)</div>
+                <div>Type</div>
                 <div>Actions</div>
               </div>
 
@@ -734,17 +934,45 @@
               || null;
             const repsPlaceholder = previousSet?.reps ?? history?.max_reps ?? 12;
             const weightPlaceholder = previousSet?.weight_kg ?? history?.max_weight_kg ?? 80;
+            const setType = ['normal', 'warmup', 'drop'].includes(prefill.set_type)
+              ? prefill.set_type
+              : (['normal', 'warmup', 'drop'].includes(previousSet?.set_type) ? previousSet.set_type : 'normal');
+            const dropRepsPlaceholder = previousSet?.drop_reps ?? 8;
+            const dropWeightPlaceholder = previousSet?.drop_weight_kg ?? Math.max(0, Number(weightPlaceholder) * 0.7);
 
             const row = document.createElement('div');
             row.className = 'ws-row';
             row.innerHTML = `
               <div class="ws-setnum">${setIndex}</div>
-              <div><input class="ws-in" type="number" min="0" placeholder="${repsPlaceholder}" value="${prefill.reps ?? ''}" aria-label="Set ${setIndex} reps; previous ${repsPlaceholder}"></div>
-              <div><input class="ws-in" type="number" min="0" step="0.5" placeholder="${weightPlaceholder}" value="${prefill.weight_kg ?? ''}" aria-label="Set ${setIndex} weight in kilograms; previous ${weightPlaceholder}"></div>
+              <div class="ws-field" data-label="Reps"><input class="ws-in ws-reps" type="number" inputmode="numeric" min="0" placeholder="${repsPlaceholder}" value="${prefill.reps ?? ''}" aria-label="Set ${setIndex} reps; previous ${repsPlaceholder}"></div>
+              <div class="ws-field" data-label="Weight (kg)"><input class="ws-in ws-weight" type="number" inputmode="decimal" min="0" step="0.5" placeholder="${weightPlaceholder}" value="${prefill.weight_kg ?? ''}" aria-label="Set ${setIndex} weight in kilograms; previous ${weightPlaceholder}"></div>
+              <div class="ws-field" data-label="Set type">
+                <select class="ws-settype" aria-label="Set ${setIndex} type">
+                  <option value="normal" ${setType === 'normal' ? 'selected' : ''}>Normal</option>
+                  <option value="warmup" ${setType === 'warmup' ? 'selected' : ''}>Warm-up</option>
+                  <option value="drop" ${setType === 'drop' ? 'selected' : ''}>Drop set</option>
+                </select>
+              </div>
+              <div class="ws-drop-fields" hidden>
+                <div class="ws-drop-copy">
+                  <strong>Drop set</strong>
+                  <span>Log the reduced weight immediately after the main set.</span>
+                </div>
+                <label>
+                  <span>Drop reps</span>
+                  <input class="ws-in ws-drop-reps" type="number" inputmode="numeric" min="0" placeholder="${dropRepsPlaceholder}" value="${prefill.drop_reps ?? ''}">
+                </label>
+                <label>
+                  <span>Drop weight (kg)</span>
+                  <input class="ws-in ws-drop-weight" type="number" inputmode="decimal" min="0" step="0.5" placeholder="${Number(dropWeightPlaceholder).toFixed(1)}" value="${prefill.drop_weight_kg ?? ''}">
+                </label>
+              </div>
               <div class="ws-act">
                 <button type="button" class="ws-remove" title="Remove set" aria-label="Remove set">–</button>
               </div>
             `;
+
+            syncSetType(row);
 
             row.querySelector('.ws-remove').addEventListener('click', () => {
               row.remove();
@@ -777,6 +1005,19 @@
           });
 
           return wrap;
+        }
+
+        function syncSetType(row) {
+          if (!row) return;
+
+          const setType = row.querySelector('.ws-settype')?.value ?? 'normal';
+          row.classList.toggle('is-warmup', setType === 'warmup');
+          row.classList.toggle('is-drop', setType === 'drop');
+
+          const dropFields = row.querySelector('.ws-drop-fields');
+          if (dropFields) {
+            dropFields.hidden = setType !== 'drop';
+          }
         }
 
         function renderWorkout(workoutId, savedLog) {
@@ -1047,6 +1288,45 @@
         render();
       })();
       </script>
+
+<script>
+  (() => {
+    const card = document.querySelector('[data-measurements-card]');
+    if (!card) return;
+
+    const tabs = Array.from(card.querySelectorAll('[data-bm-tab]'));
+    const panels = Array.from(card.querySelectorAll('[data-bm-panel]'));
+
+    function activate(name, focus = false) {
+      tabs.forEach(tab => {
+        const active = tab.dataset.bmTab === name;
+        tab.classList.toggle('is-active', active);
+        tab.setAttribute('aria-selected', active ? 'true' : 'false');
+        tab.tabIndex = active ? 0 : -1;
+        if (active && focus) tab.focus();
+      });
+
+      panels.forEach(panel => {
+        const active = panel.dataset.bmPanel === name;
+        panel.classList.toggle('is-active', active);
+        panel.hidden = !active;
+      });
+    }
+
+    tabs.forEach((tab, index) => {
+      tab.addEventListener('click', () => activate(tab.dataset.bmTab));
+      tab.addEventListener('keydown', event => {
+        if (!['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+        event.preventDefault();
+        const direction = event.key === 'ArrowRight' ? 1 : -1;
+        const next = tabs[(index + direction + tabs.length) % tabs.length];
+        activate(next.dataset.bmTab, true);
+      });
+    });
+
+    activate(card.dataset.defaultTab || 'goals');
+  })();
+</script>
 
 <div class="exercise-rank-up" id="exerciseRankUp" hidden role="dialog" aria-modal="true" aria-labelledby="exerciseRankUpTitle">
   <div class="exercise-rank-up__light" aria-hidden="true"></div>

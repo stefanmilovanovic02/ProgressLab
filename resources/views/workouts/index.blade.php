@@ -73,6 +73,15 @@
           </header>
 
           <div class="wo-card__body">
+            @if($workout->trainerAssignment)
+              <div class="wo-trainer-plan">
+                <strong>Trainer assigned</strong>
+                <span>From {{ $workout->trainerAssignment->relationship->trainer->full_name ?? $workout->trainerAssignment->relationship->trainer->name }}</span>
+                @if($workout->trainerAssignment->instructions)
+                  <p>{{ $workout->trainerAssignment->instructions }}</p>
+                @endif
+              </div>
+            @endif
             <div class="wo-label">Exercises</div>
 
             <ul class="wo-list" role="list">

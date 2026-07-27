@@ -182,6 +182,25 @@
             </div>
         </div>
 
+        <div class="fr-section" id="trainerAccessSection" hidden>
+            <div class="fr-section__title">🤝 Trainer Access</div>
+            <div class="fr-trainer-access">
+                <div>
+                    <strong id="trainerAccessTitle">Client access</strong>
+                    <p id="trainerAccessCopy">Trainer access is separate from friendship and requires approval.</p>
+                </div>
+                <div class="fr-trainer-actions" id="trainerAccessActions"></div>
+                <form class="fr-trainer-permissions" id="trainerPermissions" hidden>
+                    <label><input type="checkbox" name="can_view_nutrition"> Nutrition charts</label>
+                    <label><input type="checkbox" name="can_view_exercises"> Exercise and strength charts</label>
+                    <label><input type="checkbox" name="can_view_weight"> Body-weight history</label>
+                    <label><input type="checkbox" name="can_view_streaks"> Streaks</label>
+                    <label class="is-disabled"><input type="checkbox" disabled> Progress photos (not available to Trainers)</label>
+                </form>
+                <p class="fr-unfriend-confirm__error" id="trainerAccessError" role="alert" hidden></p>
+            </div>
+        </div>
+
         <div class="fr-section">
             <div class="fr-section__title">🏆 Quick Stats</div>
             <div class="fr-cards4">
@@ -416,6 +435,11 @@
             if (declineBtn) declineBtn.disabled = false;
         }
     });
+
+    const requestedFriend = new URLSearchParams(window.location.search).get('open_friend');
+    if (requestedFriend) {
+        document.querySelector(`.fr-fcard[data-friend-id="${CSS.escape(requestedFriend)}"]`)?.click();
+    }
 })();
 </script>
 
@@ -450,8 +474,15 @@
     const unfriendName = modal.querySelector('[data-unfriend-name]');
     const unfriendButton = modal.querySelector('[data-unfriend-confirm-button]');
     const unfriendError = modal.querySelector('[data-unfriend-error]');
+    const trainerAccessSection = document.getElementById('trainerAccessSection');
+    const trainerAccessTitle = document.getElementById('trainerAccessTitle');
+    const trainerAccessCopy = document.getElementById('trainerAccessCopy');
+    const trainerAccessActions = document.getElementById('trainerAccessActions');
+    const trainerPermissions = document.getElementById('trainerPermissions');
+    const trainerAccessError = document.getElementById('trainerAccessError');
 
     let currentFriendId = null;
+    let currentTrainerAccess = null;
     let fcChart = null;
 
     function openModal(){
@@ -561,6 +592,114 @@
             `).join('')
             : `<div class="fr-ach" style="grid-column:1/-1; opacity:.7;">No achievements to display yet</div>`;
     }
+
+    function permissionPayload() {
+        return {
+            can_view_nutrition: trainerPermissions.elements.can_view_nutrition.checked,
+            can_view_exercises: trainerPermissions.elements.can_view_exercises.checked,
+            can_view_weight: trainerPermissions.elements.can_view_weight.checked,
+            can_view_streaks: trainerPermissions.elements.can_view_streaks.checked,
+        };
+    }
+
+    function renderTrainerAccess(access) {
+        currentTrainerAccess = access;
+        trainerAccessError.hidden = true;
+        trainerAccessActions.innerHTML = '';
+        trainerPermissions.hidden = true;
+
+        if (!access || access.viewer_mode === 'none') {
+            trainerAccessSection.hidden = true;
+            return;
+        }
+
+        trainerAccessSection.hidden = false;
+        Object.entries(access.permissions || {}).forEach(([key, value]) => {
+            const field = trainerPermissions.elements[`can_view_${key}`];
+            if (field) field.checked = Boolean(value);
+        });
+
+        if (access.viewer_mode === 'trainer') {
+            trainerAccessTitle.textContent = 'Client relationship';
+            if (access.status === 'accepted') {
+                trainerAccessCopy.textContent = 'This client controls which read-only areas you can access.';
+                trainerAccessActions.innerHTML = `
+                    <a class="pl-btn pl-btn--light" href="${access.dashboard_url}">Open Client Dashboard</a>
+                    <button class="pl-btn pl-btn--ghost" type="button" data-trainer-remove>Remove Client</button>`;
+            } else if (access.status === 'pending') {
+                trainerAccessCopy.textContent = 'Invitation sent. The user must accept and choose their permissions.';
+                trainerAccessActions.innerHTML = '<button class="pl-btn pl-btn--ghost" type="button" disabled>Invitation Pending</button>';
+            } else if (access.target_can_be_client) {
+                trainerAccessCopy.textContent = 'Invite this friend to share selected charts with you.';
+                trainerAccessActions.innerHTML = '<button class="pl-btn pl-btn--light" type="button" data-trainer-invite>Invite as Client</button>';
+            } else {
+                trainerAccessCopy.textContent = 'This account cannot become a Trainer client.';
+            }
+            return;
+        }
+
+        trainerAccessTitle.textContent = 'Trainer invitation';
+        if (access.status === 'pending') {
+            trainerAccessCopy.textContent = 'Choose what this Trainer may view before accepting.';
+            trainerPermissions.hidden = false;
+            trainerAccessActions.innerHTML = `
+                <button class="pl-btn pl-btn--light" type="button" data-trainer-accept>Accept Invitation</button>
+                <button class="pl-btn pl-btn--ghost" type="button" data-trainer-decline>Decline</button>`;
+        } else if (access.status === 'accepted') {
+            trainerAccessCopy.textContent = 'You can change shared areas or revoke access at any time.';
+            trainerPermissions.hidden = false;
+            trainerAccessActions.innerHTML = `
+                <button class="pl-btn pl-btn--light" type="button" data-trainer-save>Save Access</button>
+                <button class="pl-btn pl-btn--ghost" type="button" data-trainer-remove>Revoke Access</button>`;
+        } else {
+            trainerAccessCopy.textContent = 'No active Trainer invitation.';
+        }
+    }
+
+    async function trainerRequest(url, method = 'POST', body = null) {
+        trainerAccessError.hidden = true;
+        const response = await fetch(url, {
+            method,
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': csrf,
+            },
+            body: body ? JSON.stringify(body) : null,
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(data.message || 'Trainer access could not be updated.');
+        return data;
+    }
+
+    trainerAccessActions.addEventListener('click', async event => {
+        const button = event.target.closest('button');
+        if (!button || !currentFriendId) return;
+        button.disabled = true;
+        try {
+            if (button.matches('[data-trainer-invite]')) {
+                const data = await trainerRequest(`{{ url('/friends') }}/${currentFriendId}/trainer-invitation`);
+                renderTrainerAccess({ ...currentTrainerAccess, ...data.relationship, viewer_mode: 'trainer', target_can_be_client: true });
+            } else if (button.matches('[data-trainer-accept]')) {
+                const data = await trainerRequest(`{{ url('/trainer-invitations') }}/${currentTrainerAccess.id}/accept`, 'POST', permissionPayload());
+                renderTrainerAccess({ ...currentTrainerAccess, ...data.relationship, viewer_mode: 'client' });
+            } else if (button.matches('[data-trainer-decline]')) {
+                await trainerRequest(`{{ url('/trainer-invitations') }}/${currentTrainerAccess.id}/decline`);
+                renderTrainerAccess({ ...currentTrainerAccess, status: 'declined' });
+            } else if (button.matches('[data-trainer-save]')) {
+                const data = await trainerRequest(`{{ url('/trainer-access') }}/${currentTrainerAccess.id}`, 'PATCH', permissionPayload());
+                renderTrainerAccess({ ...currentTrainerAccess, ...data.relationship, viewer_mode: 'client' });
+            } else if (button.matches('[data-trainer-remove]')) {
+                if (!confirm(currentTrainerAccess.viewer_mode === 'trainer' ? 'Remove this client?' : 'Revoke this Trainer’s access?')) return;
+                await trainerRequest(`{{ url('/trainer-access') }}/${currentTrainerAccess.id}`, 'DELETE');
+                renderTrainerAccess({ ...currentTrainerAccess, status: 'revoked' });
+            }
+        } catch (error) {
+            trainerAccessError.textContent = error.message;
+            trainerAccessError.hidden = false;
+            button.disabled = false;
+        }
+    });
 
     function resetComparisonUI() {
         fcExerciseSelect.innerHTML = `<option value="">Choose an exercise...</option>`;
@@ -719,6 +858,7 @@
 
         renderStreaks(data.streaks);
         renderAchievements(data.achievements);
+        renderTrainerAccess(data.trainer_access);
     }
 
     fcExerciseSelect.addEventListener('change', async () => {

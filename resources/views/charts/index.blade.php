@@ -59,15 +59,28 @@
 
           <div class="ch-seg">
             <button type="button" class="ch-segbtn" data-period="week">This Week</button>
-            <button type="button" class="ch-segbtn" data-period="month">This Month</button>
-            <button type="button" class="ch-segbtn" data-period="year">This Year</button>
-            <button type="button" class="ch-segbtn is-active" data-period="all">All Time</button>
+            <button type="button" class="ch-segbtn is-active" data-period="month">This Month</button>
+            @if($hasFullChartAccess)
+              <button type="button" class="ch-segbtn" data-period="year">This Year</button>
+              <button type="button" class="ch-segbtn" data-period="all">All Time</button>
+            @else
+              <button type="button" class="ch-segbtn ch-segbtn--locked" data-macro-locked-period="year">🔒 This Year</button>
+              <button type="button" class="ch-segbtn ch-segbtn--locked" data-macro-locked-period="all">🔒 All Time</button>
+            @endif
           </div>
         </div>
       </div>
 
-      <div class="ch-chartwrap">
+      <div class="ch-chartwrap ch-chartwrap--lockable">
         <canvas id="macroChart" height="120"></canvas>
+        @unless($hasFullChartAccess)
+          <div class="ch-upgrade-overlay" data-macro-upgrade hidden>
+            <span class="ch-upgrade-overlay__icon" aria-hidden="true">✦</span>
+            <strong>Upgrade to see the full insights</strong>
+            <p><span data-macro-upgrade-period>Year</span> analytics, long-term changes, and complete history are available with ProgressLab+.</p>
+            <a class="pl-btn pl-btn--light" href="{{ route('plans.index') }}">Compare plans</a>
+          </div>
+        @endunless
       </div>
 
       <div class="ch-footer">
@@ -113,8 +126,14 @@
             {{-- IMPORTANT: use .ch-seg + .ch-segbtn --}}
             <div class="ch-seg">
                 <button type="button" class="ch-segbtn" data-ep-period="week">This Week</button>
-                <button type="button" class="ch-segbtn" data-ep-period="month">This Month</button>
-                <button type="button" class="ch-segbtn is-active" data-ep-period="all">All Time</button>
+                <button type="button" class="ch-segbtn is-active" data-ep-period="month">This Month</button>
+                @if($hasFullChartAccess)
+                  <button type="button" class="ch-segbtn" data-ep-period="year">This Year</button>
+                  <button type="button" class="ch-segbtn" data-ep-period="all">All Time</button>
+                @else
+                  <button type="button" class="ch-segbtn ch-segbtn--locked" data-exercise-locked-period="year">🔒 This Year</button>
+                  <button type="button" class="ch-segbtn ch-segbtn--locked" data-exercise-locked-period="all">🔒 All Time</button>
+                @endif
             </div>
             </div>
         </div>
@@ -137,8 +156,16 @@
         </div>
 
         {{-- IMPORTANT: use .ch-chartwrap so it matches macro styling --}}
-        <div class="ch-chartwrap ch-chartwrap--exercise">
+        <div class="ch-chartwrap ch-chartwrap--exercise ch-chartwrap--lockable">
             <canvas id="epChart" height="120"></canvas>
+            @unless($hasFullChartAccess)
+              <div class="ch-upgrade-overlay" data-exercise-upgrade hidden>
+                <span class="ch-upgrade-overlay__icon" aria-hidden="true">🏋️</span>
+                <strong>Upgrade to see the full insights</strong>
+                <p><span data-exercise-upgrade-period>Year</span> strength history and long-term comparisons are available with ProgressLab+.</p>
+                <a class="pl-btn pl-btn--light" href="{{ route('plans.index') }}">Compare plans</a>
+              </div>
+            @endunless
         </div>
 
         <div class="ch-footer">
@@ -258,12 +285,143 @@
           @endif
         </section>
 
+        <section class="pl-card ch-card wr-card" aria-labelledby="weekly-report-title">
+          <div class="wr-head">
+            <div class="ch-head__left">
+              <div class="ch-icon" aria-hidden="true">&#128196;</div>
+              <div>
+                <span class="wr-eyebrow">Monday - Sunday summary</span>
+                <h2 class="ch-title" id="weekly-report-title">Weekly Report</h2>
+                <p class="wr-subtitle">Keep a permanent snapshot of your nutrition, training, weight, and body measurements.</p>
+              </div>
+            </div>
+            @if($hasFullChartAccess)
+              <span class="wr-period">{{ $weeklyReport['period']['label'] }}</span>
+            @else
+              <span class="wr-lock">&#128274; ProgressLab+</span>
+            @endif
+          </div>
+
+          @if($hasFullChartAccess)
+            <div class="wr-stats">
+              <article>
+                <span>Nutrition logged</span>
+                <strong>{{ $weeklyReport['nutrition_days_logged'] }}/7 days</strong>
+              </article>
+              <article>
+                <span>Workouts</span>
+                <strong>{{ $weeklyReport['training']['workouts'] }}</strong>
+              </article>
+              <article>
+                <span>Sets completed</span>
+                <strong>{{ number_format($weeklyReport['training']['sets']) }}</strong>
+              </article>
+              <article>
+                <span>Training volume</span>
+                <strong>{{ number_format($weeklyReport['training']['volume_kg'], 0) }} kg</strong>
+              </article>
+            </div>
+
+            <div class="wr-details">
+              <div>
+                <span>Current weight</span>
+                <strong>
+                  {{ $weeklyReport['weight']['current'] === null ? 'No entry' : number_format($weeklyReport['weight']['current'], 1).' kg' }}
+                </strong>
+              </div>
+              <div>
+                <span>Body check-ins</span>
+                <strong>{{ $weeklyReport['body_checkins'] }}</strong>
+              </div>
+              <div>
+                <span>Nutrition targets</span>
+                <strong>{{ $weeklyReport['nutrition']->first()['target'] ? 'Included' : 'Not configured' }}</strong>
+              </div>
+            </div>
+
+            <div class="wr-actions">
+              <p>The PDF includes macro totals and averages, targets, every logged workout, sets, repetitions, volume, weight change, and your latest measurements. Progress photos are never included.</p>
+              <a class="wr-download" href="{{ route('charts.weekly-report.download') }}">
+                <span aria-hidden="true">&#8595;</span>
+                Download weekly PDF
+              </a>
+            </div>
+          @else
+            <div class="wr-locked">
+              <div class="wr-locked__icon" aria-hidden="true">&#128274;</div>
+              <div>
+                <h3>Save your full weekly progress</h3>
+                <p>Weekly summaries and downloadable PDF reports are available with ProgressLab+ and Trainer plans.</p>
+              </div>
+              <a class="pl-btn pl-btn--light" href="{{ route('plans.index') }}">View plans</a>
+            </div>
+          @endif
+        </section>
+
+        <section class="pl-card ch-card ac-card" aria-labelledby="activity-calendar-title">
+          <div class="ac-head">
+            <div class="ch-head__left">
+              <div class="ch-icon" aria-hidden="true">&#9638;</div>
+              <div>
+                <span class="wr-eyebrow">{{ $activityCalendar['year'] }} consistency</span>
+                <h2 class="ch-title" id="activity-calendar-title">Activity Calendar</h2>
+                <p class="wr-subtitle">Your workout and nutrition consistency at a glance.</p>
+              </div>
+            </div>
+            <div class="ac-summary">
+              <strong>{{ $activityCalendar['active_days'] }}</strong>
+              <span>active days</span>
+              <i></i>
+              <strong>{{ $activityCalendar['complete_days'] }}</strong>
+              <span>complete days</span>
+            </div>
+          </div>
+
+          <div class="ac-scroll" tabindex="0" aria-label="Scrollable yearly activity calendar">
+            <div class="ac-calendar">
+              <div class="ac-month-spacer" aria-hidden="true"></div>
+              <div class="ac-months" style="--ac-weeks: {{ $activityCalendar['week_count'] }}" aria-hidden="true">
+                @foreach($activityCalendar['months'] as $month)
+                  <span>{{ $month }}</span>
+                @endforeach
+              </div>
+
+              <div class="ac-weekdays" aria-hidden="true">
+                <span></span><span>Mon</span><span></span><span>Wed</span><span></span><span>Fri</span><span></span>
+              </div>
+              <div class="ac-days" style="--ac-weeks: {{ $activityCalendar['week_count'] }}">
+                @foreach($activityCalendar['days'] as $day)
+                  <span
+                    class="ac-day {{ $day['future'] ? 'is-future' : '' }} {{ $day['outside_year'] ? 'is-outside-year' : '' }}"
+                    data-level="{{ $day['level'] }}"
+                    data-date="{{ $day['date'] }}"
+                    @if(!$day['outside_year']) title="{{ $day['label'] }} — {{ $day['activity'] }}" aria-label="{{ $day['label'] }}: {{ $day['activity'] }}" @endif
+                  ></span>
+                @endforeach
+              </div>
+            </div>
+          </div>
+
+          <div class="ac-footer">
+            <span>{{ \Illuminate\Support\Carbon::parse($activityCalendar['start'])->format('M j, Y') }} – {{ \Illuminate\Support\Carbon::parse($activityCalendar['end'])->format('M j, Y') }}</span>
+            <div class="ac-legend" aria-label="Activity calendar legend">
+              <span>No activity</span><i data-level="0"></i>
+              <i data-level="1"></i><span>Workout or nutrition</span>
+              <i data-level="2"></i><span>Both completed</span>
+              <i class="is-future"></i><span>Upcoming</span>
+            </div>
+          </div>
+        </section>
+
   </main>
 
   <script>
     (function () {
       const macroSelect = document.getElementById('macroSelect');
       const periodBtns = document.querySelectorAll('[data-period]');
+      const lockedPeriodBtns = document.querySelectorAll('[data-macro-locked-period]');
+      const upgradeOverlay = document.querySelector('[data-macro-upgrade]');
+      const upgradePeriod = document.querySelector('[data-macro-upgrade-period]');
       const dot = document.querySelector('[data-macro-dot]');
       const legendDot = document.querySelector('[data-legend-dot]');
       const legendLabel = document.querySelector('[data-legend-label]');
@@ -318,7 +476,7 @@
 
       async function loadData() {
         const macro = macroSelect.value;
-        const activeBtn = document.querySelector('.ch-segbtn.is-active');
+        const activeBtn = macroSelect.closest('.ch-card')?.querySelector('[data-period].is-active');
         const period = activeBtn ? activeBtn.dataset.period : 'month';
 
         const url = new URL(@json(route('charts.macros')), window.location.origin);
@@ -350,8 +508,21 @@
 
       periodBtns.forEach(btn => {
         btn.addEventListener('click', () => {
+          lockedPeriodBtns.forEach(item => item.classList.remove('is-active'));
+          if (upgradeOverlay) upgradeOverlay.hidden = true;
           setActivePeriod(btn.dataset.period);
           loadData();
+        });
+      });
+
+      lockedPeriodBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          periodBtns.forEach(item => item.classList.remove('is-active'));
+          lockedPeriodBtns.forEach(item => item.classList.toggle('is-active', item === btn));
+          if (upgradePeriod) {
+            upgradePeriod.textContent = btn.dataset.macroLockedPeriod === 'all' ? 'All-time' : 'Year';
+          }
+          if (upgradeOverlay) upgradeOverlay.hidden = false;
         });
       });
 
@@ -367,11 +538,14 @@
     const weightToggle = document.getElementById('epShowWeight');
     const legendExercise = document.getElementById('epLegendExercise');
     const daysText = document.getElementById('epDaysText');
+    const lockedExerciseBtns = document.querySelectorAll('[data-exercise-locked-period]');
+    const exerciseUpgrade = document.querySelector('[data-exercise-upgrade]');
+    const exerciseUpgradePeriod = document.querySelector('[data-exercise-upgrade-period]');
 
     if (!select || !repsToggle || !weightToggle) return;
 
     const apiUrl = "{{ route('charts.exercise-data') }}";
-    let period = 'all';
+    let period = 'month';
 
     const ctx = document.getElementById('epChart').getContext('2d');
 
@@ -453,10 +627,23 @@
     // Period buttons
     document.querySelectorAll('[data-ep-period]').forEach(btn => {
         btn.addEventListener('click', () => {
+        lockedExerciseBtns.forEach(item => item.classList.remove('is-active'));
+        if (exerciseUpgrade) exerciseUpgrade.hidden = true;
         document.querySelectorAll('[data-ep-period]').forEach(b => b.classList.remove('is-active'));
         btn.classList.add('is-active');
         period = btn.dataset.epPeriod;
         fetchAndRender();
+        });
+    });
+
+    lockedExerciseBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-ep-period]').forEach(item => item.classList.remove('is-active'));
+        lockedExerciseBtns.forEach(item => item.classList.toggle('is-active', item === btn));
+        if (exerciseUpgradePeriod) {
+            exerciseUpgradePeriod.textContent = btn.dataset.exerciseLockedPeriod === 'all' ? 'All-time' : 'Year';
+        }
+        if (exerciseUpgrade) exerciseUpgrade.hidden = false;
         });
     });
 

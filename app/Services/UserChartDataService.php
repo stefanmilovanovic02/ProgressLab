@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\User;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class UserChartDataService
 {
@@ -76,6 +77,10 @@ class UserChartDataService
                 ->whereDate('logs.entry_date', '<=', $range[1]);
         }
 
+        if (Schema::hasColumn('workout_log_sets', 'set_type')) {
+            $query->where('sets.set_type', '!=', 'warmup');
+        }
+
         $sets = $query
             ->selectRaw('date(logs.entry_date) as day')
             ->addSelect(['sets.reps', 'sets.weight_kg'])
@@ -97,6 +102,29 @@ class UserChartDataService
                 'reps' => $this->insights($reps),
                 'weight' => $this->insights($weight),
             ],
+        ];
+    }
+
+    public function weight(User $user, string $period): array
+    {
+        $range = $this->range($period);
+        $query = DB::table('weight_entries')
+            ->where('user_id', $user->id)
+            ->orderBy('recorded_on');
+
+        if ($range) {
+            $query->whereDate('recorded_on', '>=', $range[0])
+                ->whereDate('recorded_on', '<=', $range[1]);
+        }
+
+        $rows = $query->get(['recorded_on', 'weight_kg']);
+        $values = $rows->map(fn ($row) => (float) $row->weight_kg)->all();
+
+        return [
+            'labels' => $rows->map(fn ($row) => Carbon::parse($row->recorded_on)->format('M j'))->all(),
+            'values' => $values,
+            'days' => $rows->count(),
+            'insights' => $this->insights($values),
         ];
     }
 
