@@ -142,6 +142,26 @@ class LeaderboardTest extends TestCase
         $this->assertArrayNotHasKey('email', $response->json('rows.0'));
     }
 
+    public function test_exercise_leaderboard_uses_a_compact_searchable_picker(): void
+    {
+        $user = $this->createUser('Me', 'me@example.test');
+
+        DB::table('exercises')->insert([
+            'name' => 'Barbell Bench Press',
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
+
+        $response = $this->actingAs($user)->get(route('leaderboards.index'));
+
+        $response->assertOk()
+            ->assertSee('data-exercise-search', false)
+            ->assertSee('data-exercise-options', false)
+            ->assertSee('Popular exercises')
+            ->assertSee('Barbell Bench Press')
+            ->assertDontSee('<select data-exercise-select>', false);
+    }
+
     public function test_global_exercise_leaderboard_ranks_real_records_without_zeroes(): void
     {
         $user = $this->createUser('Me', 'me@example.test');

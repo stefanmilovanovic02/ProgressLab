@@ -271,6 +271,13 @@ class TrainerClientsTest extends TestCase
             ->assertSee('data-macro-locked-period="year"', false)
             ->assertSee('data-exercise-locked-period="all"', false)
             ->assertSee('Upgrade to see the full insights')
+            ->assertSee('data-private-visibility', false)
+            ->assertSee('Progress photos are visible only to you')
+            ->assertSee('data-macro-trigger', false)
+            ->assertSee('data-macro-menu', false)
+            ->assertDontSee('<select id="macroSelect"', false)
+            ->assertSee('data-chart-exercise-search', false)
+            ->assertDontSee('<select id="epExerciseSelect"', false)
             ->assertSee(route('plans.index'), false);
 
         $this->actingAs($user)
@@ -428,12 +435,37 @@ class TrainerClientsTest extends TestCase
         $this->actingAs($trainer)
             ->get(route('trainer.clients.show', $client))
             ->assertOk()
-            ->assertSee('Read-only client dashboard')
+            ->assertSee('Client coaching dashboard')
             ->assertSee('Progress photos excluded')
             ->assertDontSee('progress-photos.show', false)
             ->assertDontSee('Streaks and achievements')
             ->assertDontSee('tr-achievements', false)
             ->assertSee('Private notes');
+    }
+
+    public function test_client_dashboard_uses_custom_macro_and_searchable_exercise_controls(): void
+    {
+        $trainer = $this->user(UserRole::Trainer, 'trainer-chart-controls@example.test');
+        $client = $this->user(UserRole::User, 'client-chart-controls@example.test');
+        TrainerClient::create([
+            'trainer_id' => $trainer->id,
+            'client_id' => $client->id,
+            'status' => TrainerClient::STATUS_ACCEPTED,
+            'can_view_nutrition' => true,
+            'can_view_exercises' => true,
+            'can_view_weight' => false,
+            'can_view_streaks' => false,
+        ]);
+
+        $this->actingAs($trainer)
+            ->get(route('trainer.clients.show', $client))
+            ->assertOk()
+            ->assertSee('data-tr-macro-trigger', false)
+            ->assertSee('data-tr-macro-menu', false)
+            ->assertSee('data-tr-exercise-search', false)
+            ->assertSee('data-tr-exercise-options', false)
+            ->assertDontSee('<select class="ch-select" data-tr-macro', false)
+            ->assertDontSee('<select class="ch-select" data-tr-exercise', false);
     }
 
     public function test_dashboard_lists_recent_records_only_for_clients_sharing_exercises(): void

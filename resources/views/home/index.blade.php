@@ -5,16 +5,18 @@
         title="Home Dashboard"
         description="Track today's nutrition, workouts, streaks, achievements, and weekly fitness progress in your ProgressLab dashboard."
         robots="noindex, nofollow, noarchive"
+        :load-numeric-inputs="false"
+        :load-password-toggle="false"
     />
-    <link rel="stylesheet" href="{{ asset('css/auth.css') }}">
-    <link rel="stylesheet" href="{{ asset('css/ranked-xp.css') }}">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <link rel="stylesheet" href="{{ asset('css/home.min.css') }}?v={{ filemtime(public_path('css/home.min.css')) }}">
+    <link rel="stylesheet" href="{{ asset('css/ranked-xp.min.css') }}?v={{ filemtime(public_path('css/ranked-xp.min.css')) }}">
 </head>
 <body class="auth-body">
 
 <x-navbar />
 
 <main class="hm-wrap">
+    <h1 class="sr-only">Your ProgressLab fitness dashboard</h1>
     <div class="hm-grid">
 
         {{-- LEFT --}}
@@ -22,7 +24,7 @@
         <section class="hm-card hm-profile">
             <div class="hm-profile__top">
                 <div class="hm-profile__avatar">
-                    <img src="{{ $profile['avatar_url'] }}" alt="{{ $profile['name'] }}">
+                    <img src="{{ $profile['avatar_url'] }}" alt="{{ $profile['name'] }}" width="58" height="58" decoding="async" fetchpriority="high">
                 </div>
                 <div>
                     <h2 class="hm-profile__name">{{ $profile['name'] }}</h2>
@@ -55,14 +57,21 @@
         <section
             class="hm-card rank-card rank-card--{{ $rankProgress['rank_slug'] }}"
             style="--rank-color: {{ $rankProgress['color'] }}; --rank-next-color: {{ $rankProgress['next_color'] }};"
+            role="button"
+            tabindex="0"
+            aria-haspopup="dialog"
+            aria-controls="rankOverviewDialog"
+            aria-expanded="false"
+            data-rank-open
         >
             <div class="rank-card__head">
                 <div class="rank-card__badge">
                     <img
-                        src="{{ asset('images/ranks/' . $rankProgress['rank_slug'] . '.png') }}"
+                        src="{{ asset('images/ranks/thumbs/' . $rankProgress['rank_slug'] . '.png') }}"
                         alt="{{ $rankProgress['rank'] }} rank badge"
                         width="82"
                         height="82"
+                        decoding="async"
                     >
                 </div>
                 <div class="rank-card__identity">
@@ -97,6 +106,7 @@
                     {{ number_format($rankProgress['level_xp']) }} / {{ number_format($rankProgress['required_xp']) }} XP
                 @endif
             </div>
+            <div class="rank-card__view">View all ranks</div>
         </section>
     </aside>    
 
@@ -132,7 +142,7 @@
             </section>
 
             <section class="hm-card hm-workout">
-                <a href="{{ url('/add-today') }}" class="hm-workout__link">
+                <a href="{{ route('add-today') }}#workout-selection" class="hm-workout__link">
                     <div class="hm-workout__head">
                         <h2 class="hm-block-title">Today’s Workout</h2>
 
@@ -181,14 +191,38 @@
                         <div class="hm-graph__more">View Full Charts ↗</div>
                     </div>
 
+                    @php
+                        $homeChartValues = collect($weeklyProgress['values'])->map(fn ($value) => (float) $value)->values();
+                        $homeChartMax = max(1, (float) $homeChartValues->max());
+                        $homeChartPoints = $homeChartValues->map(function ($value, $index) use ($homeChartMax) {
+                            $x = 34 + ($index * (632 / 6));
+                            $y = 18 + ((1 - ($value / $homeChartMax)) * 150);
+                            return number_format($x, 1, '.', '') . ',' . number_format($y, 1, '.', '');
+                        })->implode(' ');
+                    @endphp
                     <div class="hm-graph__canvasWrap">
-                        <canvas id="homeWeeklyChart" height="120"></canvas>
+                        <svg class="hm-weekly-chart" viewBox="0 0 700 210" role="img" aria-labelledby="homeWeeklyChartTitle homeWeeklyChartDesc" preserveAspectRatio="none">
+                            <title id="homeWeeklyChartTitle">Weekly workout volume</title>
+                            <desc id="homeWeeklyChartDesc">Workout volume for Monday through Sunday in {{ $weeklyProgress['weight_unit'] }}.</desc>
+                            @foreach([18, 68, 118, 168] as $gridY)
+                                <line class="hm-weekly-chart__grid" x1="34" y1="{{ $gridY }}" x2="666" y2="{{ $gridY }}" />
+                            @endforeach
+                            <polyline class="hm-weekly-chart__line" points="{{ $homeChartPoints }}" />
+                            @foreach($homeChartValues as $index => $value)
+                                @php
+                                    $pointX = 34 + ($index * (632 / 6));
+                                    $pointY = 18 + ((1 - ($value / $homeChartMax)) * 150);
+                                @endphp
+                                <circle class="hm-weekly-chart__point" cx="{{ number_format($pointX, 1, '.', '') }}" cy="{{ number_format($pointY, 1, '.', '') }}" r="4" />
+                                <text class="hm-weekly-chart__label" x="{{ number_format($pointX, 1, '.', '') }}" y="198" text-anchor="middle">{{ $weeklyProgress['labels'][$index] }}</text>
+                            @endforeach
+                        </svg>
                     </div>
 
                     <div class="hm-graph__stats">
                         <div class="hm-graph__stat">
-                            <div class="hm-graph__statValue">{{ number_format($weeklyProgress['total_volume'] / 1000, 1) }}k</div>
-                            <div class="hm-graph__statLabel">Total Volume</div>
+                            <div class="hm-graph__statValue">{{ number_format($weeklyProgress['display_total_volume'] / 1000, 1) }}k</div>
+                            <div class="hm-graph__statLabel">Total Volume ({{ $weeklyProgress['weight_unit'] }})</div>
                         </div>
 
                         <div class="hm-graph__stat">
@@ -217,7 +251,7 @@
                     @forelse($friendsActivity as $activity)
                         <div class="hm-activity">
                             <div class="hm-activity__avatar">
-                                <img src="{{ $activity['avatar'] ?? asset('images/default-avatar.png') }}" alt="user">
+                                <img src="{{ $activity['avatar'] ?? asset('images/default-avatar.png') }}" alt="" width="42" height="42" loading="lazy" decoding="async">
                             </div>
                             <div class="hm-activity__body">
                                 <div class="hm-activity__text">
@@ -247,7 +281,7 @@
                 @forelse($recentAchievements as $achievement)
                     <div class="hm-ach">
                         <div class="hm-ach__thumb">
-                            <img src="{{ $achievement['image'] }}" alt="{{ $achievement['title'] }}">
+                            <img src="{{ $achievement['image'] }}" alt="" width="46" height="46" loading="lazy" decoding="async">
                         </div>
 
                         <div class="hm-ach__body">
@@ -272,57 +306,90 @@
     </div>
 </main>
 
+<div class="rank-modal" data-rank-modal hidden>
+    <section
+        id="rankOverviewDialog"
+        class="rank-modal__panel"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="rankOverviewTitle"
+    >
+        <header class="rank-modal__head">
+            <div>
+                <span class="rank-modal__eyebrow">ProgressLab ranking</span>
+                <h2 id="rankOverviewTitle">All ranks</h2>
+                <p>Every rank contains four levels. Earn XP to move through them.</p>
+            </div>
+            <button class="rank-modal__close" type="button" aria-label="Close rank overview" data-rank-close>&times;</button>
+        </header>
+
+        <div class="rank-modal__current">
+            <span>Current rank</span>
+            <strong style="--item-rank-color: {{ $rankProgress['color'] }}">{{ $rankProgress['rank'] }} {{ ['I', 'II', 'III', 'IV'][$rankProgress['level'] - 1] }}</strong>
+            <small>{{ number_format($rankProgress['total_xp']) }} total XP</small>
+        </div>
+
+        <div class="rank-modal__grid">
+            @foreach($rankCatalog as $rank)
+                <article
+                    class="rank-modal__item {{ $rank['index'] === $rankProgress['rank_index'] ? 'is-current' : '' }} {{ $rank['index'] < $rankProgress['rank_index'] ? 'is-complete' : '' }}"
+                    style="--item-rank-color: {{ $rank['color'] }}"
+                >
+                    <img src="{{ asset('images/ranks/thumbs/' . $rank['slug'] . '.png') }}" alt="" width="86" height="86" loading="lazy" decoding="async">
+                    <div>
+                        <strong>{{ $rank['name'] }}</strong>
+                        <span>Levels I–IV</span>
+                        <small>
+                            {{ $rank['starting_xp'] === 0 ? 'Starting rank' : number_format($rank['starting_xp']) . ' XP to enter' }}
+                        </small>
+                    </div>
+                    @if($rank['index'] === $rankProgress['rank_index'])
+                        <b>Current</b>
+                    @elseif($rank['index'] < $rankProgress['rank_index'])
+                        <b>Complete</b>
+                    @endif
+                </article>
+            @endforeach
+        </div>
+    </section>
+</div>
+
     <script>
-    (function () {
-        const canvas = document.getElementById('homeWeeklyChart');
-        if (!canvas) return;
+    (() => {
+        const trigger = document.querySelector('[data-rank-open]');
+        const modal = document.querySelector('[data-rank-modal]');
+        const closeButton = modal?.querySelector('[data-rank-close]');
+        if (!trigger || !modal || !closeButton) return;
 
-        const labels = @json($weeklyProgress['labels']);
-        const values = @json($weeklyProgress['values']);
+        const open = () => {
+            modal.hidden = false;
+            document.body.classList.add('rank-modal-open');
+            trigger.setAttribute('aria-expanded', 'true');
+            requestAnimationFrame(() => modal.classList.add('is-open'));
+            closeButton.focus();
+        };
 
-        new Chart(canvas, {
-            type: 'line',
-            data: {
-                labels: labels,
-                datasets: [{
-                    data: values,
-                    borderColor: '#00d084',
-                    backgroundColor: 'transparent',
-                    pointBackgroundColor: '#00d084',
-                    pointBorderColor: '#00d084',
-                    pointRadius: 4,
-                    pointHoverRadius: 5,
-                    borderWidth: 2.5,
-                    tension: 0.4,
-                    fill: false,
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false },
-                    tooltip: {
-                        enabled: true,
-                        callbacks: {
-                            label: function(context) {
-                                return 'Volume: ' + context.raw + ' kg';
-                            }
-                        }
-                    }
-                },
-                scales: {
-                    x: {
-                        ticks: { color: 'rgba(255,255,255,.72)' },
-                        grid: { color: 'rgba(255,255,255,.08)' }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        ticks: { color: 'rgba(255,255,255,.72)' },
-                        grid: { color: 'rgba(255,255,255,.08)' }
-                    }
-                }
+        const close = () => {
+            modal.classList.remove('is-open');
+            document.body.classList.remove('rank-modal-open');
+            trigger.setAttribute('aria-expanded', 'false');
+            modal.hidden = true;
+            trigger.focus();
+        };
+
+        trigger.addEventListener('click', open);
+        trigger.addEventListener('keydown', event => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                open();
             }
+        });
+        closeButton.addEventListener('click', close);
+        modal.addEventListener('click', event => {
+            if (event.target === modal) close();
+        });
+        document.addEventListener('keydown', event => {
+            if (event.key === 'Escape' && !modal.hidden) close();
         });
     })();
     </script>

@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\AchievementImage;
+use App\Support\UnitConverter;
+
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -16,6 +19,10 @@ class HomeController extends Controller
     public function index(Request $request)
     {
         $user = $request->user();
+        $setColumnsAvailable = collect(Schema::getColumnListing('workout_log_sets'))->flip();
+        $hasSetType = $setColumnsAvailable->has('set_type');
+        $hasDropSet = $setColumnsAvailable->has('drop_reps')
+            && $setColumnsAvailable->has('drop_weight_kg');
         // profile logic
         $profile = [
             'name' => $user->full_name ?? $user->name ?? 'User Name',
@@ -25,7 +32,9 @@ class HomeController extends Controller
         ];
         //quote logic
         $motivation = $this->motivationProgress($profile['streak']);
-        $rankProgress = app(ExperienceService::class)->progress($user);
+        $experienceService = app(ExperienceService::class);
+        $rankProgress = $experienceService->progress($user);
+        $rankCatalog = $experienceService->rankCatalog();
         // nutrition logic
         $todayEntry = \App\Models\NutritionEntry::query()
             ->where('user_id', $user->id)
@@ -117,13 +126,10 @@ class HomeController extends Controller
                 'reps',
                 'weight_kg',
             ];
-            if (Schema::hasColumn('workout_log_sets', 'set_type')) {
+            if ($hasSetType) {
                 $setColumns[] = 'set_type';
             }
-            if (
-                Schema::hasColumn('workout_log_sets', 'drop_reps')
-                && Schema::hasColumn('workout_log_sets', 'drop_weight_kg')
-            ) {
+            if ($hasDropSet) {
                 $setColumns[] = 'drop_reps';
                 $setColumns[] = 'drop_weight_kg';
             }
@@ -137,16 +143,18 @@ class HomeController extends Controller
             $todayWorkout = [
                 'name' => $todayLog->workout_name,
                 'date' => Carbon::parse($todayLog->entry_date)->format('F j, Y'),
-                'exercises' => $exerciseRows->map(function ($exercise) use ($setRows) {
-                    $sets = collect($setRows[$exercise->workout_log_exercise_id] ?? [])->map(function ($set) {
+                'exercises' => $exerciseRows->map(function ($exercise) use ($setRows, $user) {
+                    $sets = collect($setRows[$exercise->workout_log_exercise_id] ?? [])->map(function ($set) use ($user) {
                         $reps = $set->reps ?? 0;
-                        $weight = $set->weight_kg ?? 0;
+                        $weight = UnitConverter::weightFromKg($set->weight_kg ?? 0, $user->unit_system);
+                        $weightUnit = $user->weightUnit();
                         $type = $set->set_type ?? 'normal';
                         $label = $type === 'warmup' ? 'Warm-up: ' : '';
-                        $summary = "{$label}{$reps} × {$weight}kg";
+                        $summary = "{$label}{$reps} × {$weight}{$weightUnit}";
 
                         if ($type === 'drop' && isset($set->drop_reps, $set->drop_weight_kg)) {
-                            $summary .= " → {$set->drop_reps} × {$set->drop_weight_kg}kg drop";
+                            $dropWeight = UnitConverter::weightFromKg($set->drop_weight_kg, $user->unit_system);
+                            $summary .= " → {$set->drop_reps} × {$dropWeight}{$weightUnit} drop";
                         }
 
                         return $summary;
@@ -164,8 +172,7 @@ class HomeController extends Controller
         $weekStart = now()->startOfWeek(Carbon::MONDAY);
         $weekEnd = now()->endOfWeek(Carbon::SUNDAY);
 
-        $volumeExpression = Schema::hasColumn('workout_log_sets', 'drop_reps')
-            && Schema::hasColumn('workout_log_sets', 'drop_weight_kg')
+        $volumeExpression = $hasDropSet
             ? '(COALESCE(s.reps, 0) * COALESCE(s.weight_kg, 0)) + (COALESCE(s.drop_reps, 0) * COALESCE(s.drop_weight_kg, 0))'
             : 'COALESCE(s.reps, 0) * COALESCE(s.weight_kg, 0)';
 
@@ -190,7 +197,7 @@ class HomeController extends Controller
             $volume = (float) ($volumeRows[$dayKey] ?? 0);
 
             $labels[] = $date->format('D');
-            $values[] = round($volume, 1);
+            $values[] = UnitConverter::weightFromKg($volume, $user->unit_system);
             $weeklyTotalVolume += $volume;
         }
 
@@ -223,6 +230,8 @@ class HomeController extends Controller
             'labels' => $labels,
             'values' => $values,
             'total_volume' => round($weeklyTotalVolume, 1),
+            'display_total_volume' => UnitConverter::weightFromKg($weeklyTotalVolume, $user->unit_system),
+            'weight_unit' => $user->weightUnit(),
             'workouts' => $workoutsThisWeek,
             'vs_last_week' => $vsLastWeek,
         ];
@@ -264,6 +273,7 @@ class HomeController extends Controller
                 'a.title',
                 'a.description',
                 'a.image_path',
+                'a.category',
                 'a.rarity',
                 'user_achievements.unlocked_at',
             ])
@@ -271,9 +281,7 @@ class HomeController extends Controller
                 return [
                     'title' => $achievement->title,
                     'desc' => $achievement->description,
-                    'image' => $achievement->image_path
-                        ? asset($achievement->image_path)
-                        : asset('images/achievements/default.png'),
+                    'image' => AchievementImage::thumbnailUrl($achievement->image_path, $achievement->category),
                     'rarity' => $achievement->rarity,
                     'unlocked_at' => $achievement->unlocked_at
                         ? Carbon::parse($achievement->unlocked_at)->diffForHumans()
@@ -290,7 +298,8 @@ class HomeController extends Controller
             'friendsActivity',
             'recentAchievements',
             'weeklyProgress',
-            'rankProgress'
+            'rankProgress',
+            'rankCatalog'
         ));
         
     }

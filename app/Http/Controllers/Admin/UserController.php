@@ -76,6 +76,7 @@ class UserController extends Controller
         $ownerData = null;
 
         if ($request->user()->isOwner()) {
+            $hasActiveSubscription = $user->subscriptions()->currentlyActive()->exists();
             $ownerData = [
                 'photos' => $user->progressPhotoSets()
                     ->latest('captured_on')
@@ -84,6 +85,8 @@ class UserController extends Controller
                 'subscriptions' => $user->subscriptions()
                     ->latest('starts_on')
                     ->get(),
+                'direct_access' => in_array($user->role, [UserRole::Paid, UserRole::Trainer], true)
+                    && !$hasActiveSubscription,
             ];
         }
 

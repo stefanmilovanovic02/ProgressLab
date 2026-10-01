@@ -28,7 +28,12 @@ class SecurityHeaders
         $isSensitiveDocument = str_starts_with($contentType, 'text/html')
             || str_starts_with($contentType, 'application/json');
 
-        if ($request->user() && $isSensitiveDocument) {
+        if ($request->user() && str_starts_with($contentType, 'text/html')) {
+            // HTML still revalidates before reuse, while avoiding `no-store`, which
+            // prevents browsers from restoring ordinary app pages from bfcache.
+            $response->headers->set('Cache-Control', 'private, no-cache, max-age=0, must-revalidate');
+            $response->headers->set('Pragma', 'no-cache');
+        } elseif ($request->user() && $isSensitiveDocument) {
             $response->headers->set('Cache-Control', 'private, no-store, max-age=0');
             $response->headers->set('Pragma', 'no-cache');
         }

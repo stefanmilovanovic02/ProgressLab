@@ -24,4 +24,30 @@
     </tbody></table></div>
     <div class="ad-pagination">@if($subscriptions->previousPageUrl())<a href="{{ $subscriptions->previousPageUrl() }}">← Previous</a>@endif<span>Page {{ $subscriptions->currentPage() }} of {{ $subscriptions->lastPage() }}</span>@if($subscriptions->nextPageUrl())<a href="{{ $subscriptions->nextPageUrl() }}">Next →</a>@endif</div>
   </section>
+
+  <section class="ad-card">
+    <div class="ad-card__head">
+      <div><span class="ad-eyebrow">Owner-granted access</span><h2>Complimentary direct grants</h2></div>
+      <span class="ad-lock">{{ $directGrants->count() }} accounts</span>
+    </div>
+    <p class="ad-section-copy">These users have Paid or Trainer access through their account role, without an active billing record. They count as complimentary access, never as paid subscriptions or revenue.</p>
+    <div class="ad-table-wrap">
+      <table class="ad-table">
+        <thead><tr><th>User</th><th>Access</th><th>Status</th><th>Source</th><th></th></tr></thead>
+        <tbody>
+          @forelse($directGrants as $account)
+            <tr>
+              <td><strong>{{ $account->full_name ?? $account->name }}</strong><small>{{ $account->email }}</small></td>
+              <td><span class="ad-role-pill ad-role-pill--{{ $account->role->value }}">{{ $account->role->label() }}</span></td>
+              <td><span class="ad-status ad-status--active">Active</span></td>
+              <td>Complimentary<small>Direct role grant</small></td>
+              <td><a class="ad-table-link" href="{{ route('admin.users.show', $account) }}">View user</a></td>
+            </tr>
+          @empty
+            <tr><td colspan="5" class="ad-empty">{{ $status !== '' && $status !== 'active' ? 'Direct grants only have active status.' : 'No directly granted Paid or Trainer accounts match your filters.' }}</td></tr>
+          @endforelse
+        </tbody>
+      </table>
+    </div>
+  </section>
 </main><x-footer /></body></html>

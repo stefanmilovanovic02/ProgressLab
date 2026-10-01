@@ -7,6 +7,7 @@ use App\Models\Achievement;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use App\Models\UserAchievement;
+use App\Support\AchievementImage;
 
 class AchievementsController extends Controller
 {
@@ -82,7 +83,8 @@ class AchievementsController extends Controller
                 'icon' => $a->icon ?? '🏆',
 
                 // UI additions
-                'image_path' => $a->image_path ? asset($a->image_path) : asset('images/achievements/default.png'),
+                'image_path' => AchievementImage::url($a->image_path, $a->category),
+                'fallback_image_path' => AchievementImage::url(null, $a->category),
                 'category_icon' => $a->category_icon ?? '🏆',
 
                 // unlock data
@@ -130,6 +132,7 @@ class AchievementsController extends Controller
                 'a.description',
                 'a.rarity',
                 'a.image_path',
+                'a.category',
             ]);
 
         if ($items->isNotEmpty()) {
@@ -143,7 +146,7 @@ class AchievementsController extends Controller
                 'title' => $x->title,
                 'description' => $x->description,
                 'rarity' => $x->rarity,
-                'image_path' => $achievement->image_path ? asset($achievement->image_path) : asset('images/achievements/default.png'),
+                'image_path' => AchievementImage::url($x->image_path, $x->category),
             ])->values(),
         ]);
     }

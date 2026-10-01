@@ -35,6 +35,55 @@ use App\Http\Controllers\Trainer\ClientManagementController as TrainerClientMana
 use App\Http\Controllers\SubscriptionPlansController;
 use App\Http\Controllers\Admin\SubscriptionRequestController as AdminSubscriptionRequestController;
 
+Route::get('/robots.txt', function () {
+    $lines = [
+        'User-agent: *',
+        'Allow: /login',
+        'Allow: /register',
+        'Allow: /privacy-policy',
+        'Allow: /terms-of-use',
+        'Disallow: /admin/',
+        'Disallow: /trainer/',
+        'Disallow: /profile',
+        'Disallow: /notifications',
+        'Disallow: /friends',
+        'Disallow: /add-today',
+        'Disallow: /charts',
+        'Disallow: /workouts',
+        'Sitemap: ' . url('/sitemap.xml'),
+    ];
+
+    return response(implode("\n", $lines) . "\n", 200, [
+        'Content-Type' => 'text/plain; charset=UTF-8',
+        'Cache-Control' => 'public, max-age=3600',
+    ]);
+})->name('seo.robots');
+
+Route::get('/sitemap.xml', function () {
+    $urls = [
+        route('login'),
+        route('register'),
+        route('legal.privacy'),
+        route('legal.terms'),
+    ];
+    $entries = collect($urls)
+        ->map(fn (string $url) => '<url><loc>' . e($url) . '</loc></url>')
+        ->implode('');
+    $xml = '<?xml version="1.0" encoding="UTF-8"?>'
+        . '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+        . $entries
+        . '</urlset>';
+
+    return response($xml, 200, [
+        'Content-Type' => 'application/xml; charset=UTF-8',
+        'Cache-Control' => 'public, max-age=3600',
+    ]);
+})->name('seo.sitemap');
+
+// Public legal information
+Route::view('/privacy-policy', 'legal.privacy')->name('legal.privacy');
+Route::view('/terms-of-use', 'legal.terms')->name('legal.terms');
+
 // Guest (Not logged in)
  Route::middleware('guest')->group(function () {
 
@@ -158,6 +207,7 @@ Route::middleware(['auth', 'track.daily.login'])->group(function () {
     Route::post('/friends/request', [FriendsController::class, 'sendRequest'])->name('friends.request');
     Route::post('/friends/requests/{friendRequest}/accept', [FriendsController::class, 'accept'])->name('friends.requests.accept');
     Route::post('/friends/requests/{friendRequest}/decline', [FriendsController::class, 'decline'])->name('friends.requests.decline');
+    Route::delete('/friends/requests/{friendRequest}', [FriendsController::class, 'cancelRequest'])->name('friends.requests.cancel');
     Route::delete('/friends/{user}', [FriendsController::class, 'destroy'])->name('friends.destroy');
     
     Route::get('/friends/{user}/summary', [\App\Http\Controllers\FriendsController::class, 'summary'])->name('friends.summary');
@@ -188,6 +238,9 @@ Route::middleware(['auth', 'track.daily.login'])->group(function () {
             Route::get('/clients/{user}', [TrainerDashboardController::class, 'show'])->name('clients.show');
             Route::patch('/clients/{user}/notes', [TrainerDashboardController::class, 'updateNotes'])->name('clients.notes');
             Route::post('/clients/{user}/workouts', [TrainerClientManagementController::class, 'assignWorkout'])->name('clients.workouts.store');
+            Route::get('/clients/{user}/workout-assignments/{assignment}/log', [TrainerClientManagementController::class, 'editWorkoutLog'])->name('clients.workout-logs.edit');
+            Route::put('/clients/{user}/workout-assignments/{assignment}/log', [TrainerClientManagementController::class, 'updateWorkoutLog'])->name('clients.workout-logs.update');
+            Route::patch('/clients/{user}/nutrition-entry', [TrainerClientManagementController::class, 'updateDailyNutrition'])->name('clients.nutrition-entry.update');
             Route::patch('/clients/{user}/nutrition-targets', [TrainerClientManagementController::class, 'updateNutrition'])->name('clients.nutrition-targets.update');
             Route::get('/clients/{user}/weekly-report.pdf', [TrainerClientManagementController::class, 'report'])->name('clients.weekly-report');
             Route::get('/clients/{user}/charts/macros', [TrainerChartController::class, 'macros'])->name('clients.charts.macros');
@@ -200,6 +253,8 @@ Route::middleware(['auth', 'track.daily.login'])->group(function () {
     Route::put('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::put('/profile/photo', [ProfileController::class, 'updatePhoto'])->name('profile.photo.update');
     Route::put('/profile/cover', [ProfileController::class, 'updateCover'])->name('profile.cover.update');
+    Route::put('/profile/showcase', [ProfileController::class, 'updateShowcase'])->name('profile.showcase.update');
+    Route::patch('/profile/theme', [ProfileController::class, 'updateTheme'])->name('profile.theme.update');
     Route::get('/profile/password', [\App\Http\Controllers\PasswordController::class, 'edit'])->name('password.edit');
     Route::put('/profile/password', [\App\Http\Controllers\PasswordController::class, 'update'])->name('profile.password.update');
     Route::delete('/profile', [\App\Http\Controllers\ProfileController::class, 'destroy'])->name('profile.destroy');

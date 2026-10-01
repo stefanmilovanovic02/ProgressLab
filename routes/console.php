@@ -10,7 +10,7 @@ Artisan::command('inspire', function () {
 
 Schedule::command('notifications:send-reminders')
     ->hourly()
-    ->between('18:00', '23:00')
+    ->between('08:00', '21:00')
     ->timezone(config('app.timezone'))
     ->withoutOverlapping();
 

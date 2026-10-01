@@ -6,7 +6,7 @@
     description="Manage your private ProgressLab profile, fitness metrics, nutrition targets, and account preferences."
     robots="noindex, nofollow, noarchive"
   />
-  <link rel="stylesheet" href="{{ asset('css/auth.css') }}">
+  <link rel="stylesheet" href="{{ asset('css/auth.css') }}?v={{ filemtime(public_path('css/auth.css')) }}">
 </head>
 <body class="auth-body">
 
@@ -24,6 +24,10 @@
     $usernameText = '@' . ($user->username ?? 'username');
 
     $gender = $user->metric?->gender; 
+    $unitSystem = $user->unit_system ?? 'metric';
+    $heightDisplay = \App\Support\UnitConverter::lengthFromCm($metric?->height_cm, $unitSystem);
+    $weightDisplay = \App\Support\UnitConverter::weightFromKg($metric?->weight_kg, $unitSystem);
+    $canCustomizeProfile = $user->canCustomizeSocialProfile();
   @endphp
 
   <main class="pl-container">
@@ -51,23 +55,6 @@
           <img src="{{ $avatarUrl }}" alt="Profile picture">
         </div>
 
-        {{-- Upload controls (enabled only in edit mode via JS) --}}
-      <div class="pl-media-actions" data-media-actions style ="display:none;">
-        <form action="{{ route('profile.photo.update') }}" method="POST" enctype="multipart/form-data" data-avatar-form>
-          @csrf
-          @method('PUT')
-          <input type="file" name="avatar" accept="image/*" class="pl-file" data-avatar-input disabled>
-          <button type="button" class="pl-btn pl-btn--ghost" data-avatar-btn disabled>Change Photo</button>
-        </form>
-
-        <form action="{{ route('profile.cover.update') }}" method="POST" enctype="multipart/form-data" data-cover-form>
-          @csrf
-          @method('PUT')
-          <input type="file" name="cover" accept="image/*" class="pl-file" data-cover-input disabled>
-          <button type="button" class="pl-btn pl-btn--ghost" data-cover-btn disabled>Change Cover</button>
-        </form>
-      </div>
-
         <div class="pl-profilecard__meta">
           <h2 class="pl-profilecard__name">
             {{ $user->full_name ?? $user->name ?? 'Your Name' }}
@@ -90,6 +77,9 @@
       </div>
 
       <div class="pl-profilecard__right">
+        <a class="pl-btn pl-btn--ghost" href="{{ route('friends.index', ['open_profile' => $user->id, 'return_to' => 'profile']) }}">
+          Preview Public Profile
+        </a>
         <button class="pl-btn pl-btn--light" type="button" data-edit-toggle>
           ✎ Edit Profile
         </button>
@@ -194,6 +184,34 @@
       </div> 
     </section>
 
+    <section class="pl-card pl-infocard pl-social-profile" style="margin-top: 22px;">
+      <div class="pl-card__head">
+        <div class="pl-card__head-left">
+          <div class="pl-card__icon" aria-hidden="true">✦</div>
+          <div><h3 class="pl-card__title">Social Profile</h3><p class="pl-card__subtitle">Customize the profile people see from Friends.</p></div>
+        </div>
+        @unless($canCustomizeProfile)<a class="pl-btn pl-btn--light" href="{{ route('plans.index') }}">Unlock with ProgressLab+</a>@endunless
+      </div>
+      @if($canCustomizeProfile)
+        <div class="pl-formgrid">
+          <div class="pl-field pl-field--wide">
+            <label class="pl-label" for="profile_quote">Profile quote</label>
+            <input class="pl-input pl-input--field" id="profile_quote" name="profile_quote" maxlength="180" value="{{ old('profile_quote', $user->profile_quote) }}" placeholder="A short line that represents your journey" disabled>
+          </div>
+          @foreach(['instagram'=>'Instagram','tiktok'=>'TikTok','snapchat'=>'Snapchat','linkedin'=>'LinkedIn'] as $network => $label)
+            <div class="pl-field">
+              <label class="pl-label" for="social_{{ $network }}">{{ $label }} URL</label>
+              <input class="pl-input pl-input--field" id="social_{{ $network }}" name="social_{{ $network }}" type="url" value="{{ old('social_'.$network, $user->{'social_'.$network}) }}" placeholder="https://..." disabled>
+              @error('social_'.$network)<p class="field-error">{{ $message }}</p>@enderror
+            </div>
+          @endforeach
+        </div>
+        <p class="pl-social-profile__help">Use <strong>Preview Public Profile</strong> above to change your profile photo, full-screen background, showcase image, and profile colors while seeing the result in context.</p>
+      @else
+        <div class="pl-social-profile__locked"><strong>Your profile already uses the new layout.</strong><span>ProgressLab+ unlocks a full-screen background, animated showcase, custom colors, quote, and social links. Profile photo changes remain free.</span></div>
+      @endif
+    </section>
+
 
     {{-- Fitness Info Card --}}
 <section class="pl-card pl-infocard" style="margin-top: 22px;">
@@ -206,32 +224,41 @@
 
   <div class="pl-formgrid">
     <div class="pl-field">
-      <label class="pl-label" for="height_cm">Height (cm)</label>
+      <label class="pl-label" for="unit_system">Measurement System</label>
+      <select class="pl-input pl-input--field" id="unit_system" name="unit_system" disabled>
+        <option value="metric" @selected($unitSystem === 'metric')>Metric (kg, cm)</option>
+        <option value="imperial" @selected($unitSystem === 'imperial')>Imperial (lb, in)</option>
+      </select>
+    </div>
+
+    <div class="pl-field">
+      <label class="pl-label" for="height_cm">Height (<span data-profile-height-unit>{{ $unitSystem === 'imperial' ? 'in' : 'cm' }}</span>)</label>
       <input
         class="pl-input pl-input--field"
         id="height_cm"
         name="height_cm"
         type="number"
-        min="120"
-        max="230"
-        placeholder="e.g. 185"
-        value="{{ old('height_cm', $metric->height_cm ?? '') }}"
+        min="{{ $unitSystem === 'imperial' ? 47 : 120 }}"
+        max="{{ $unitSystem === 'imperial' ? 91 : 230 }}"
+        step="0.1"
+        placeholder="{{ $unitSystem === 'imperial' ? 'e.g. 73' : 'e.g. 185' }}"
+        value="{{ old('height_cm', $heightDisplay) }}"
         disabled
       />
     </div>
 
     <div class="pl-field">
-      <label class="pl-label" for="weight_kg">Weight (kg)</label>
+      <label class="pl-label" for="weight_kg">Weight (<span data-profile-weight-unit>{{ $unitSystem === 'imperial' ? 'lb' : 'kg' }}</span>)</label>
       <input
         class="pl-input pl-input--field"
         id="weight_kg"
         name="weight_kg"
         type="number"
-        min="35"
-        max="250"
+        min="{{ $unitSystem === 'imperial' ? 77 : 35 }}"
+        max="{{ $unitSystem === 'imperial' ? 551 : 250 }}"
         step="0.1"
-        placeholder="e.g. 80"
-        value="{{ old('weight_kg', $metric->weight_kg ?? '') }}"
+        placeholder="{{ $unitSystem === 'imperial' ? 'e.g. 176' : 'e.g. 80' }}"
+        value="{{ old('weight_kg', $weightDisplay) }}"
         disabled
       />
     </div>
@@ -240,7 +267,7 @@
       <label class="pl-label" for="activity_multiplier">Activity Multiplier</label>
       <select
         class="pl-input pl-input--field"
-        id="activity_,multiplier"
+        id="activity_multiplier"
         name="activity_multiplier"
         disabled
       >
@@ -446,8 +473,8 @@
       @method('DELETE')
 
       <div class="pl-field">
-        <label class="pl-label">Enter your password to confirm</label>
-        <input type="password" name="password" class="pl-input pl-input--field" required>
+        <label class="pl-label" for="delete_account_password">Enter your password to confirm</label>
+        <input id="delete_account_password" type="password" name="password" class="pl-input pl-input--field" autocomplete="current-password" required>
       </div>
 
       <div class="pl-modal__actions">
@@ -463,7 +490,7 @@
   </div>
 </div>
 
-
+  <script src="{{ asset('js/image-optimizer.js') }}?v={{ filemtime(public_path('js/image-optimizer.js')) }}"></script>
   <script>
     (function () {
       const toggleBtn = document.querySelector('[data-edit-toggle]');
@@ -475,6 +502,15 @@
       const avatarInput = document.querySelector('[data-avatar-input]');
       const coverBtn = document.querySelector('[data-cover-btn]');
       const coverInput = document.querySelector('[data-cover-input]');
+      const showcaseBtn = document.querySelector('[data-showcase-btn]');
+      const showcaseInput = document.querySelector('[data-showcase-input]');
+
+      document.querySelectorAll('.pl-color-field input[type="color"]').forEach(input => {
+        const output = input.closest('.pl-color-field')?.querySelector('[data-color-value]');
+        input.addEventListener('input', () => {
+          if (output) output.textContent = input.value.toUpperCase();
+        });
+      });
 
       if (!toggleBtn || !form || !saveBtn || !cancelBtn) return;
 
@@ -498,6 +534,10 @@
           if (coverBtn && coverInput) {
             coverBtn.disabled = !on;
             coverInput.disabled = !on;
+          }
+          if (showcaseBtn && showcaseInput) {
+            showcaseBtn.disabled = !on;
+            showcaseInput.disabled = !on;
           }
         });
 
@@ -530,11 +570,46 @@
         setEditMode(false);
       });
 
+      async function optimizeAndSubmit(uploadForm, input, button, options) {
+        const original = input.files?.[0];
+        if (!original || !uploadForm) return;
+
+        const originalLabel = button.textContent;
+        button.disabled = true;
+        button.textContent = 'Optimizingâ€¦';
+
+        try {
+          const result = await window.ProgressLabImageOptimizer.optimize(original, options);
+          const data = new FormData(uploadForm);
+          data.set(input.name, result.file, result.file.name);
+          button.textContent = 'Uploadingâ€¦';
+
+          const response = await fetch(uploadForm.action, {
+            method: 'POST',
+            headers: { 'Accept': 'text/html' },
+            body: data,
+          });
+          if (!response.ok) throw new Error('The image could not be uploaded.');
+
+          window.location.assign(response.url || @json(route('profile.show')));
+        } catch (error) {
+          alert(error.message || 'The image could not be prepared.');
+          input.value = '';
+          button.disabled = false;
+          button.textContent = originalLabel;
+        }
+      }
+
       if (avatarBtn && avatarInput) {
         avatarBtn.addEventListener('click', () => avatarInput.click());
         avatarInput.addEventListener('change', () => {
           if (avatarInput.files && avatarInput.files[0]) {
-            document.querySelector('[data-avatar-form]').submit();
+            optimizeAndSubmit(
+              document.querySelector('[data-avatar-form]'),
+              avatarInput,
+              avatarBtn,
+              { maxDimension: 900, targetBytes: 320 * 1024, quality: .86, baseName: 'avatar' }
+            );
           }
         });
 }
@@ -543,10 +618,38 @@
           coverBtn.addEventListener('click', () => coverInput.click());
           coverInput.addEventListener('change', () => {
             if (coverInput.files && coverInput.files[0]) {
-              document.querySelector('[data-cover-form]').submit();
+              if (coverInput.files[0].type === 'image/gif') {
+                coverBtn.textContent = 'Uploading…';
+                document.querySelector('[data-cover-form]').requestSubmit();
+                return;
+              }
+              optimizeAndSubmit(
+                document.querySelector('[data-cover-form]'),
+                coverInput,
+                coverBtn,
+                { maxDimension: 1920, targetBytes: 850 * 1024, quality: .84, baseName: 'cover' }
+              );
             }
           });
         }
+
+      if (showcaseBtn && showcaseInput) {
+        showcaseBtn.addEventListener('click', () => showcaseInput.click());
+        showcaseInput.addEventListener('change', () => {
+          if (!showcaseInput.files?.[0]) return;
+          if (showcaseInput.files[0].type === 'image/gif') {
+            showcaseBtn.textContent = 'Uploading…';
+            document.querySelector('[data-showcase-form]').requestSubmit();
+            return;
+          }
+          optimizeAndSubmit(
+            document.querySelector('[data-showcase-form]'),
+            showcaseInput,
+            showcaseBtn,
+            { maxDimension: 1600, targetBytes: 900 * 1024, quality: .86, baseName: 'showcase' }
+          );
+        });
+      }
 
 
       // If there are validation errors, auto-enable edit mode
@@ -575,6 +678,35 @@
     });
   })();
 
+  </script>
+
+  <script>
+  (() => {
+    const units = document.getElementById('unit_system');
+    const height = document.getElementById('height_cm');
+    const weight = document.getElementById('weight_kg');
+    if (!units || !height || !weight) return;
+    let previous = units.value;
+    const round = value => Math.round(value * 10) / 10;
+
+    units.addEventListener('change', () => {
+      const next = units.value;
+      const heightValue = Number.parseFloat(height.value);
+      const weightValue = Number.parseFloat(weight.value);
+      if (previous !== next) {
+        if (Number.isFinite(heightValue)) height.value = round(next === 'imperial' ? heightValue / 2.54 : heightValue * 2.54);
+        if (Number.isFinite(weightValue)) weight.value = round(next === 'imperial' ? weightValue * 2.2046226218 : weightValue / 2.2046226218);
+      }
+      const imperial = next === 'imperial';
+      document.querySelector('[data-profile-height-unit]').textContent = imperial ? 'in' : 'cm';
+      document.querySelector('[data-profile-weight-unit]').textContent = imperial ? 'lb' : 'kg';
+      height.min = imperial ? '47' : '120';
+      height.max = imperial ? '91' : '230';
+      weight.min = imperial ? '77' : '35';
+      weight.max = imperial ? '551' : '250';
+      previous = next;
+    });
+  })();
   </script>
 
 <x-achievement-toasts />

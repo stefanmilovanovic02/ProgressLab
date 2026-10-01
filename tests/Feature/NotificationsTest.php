@@ -9,6 +9,8 @@ use App\Models\User;
 use App\Services\NotificationService;
 use App\Services\WebPushService;
 use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use Tests\TestCase;
 
@@ -81,12 +83,44 @@ class NotificationsTest extends TestCase
             $table->timestamps();
         });
 
+        Schema::create('nutrition_entries', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('user_id');
+            $table->date('entry_date');
+            $table->unsignedSmallInteger('calories')->default(0);
+            $table->unsignedSmallInteger('protein_g')->default(0);
+            $table->unsignedSmallInteger('carbs_g')->default(0);
+            $table->unsignedSmallInteger('fat_g')->default(0);
+            $table->timestamps();
+        });
+
+        Schema::create('nutrition_goals', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('user_id');
+            $table->unsignedSmallInteger('calorie_target');
+            $table->unsignedSmallInteger('protein_g');
+            $table->unsignedSmallInteger('carbs_g');
+            $table->unsignedSmallInteger('fat_g');
+            $table->timestamps();
+        });
+
+        Schema::create('workout_logs', function (Blueprint $table) {
+            $table->id();
+            $table->unsignedBigInteger('user_id');
+            $table->date('entry_date');
+            $table->timestamps();
+        });
+
         config()->set('services.webpush.public_key', null);
         config()->set('services.webpush.private_key', null);
     }
 
     protected function tearDown(): void
     {
+        Carbon::setTestNow();
+        Schema::dropIfExists('workout_logs');
+        Schema::dropIfExists('nutrition_goals');
+        Schema::dropIfExists('nutrition_entries');
         Schema::dropIfExists('login_logs');
         Schema::dropIfExists('friend_activities');
         Schema::dropIfExists('friends');
@@ -186,6 +220,8 @@ class NotificationsTest extends TestCase
 
     public function test_reminder_command_creates_one_streak_expiry_notification_per_day(): void
     {
+        $now = Carbon::parse('2026-09-30 20:00:00', config('app.timezone'));
+        Carbon::setTestNow($now);
         $user = User::query()->create([
             'name' => 'Streak User',
             'email' => 'streak@example.test',
@@ -199,17 +235,68 @@ class NotificationsTest extends TestCase
             'content_encoding' => 'aes128gcm',
         ]);
 
-        \App\Models\LoginLog::query()->create([
+        DB::table('login_logs')->insert([
             'user_id' => $user->id,
-            'login_date' => now()->subDay()->startOfDay(),
+            'login_date' => $now->copy()->subDay()->toDateString(),
+            'created_at' => $now->copy()->subHours(23),
+            'updated_at' => $now->copy()->subHours(23),
         ]);
 
-        $this->artisan('notifications:send-reminders')->assertSuccessful();
-        $this->artisan('notifications:send-reminders')->assertSuccessful();
+        $this->artisan('notifications:send-reminders', ['--now' => $now->toIso8601String()])->assertSuccessful();
+        $this->artisan('notifications:send-reminders', ['--now' => $now->toIso8601String()])->assertSuccessful();
 
         $this->assertSame(1, $user->appNotifications()
-            ->where('title', 'Your streak expires tonight 🔥')
+            ->where('title', 'Your login streak is close to expiring')
             ->count());
+    }
+
+    public function test_reminders_cover_missing_food_unfinished_goals_and_workouts_without_duplicates(): void
+    {
+        $user = User::query()->create([
+            'name' => 'Daily Reminder User',
+            'email' => 'daily-reminders@example.test',
+            'password' => 'password',
+        ]);
+        $user->pushSubscriptions()->create([
+            'endpoint' => 'https://push.example.test/subscriptions/daily-device',
+            'public_key' => str_repeat('a', 88),
+            'auth_token' => str_repeat('b', 24),
+            'content_encoding' => 'aes128gcm',
+        ]);
+
+        $daytime = Carbon::parse('2026-09-30 15:00:00', config('app.timezone'));
+        $this->artisan('notifications:send-reminders', ['--now' => $daytime->toIso8601String()])->assertSuccessful();
+        $this->assertDatabaseHas('app_notifications', [
+            'user_id' => $user->id,
+            'title' => 'Quick nutrition check-in',
+        ]);
+
+        DB::table('nutrition_entries')->insert([
+            'user_id' => $user->id,
+            'entry_date' => $daytime->toDateString(),
+            'calories' => 1200,
+            'protein_g' => 70,
+            'carbs_g' => 100,
+            'fat_g' => 35,
+            'created_at' => $daytime,
+            'updated_at' => $daytime,
+        ]);
+        DB::table('nutrition_goals')->insert([
+            'user_id' => $user->id,
+            'calorie_target' => 2500,
+            'protein_g' => 160,
+            'carbs_g' => 280,
+            'fat_g' => 75,
+            'created_at' => $daytime,
+            'updated_at' => $daytime,
+        ]);
+
+        $evening = $daytime->copy()->setTime(20, 0);
+        $this->artisan('notifications:send-reminders', ['--now' => $evening->toIso8601String()])->assertSuccessful();
+        $this->artisan('notifications:send-reminders', ['--now' => $evening->toIso8601String()])->assertSuccessful();
+
+        $this->assertSame(1, $user->appNotifications()->where('title', 'Your nutrition goal is not finished')->count());
+        $this->assertSame(1, $user->appNotifications()->where('title', 'No workout logged today')->count());
     }
 
     public function test_push_test_reports_failure_when_no_provider_accepts_delivery(): void
@@ -263,7 +350,7 @@ class NotificationsTest extends TestCase
                 $user->is($recipient)
                 && $payload['title'] === 'Friend logged nutrition'
                 && $payload['body'] === 'Nutrition Friend logged nutrition for today.'
-                && $payload['url'] === route('notifications.index', [], false)
+                && $payload['url'] === route('friends.index', [], false)
             )
             ->andReturn(1);
 

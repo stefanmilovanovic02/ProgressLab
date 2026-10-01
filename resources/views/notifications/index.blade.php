@@ -7,6 +7,7 @@
     robots="noindex, nofollow, noarchive"
   />
   <link rel="stylesheet" href="{{ asset('css/auth.css') }}">
+  <script defer src="{{ asset('js/push-notifications.js') }}?v={{ filemtime(public_path('js/push-notifications.js')) }}"></script>
 </head>
 <body class="auth-body">
 
@@ -45,7 +46,7 @@
           </div>
           <span class="nt-push__live">Android + iPhone</span>
         </div>
-        <p>Get friend achievement alerts, ProgressLab updates, and a reminder before your login streak expires.</p>
+        <p>Get friend activity alerts, daytime food check-ins, evening nutrition and workout reminders, and warnings before your login, nutrition, or workout streak expires.</p>
         <p class="nt-push__status" data-push-status role="status">Checking this device…</p>
         <div class="nt-push__install" data-push-install-hint hidden>
           <strong>iPhone setup:</strong> In Safari, tap Share → Add to Home Screen. Open ProgressLab from that icon, return here, and enable notifications.

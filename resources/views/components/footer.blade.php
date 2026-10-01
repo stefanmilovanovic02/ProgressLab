@@ -7,7 +7,7 @@
             <div class="gt-footer__brand">
                 <a href="{{ route('home') }}" class="gt-footer__logoLink" aria-label="Go to home">
                     <div class="gt-footer__logoWrap">
-                        <img class="gt-footer__brand-logo" src="{{ asset('images/branding/progresslab-logo.png') }}?v=2" alt="" width="34" height="34">
+                        <img class="gt-footer__brand-logo" src="{{ asset('images/branding/progresslab-app-192.png') }}" alt="" width="34" height="34" loading="lazy" decoding="async">
                         <span class="pl-nav__brand-text">ProgressLab</span>
                     </div>
                 </a>
@@ -61,6 +61,11 @@
             <p class="gt-footer__copy">
                 © {{ now()->year }} ProgressLab. All rights reserved.
             </p>
+
+            <nav class="gt-footer__legal" aria-label="Legal information">
+                <a href="{{ route('legal.privacy') }}">Privacy Policy</a>
+                <a href="{{ route('legal.terms') }}">Terms of Use</a>
+            </nav>
 
             <p class="gt-footer__credit">
                 Design &amp; development by

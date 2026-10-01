@@ -6,6 +6,7 @@ use App\Enums\UserRole;
 use App\Http\Controllers\Controller;
 use App\Models\User;
 use App\Models\SubscriptionRequest;
+use App\Models\Subscription;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -50,17 +51,24 @@ class DashboardController extends Controller
         $ownerMetrics = null;
         $pendingPaymentRequests = collect();
         if ($request->user()->isOwner()) {
+            $complimentaryUserIds = Subscription::query()
+                ->currentlyActive()
+                ->where('is_complimentary', true)
+                ->pluck('user_id');
+            $directAccessUserIds = User::query()
+                ->whereIn('role', [UserRole::Paid->value, UserRole::Trainer->value])
+                ->whereDoesntHave('subscriptions', fn ($query) => $query->currentlyActive())
+                ->pluck('id');
+
             $ownerMetrics = [
                 'subscriptions' => DB::table('subscriptions')->where('is_complimentary', false)->count(),
-                'active_subscriptions' => DB::table('subscriptions')
+                'active_subscriptions' => Subscription::query()
+                    ->currentlyActive()
                     ->where('is_complimentary', false)
-                    ->where('status', 'active')
-                    ->where(fn ($query) => $query->whereNull('ends_on')->orWhereDate('ends_on', '>=', today()))
                     ->count(),
-                'complimentary_access' => DB::table('subscriptions')
-                    ->where('is_complimentary', true)
-                    ->where('status', 'active')
-                    ->where(fn ($query) => $query->whereNull('ends_on')->orWhereDate('ends_on', '>=', today()))
+                'complimentary_access' => $complimentaryUserIds
+                    ->merge($directAccessUserIds)
+                    ->unique()
                     ->count(),
                 'revenue' => (float) DB::table('subscriptions')
                     ->where('is_complimentary', false)

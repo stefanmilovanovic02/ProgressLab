@@ -10,9 +10,16 @@
   <link rel="stylesheet" href="{{ asset('css/workout-duration.css') }}">
   <link rel="stylesheet" href="{{ asset('css/exercise-ranks.css') }}">
 </head>
-<body class="auth-body">
+<body class="auth-body add-today-body">
 
   <x-navbar />
+
+  @php
+    $unitSystem = auth()->user()->unit_system ?? \App\Support\UnitConverter::METRIC;
+    $weightUnit = \App\Support\UnitConverter::weightUnit($unitSystem);
+    $lengthUnit = \App\Support\UnitConverter::lengthUnit($unitSystem);
+    $usesImperial = $unitSystem === \App\Support\UnitConverter::IMPERIAL;
+  @endphp
 
   <main class="pl-container">
 
@@ -166,13 +173,14 @@
         
       @endphp
 
-      <section class="pl-card ws-card" aria-label="Workout Selection">
+      <section class="pl-card ws-card" id="workout-selection" aria-label="Workout Selection">
 
         <div class="ws-head">
           <div class="ws-head__left">
             <div class="ws-icon" aria-hidden="true">🏋️</div>
             <h2 class="ws-title">Workout Selection</h2>
           </div>
+          <a class="ws-create-link" href="{{ route('workouts.index', ['create' => 1]) }}">Create New Workout</a>
         </div>
 
         {{-- Select workout --}}
@@ -192,8 +200,14 @@
 
         {{-- Empty hint --}}
         <div class="ws-empty" data-ws-empty>
-          <div class="ws-empty__icon" aria-hidden="true">🏋️</div>
-          <div class="ws-empty__text">Select a workout to start logging exercises</div>
+          @if($workouts->isEmpty())
+            <div class="ws-empty__title">You don’t have a workout yet</div>
+            <div class="ws-empty__text">Create a reusable workout first, then return here to log your sets.</div>
+            <a class="ws-empty__action" href="{{ route('workouts.index', ['create' => 1]) }}">Create Your First Workout</a>
+          @else
+            <div class="ws-empty__icon" aria-hidden="true">🏋️</div>
+            <div class="ws-empty__text">Select a workout to start logging exercises</div>
+          @endif
         </div>
 
         {{-- Selected workout content --}}
@@ -360,33 +374,33 @@
             @csrf
             <div class="bm-grid">
               <label class="bm-field">
-                <span>Weight <small>kg</small></span>
-                <input type="number" inputmode="decimal" name="weight_kg" min="20" max="400" step="0.1" placeholder="e.g. 82.5" value="{{ old('weight_kg', $currentWeight) }}">
+                <span>Weight <small>{{ $weightUnit }}</small></span>
+                <input type="number" inputmode="decimal" name="weight_kg" min="{{ $usesImperial ? 44 : 20 }}" max="{{ $usesImperial ? 882 : 400 }}" step="0.1" placeholder="e.g. {{ $usesImperial ? '182' : '82.5' }}" value="{{ old('weight_kg', \App\Support\UnitConverter::weightFromKg($currentWeight, $unitSystem)) }}">
               </label>
 
               <label class="bm-field">
-                <span>Waist <small>cm</small></span>
-                <input type="number" inputmode="decimal" name="waist_cm" min="30" max="250" step="0.1" placeholder="e.g. 84" value="{{ old('waist_cm', $latestBodyMeasurement?->waist_cm) }}">
+                <span>Waist <small>{{ $lengthUnit }}</small></span>
+                <input type="number" inputmode="decimal" name="waist_cm" min="{{ $usesImperial ? 12 : 30 }}" max="{{ $usesImperial ? 98 : 250 }}" step="0.1" placeholder="e.g. {{ $usesImperial ? '33' : '84' }}" value="{{ old('waist_cm', \App\Support\UnitConverter::lengthFromCm($latestBodyMeasurement?->waist_cm, $unitSystem)) }}">
               </label>
 
               <label class="bm-field">
-                <span>Arms <small>cm</small></span>
-                <input type="number" inputmode="decimal" name="arms_cm" min="10" max="100" step="0.1" placeholder="e.g. 39" value="{{ old('arms_cm', $latestBodyMeasurement?->arms_cm) }}">
+                <span>Arms <small>{{ $lengthUnit }}</small></span>
+                <input type="number" inputmode="decimal" name="arms_cm" min="{{ $usesImperial ? 4 : 10 }}" max="{{ $usesImperial ? 39 : 100 }}" step="0.1" placeholder="e.g. {{ $usesImperial ? '15.5' : '39' }}" value="{{ old('arms_cm', \App\Support\UnitConverter::lengthFromCm($latestBodyMeasurement?->arms_cm, $unitSystem)) }}">
               </label>
 
               <label class="bm-field">
-                <span>Thighs <small>cm</small></span>
-                <input type="number" inputmode="decimal" name="thighs_cm" min="20" max="150" step="0.1" placeholder="e.g. 61" value="{{ old('thighs_cm', $latestBodyMeasurement?->thighs_cm) }}">
+                <span>Thighs <small>{{ $lengthUnit }}</small></span>
+                <input type="number" inputmode="decimal" name="thighs_cm" min="{{ $usesImperial ? 8 : 20 }}" max="{{ $usesImperial ? 59 : 150 }}" step="0.1" placeholder="e.g. {{ $usesImperial ? '24' : '61' }}" value="{{ old('thighs_cm', \App\Support\UnitConverter::lengthFromCm($latestBodyMeasurement?->thighs_cm, $unitSystem)) }}">
               </label>
 
               <label class="bm-field">
-                <span>Hips <small>cm</small></span>
-                <input type="number" inputmode="decimal" name="hips_cm" min="30" max="250" step="0.1" placeholder="e.g. 96" value="{{ old('hips_cm', $latestBodyMeasurement?->hips_cm) }}">
+                <span>Hips <small>{{ $lengthUnit }}</small></span>
+                <input type="number" inputmode="decimal" name="hips_cm" min="{{ $usesImperial ? 12 : 30 }}" max="{{ $usesImperial ? 98 : 250 }}" step="0.1" placeholder="e.g. {{ $usesImperial ? '38' : '96' }}" value="{{ old('hips_cm', \App\Support\UnitConverter::lengthFromCm($latestBodyMeasurement?->hips_cm, $unitSystem)) }}">
               </label>
 
               <label class="bm-field">
-                <span>Glutes / Seat <small>cm</small></span>
-                <input type="number" inputmode="decimal" name="glutes_cm" min="30" max="250" step="0.1" placeholder="e.g. 101" value="{{ old('glutes_cm', $latestBodyMeasurement?->glutes_cm) }}">
+                <span>Glutes / Seat <small>{{ $lengthUnit }}</small></span>
+                <input type="number" inputmode="decimal" name="glutes_cm" min="{{ $usesImperial ? 12 : 30 }}" max="{{ $usesImperial ? 98 : 250 }}" step="0.1" placeholder="e.g. {{ $usesImperial ? '40' : '101' }}" value="{{ old('glutes_cm', \App\Support\UnitConverter::lengthFromCm($latestBodyMeasurement?->glutes_cm, $unitSystem)) }}">
               </label>
             </div>
 
@@ -624,6 +638,23 @@
       (function () {
         const workouts = @json($workoutsForJs);
         const exerciseHistory = @json($exerciseHistory);
+        const weightUnit = @json($weightUnit);
+        const usesImperial = @json($usesImperial);
+        const poundsPerKilogram = 2.2046226218;
+
+        const weightForDisplay = value => {
+          if (value === null || value === undefined || value === '') return '';
+          const converted = usesImperial ? Number(value) * poundsPerKilogram : Number(value);
+          return Number(converted.toFixed(1));
+        };
+
+        const weightForStorage = value => {
+          const normalized = String(value ?? '').trim().replace(/\s+/g, '').replace(',', '.');
+          if (normalized === '') return null;
+          const number = Number(normalized);
+          if (!Number.isFinite(number)) return null;
+          return Number((usesImperial ? number / poundsPerKilogram : number).toFixed(2));
+        };
 
         const select  = document.getElementById('wsWorkoutSelect');
         const empty   = document.querySelector('[data-ws-empty]');
@@ -768,13 +799,20 @@
               const dropRepsVal = row.querySelector('.ws-drop-reps')?.value ?? '';
               const dropWeightVal = row.querySelector('.ws-drop-weight')?.value ?? '';
 
+              const decimalValue = value => {
+                const normalized = String(value).trim().replace(/\s+/g, '').replace(',', '.');
+                if (normalized === '') return null;
+                const number = Number(normalized);
+                return Number.isFinite(number) ? number : null;
+              };
+
               return {
                 set_number: idx + 1,
                 set_type: setType,
                 reps: repsVal === '' ? null : Number(repsVal),
-                weight_kg: wVal === '' ? null : Number(wVal),
+                weight_kg: weightForStorage(wVal),
                 drop_reps: setType === 'drop' && dropRepsVal !== '' ? Number(dropRepsVal) : null,
-                drop_weight_kg: setType === 'drop' && dropWeightVal !== '' ? Number(dropWeightVal) : null,
+                drop_weight_kg: setType === 'drop' ? weightForStorage(dropWeightVal) : null,
               };
             });
 
@@ -900,7 +938,7 @@
               <div class="ws-row ws-th">
                 <div>Set</div>
                 <div>Reps</div>
-                <div>Weight (kg)</div>
+                <div>Weight (${weightUnit})</div>
                 <div>Type</div>
                 <div>Actions</div>
               </div>
@@ -933,19 +971,23 @@
               || history?.sets?.find(set => Number(set.set_number) === setIndex)
               || null;
             const repsPlaceholder = previousSet?.reps ?? history?.max_reps ?? 12;
-            const weightPlaceholder = previousSet?.weight_kg ?? history?.max_weight_kg ?? 80;
+            const weightPlaceholderKg = previousSet?.weight_kg ?? history?.max_weight_kg ?? 80;
+            const weightPlaceholder = weightForDisplay(weightPlaceholderKg);
             const setType = ['normal', 'warmup', 'drop'].includes(prefill.set_type)
               ? prefill.set_type
               : (['normal', 'warmup', 'drop'].includes(previousSet?.set_type) ? previousSet.set_type : 'normal');
             const dropRepsPlaceholder = previousSet?.drop_reps ?? 8;
-            const dropWeightPlaceholder = previousSet?.drop_weight_kg ?? Math.max(0, Number(weightPlaceholder) * 0.7);
+            const dropWeightPlaceholderKg = previousSet?.drop_weight_kg ?? Math.max(0, Number(weightPlaceholderKg) * 0.7);
+            const dropWeightPlaceholder = weightForDisplay(dropWeightPlaceholderKg);
+            const prefillWeight = weightForDisplay(prefill.weight_kg);
+            const prefillDropWeight = weightForDisplay(prefill.drop_weight_kg);
 
             const row = document.createElement('div');
             row.className = 'ws-row';
             row.innerHTML = `
               <div class="ws-setnum">${setIndex}</div>
               <div class="ws-field" data-label="Reps"><input class="ws-in ws-reps" type="number" inputmode="numeric" min="0" placeholder="${repsPlaceholder}" value="${prefill.reps ?? ''}" aria-label="Set ${setIndex} reps; previous ${repsPlaceholder}"></div>
-              <div class="ws-field" data-label="Weight (kg)"><input class="ws-in ws-weight" type="number" inputmode="decimal" min="0" step="0.5" placeholder="${weightPlaceholder}" value="${prefill.weight_kg ?? ''}" aria-label="Set ${setIndex} weight in kilograms; previous ${weightPlaceholder}"></div>
+              <div class="ws-field" data-label="Weight (${weightUnit})"><input class="ws-in ws-weight" type="text" inputmode="decimal" data-numeric-input="decimal" pattern="[0-9]+([.,][0-9]+)?" autocomplete="off" placeholder="${weightPlaceholder}" value="${prefillWeight}" aria-label="Set ${setIndex} weight in ${weightUnit}; previous ${weightPlaceholder}"></div>
               <div class="ws-field" data-label="Set type">
                 <select class="ws-settype" aria-label="Set ${setIndex} type">
                   <option value="normal" ${setType === 'normal' ? 'selected' : ''}>Normal</option>
@@ -963,8 +1005,8 @@
                   <input class="ws-in ws-drop-reps" type="number" inputmode="numeric" min="0" placeholder="${dropRepsPlaceholder}" value="${prefill.drop_reps ?? ''}">
                 </label>
                 <label>
-                  <span>Drop weight (kg)</span>
-                  <input class="ws-in ws-drop-weight" type="number" inputmode="decimal" min="0" step="0.5" placeholder="${Number(dropWeightPlaceholder).toFixed(1)}" value="${prefill.drop_weight_kg ?? ''}">
+                  <span>Drop weight (${weightUnit})</span>
+                  <input class="ws-in ws-drop-weight" type="text" inputmode="decimal" data-numeric-input="decimal" pattern="[0-9]+([.,][0-9]+)?" autocomplete="off" placeholder="${dropWeightPlaceholder}" value="${prefillDropWeight}">
                 </label>
               </div>
               <div class="ws-act">
@@ -1077,6 +1119,7 @@
       })();
       </script>
 
+      <script src="{{ asset('js/image-optimizer.js') }}?v={{ filemtime(public_path('js/image-optimizer.js')) }}"></script>
       <script>
       (() => {
         const form = document.querySelector('[data-progress-photo-form]');
@@ -1185,56 +1228,20 @@
           goTo(currentStep + 1);
         });
 
-        async function decodeImage(file) {
-          if ('createImageBitmap' in window) {
-            return createImageBitmap(file, { imageOrientation: 'from-image' });
-          }
-
-          return new Promise((resolve, reject) => {
-            const url = URL.createObjectURL(file);
-            const image = new Image();
-            image.onload = () => {
-              URL.revokeObjectURL(url);
-              resolve(image);
-            };
-            image.onerror = () => {
-              URL.revokeObjectURL(url);
-              reject(new Error('This image format could not be prepared by your browser.'));
-            };
-            image.src = url;
-          });
-        }
-
         async function preparePhoto(file, name) {
-          let source;
           try {
-            source = await decodeImage(file);
+            const result = await window.ProgressLabImageOptimizer.optimize(file, {
+              maxDimension: 1600,
+              targetBytes: 900 * 1024,
+              quality: .84,
+              baseName: name,
+            });
+
+            return result;
           } catch (error) {
             if (file.size <= 1900 * 1024) return file;
             throw new Error('This photo is too large for your browser to prepare. Please choose a smaller photo.');
           }
-
-          const sourceWidth = source.width || source.naturalWidth;
-          const sourceHeight = source.height || source.naturalHeight;
-          const scale = Math.min(1, 1440 / Math.max(sourceWidth, sourceHeight));
-          const canvas = document.createElement('canvas');
-          canvas.width = Math.max(1, Math.round(sourceWidth * scale));
-          canvas.height = Math.max(1, Math.round(sourceHeight * scale));
-          canvas.getContext('2d').drawImage(source, 0, 0, canvas.width, canvas.height);
-          if (typeof source.close === 'function') source.close();
-
-          const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', .8));
-          if (!blob) throw new Error('This photo could not be prepared. Please choose another image.');
-
-          const prepared = blob.size < file.size || file.size > 1900 * 1024
-            ? new File([blob], `${name}.jpg`, { type: 'image/jpeg', lastModified: Date.now() })
-            : file;
-
-          if (prepared.size > 2 * 1024 * 1024) {
-            throw new Error('This photo is still too large. Please choose a smaller image.');
-          }
-
-          return prepared;
         }
 
         form.addEventListener('submit', async event => {
@@ -1256,8 +1263,19 @@
             const fields = ['front_photo', 'side_photo', 'back_photo'];
 
             for (let index = 0; index < inputs.length; index++) {
-              const prepared = await preparePhoto(inputs[index].files[0], stepNames[index].toLowerCase());
+              const original = inputs[index].files[0];
+              const result = await preparePhoto(original, stepNames[index].toLowerCase());
+              const prepared = result.file || result;
               data.set(fields[index], prepared, prepared.name);
+
+              if (result.optimizedBytes) {
+                const status = panels[index].querySelector('[data-pp-file-status]');
+                const before = (result.originalBytes / 1024 / 1024).toFixed(1);
+                const after = (result.optimizedBytes / 1024 / 1024).toFixed(1);
+                status.textContent = result.changed
+                  ? `Optimized ${before} MB → ${after} MB · high quality`
+                  : `${after} MB · already optimized`;
+              }
             }
 
             saveButton.textContent = 'Saving…';
@@ -1339,6 +1357,74 @@
     <button class="exercise-rank-up__close" type="button" data-rank-up-close>Continue</button>
   </div>
 </div>
+
+<script>
+(() => {
+  const labelFor = input => (input.getAttribute('aria-label') || input.name || 'value')
+    .replaceAll('_', ' ')
+    .trim();
+
+  const enhance = input => {
+    if (input.dataset.appStepper === 'true' || input.disabled || input.readOnly) return;
+    input.dataset.appStepper = 'true';
+
+    let host = input.closest('.at-inputwrap');
+    if (!host) {
+      host = document.createElement('span');
+      host.className = 'app-number-field';
+      input.parentNode.insertBefore(host, input);
+      host.appendChild(input);
+    }
+    host.classList.add('has-app-stepper');
+
+    const controls = document.createElement('span');
+    controls.className = 'app-number-stepper';
+
+    [['up', 1, 'Increase'], ['down', -1, 'Decrease']].forEach(([direction, amount, verb]) => {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `app-number-stepper__button is-${direction}`;
+      button.setAttribute('aria-label', `${verb} ${labelFor(input)}`);
+      button.innerHTML = '<span aria-hidden="true"></span>';
+      button.addEventListener('click', () => {
+        try {
+          if (input.value === '') {
+            const minimum = Number.parseFloat(input.min);
+            input.value = Number.isFinite(minimum) ? minimum : 0;
+          } else if (amount > 0) {
+            input.stepUp();
+          } else {
+            input.stepDown();
+          }
+        } catch (_) {
+          const step = Number.parseFloat(input.step) || 1;
+          const current = Number.parseFloat(input.value) || 0;
+          input.value = current + (step * amount);
+        }
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
+      });
+      controls.appendChild(button);
+    });
+
+    host.appendChild(controls);
+  };
+
+  const enhanceWithin = root => {
+    if (root.matches?.('input[type="number"]')) enhance(root);
+    root.querySelectorAll?.('input[type="number"]').forEach(enhance);
+  };
+
+  const main = document.querySelector('main');
+  if (!main) return;
+  enhanceWithin(main);
+  new MutationObserver(mutations => mutations.forEach(mutation => {
+    mutation.addedNodes.forEach(node => {
+      if (node.nodeType === Node.ELEMENT_NODE) enhanceWithin(node);
+    });
+  })).observe(main, { childList: true, subtree: true });
+})();
+</script>
 
 <x-achievement-toasts />
 <x-footer />

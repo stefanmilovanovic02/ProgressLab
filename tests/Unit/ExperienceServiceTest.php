@@ -119,6 +119,19 @@ class ExperienceServiceTest extends TestCase
         $this->assertSame(150, $progress['required_xp']);
     }
 
+    public function test_rank_catalog_contains_every_rank_and_cumulative_entry_xp(): void
+    {
+        $catalog = app(ExperienceService::class)->rankCatalog();
+
+        $this->assertSame(
+            ['Bronze', 'Silver', 'Gold', 'Platinum', 'Diamond', 'Master', 'Titan', 'Olympian'],
+            array_column($catalog, 'name')
+        );
+        $this->assertSame(0, $catalog[0]['starting_xp']);
+        $this->assertSame(700, $catalog[1]['starting_xp']);
+        $this->assertSame(4, $catalog[7]['level_count']);
+    }
+
     private function user(): User
     {
         return User::query()->create([

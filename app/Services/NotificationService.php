@@ -9,6 +9,7 @@ use App\Models\FriendRequest;
 use App\Models\User;
 use App\Models\UserAchievement;
 use App\Models\TrainerClient;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Schema;
 
 class NotificationService
@@ -20,6 +21,25 @@ class NotificationService
     }
 
     public function syncForUser(User $user): void
+    {
+        if (app()->environment('testing')) {
+            $this->performSyncForUser($user);
+
+            return;
+        }
+
+        Cache::remember(
+            'notifications:sync:' . $user->id,
+            now()->addSeconds(60),
+            function () use ($user) {
+                $this->performSyncForUser($user);
+
+                return true;
+            }
+        );
+    }
+
+    private function performSyncForUser(User $user): void
     {
         if (!Schema::hasTable('app_notifications')) {
             return;
@@ -79,8 +99,11 @@ class NotificationService
             ]
         );
 
-        if ($push && $notification->wasRecentlyCreated) {
-            $this->deliver($user, $notification);
+        if ($push && !$notification->push_sent_at) {
+            $accepted = $this->deliver($user, $notification);
+            if ($accepted > 0) {
+                $notification->forceFill(['push_sent_at' => now()])->save();
+            }
         }
 
         return $notification;
@@ -251,7 +274,9 @@ class NotificationService
         return $this->webPush->sendToUser($user, [
             'title' => $notification->title,
             'body' => $notification->message,
-            'url' => route('notifications.index', [], false),
+            'url' => $notification->action_url ?: route('notifications.index', [], false),
+            'icon' => asset('images/branding/progresslab-app-192.png'),
+            'badge' => asset('images/branding/progresslab-favicon.png'),
             'tag' => $notification->source_type . '-' . $notification->source_id,
             'category' => $notification->category,
             'badgeCount' => $this->unreadCount($user),

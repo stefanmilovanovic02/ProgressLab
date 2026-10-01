@@ -1,8 +1,10 @@
 @props([
     'title' => 'Track Your Fitness Progress',
     'description' => 'Track workouts, nutrition, streaks, achievements, and fitness progress with ProgressLab.',
-    'robots' => 'index, follow',
+    'robots' => 'index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1',
     'canonical' => null,
+    'loadNumericInputs' => true,
+    'loadPasswordToggle' => true,
 ])
 
 @php
@@ -20,16 +22,25 @@
 <meta name="description" content="{{ $description }}">
 <meta name="robots" content="{{ $robots }}">
 <meta name="theme-color" content="#071225">
+<meta name="application-name" content="ProgressLab">
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="csrf-token" content="{{ csrf_token() }}">
 <link rel="canonical" href="{{ $canonicalUrl }}">
+<link rel="sitemap" type="application/xml" href="{{ url('/sitemap.xml') }}">
 <link rel="manifest" href="{{ asset('manifest.webmanifest') }}">
 <link rel="icon" type="image/png" sizes="256x256" href="{{ $favicon }}">
 <link rel="apple-touch-icon" sizes="180x180" href="{{ $touchIcon }}">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="ProgressLab">
-<script defer src="{{ asset('js/push-notifications.js') }}"></script>
+<meta name="format-detection" content="telephone=no">
+<script defer src="{{ asset('js/pwa-register.js') }}?v={{ filemtime(public_path('js/pwa-register.js')) }}"></script>
+@if($loadNumericInputs)
 <script defer src="{{ asset('js/numeric-inputs.js') }}"></script>
+@endif
+@if($loadPasswordToggle)
+<script defer src="{{ asset('js/password-toggle.js') }}"></script>
+@endif
 
 <meta property="og:site_name" content="ProgressLab">
 <meta property="og:type" content="website">
@@ -51,9 +62,10 @@
 <meta name="twitter:image:alt" content="ProgressLab — Track your progress, measure, achieve, and grow">
 
 @if (str_starts_with($robots, 'index'))
-<script type="application/ld+json">{!! json_encode([
-    '@context' => 'https://schema.org',
-    '@type' => 'WebApplication',
+@php
+    $structuredData = [
+    '@' . 'context' => 'https://schema.org',
+    '@' . 'type' => 'WebApplication',
     'name' => 'ProgressLab',
     'url' => config('app.url'),
     'applicationCategory' => 'HealthApplication',
@@ -61,5 +73,7 @@
     'description' => $description,
     'logo' => $logo,
     'image' => $socialImage,
-], JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
+    ];
+@endphp
+<script type="application/ld+json">{!! json_encode($structuredData, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
 @endif

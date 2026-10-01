@@ -1,8 +1,4 @@
 (() => {
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('/sw.js').catch(() => {});
-  }
-
   const panel = document.querySelector('[data-push-settings]');
   if (!panel) return;
 

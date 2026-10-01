@@ -104,4 +104,53 @@ class WorkoutSetTypesTest extends TestCase
 
         $this->assertEqualsWithDelta(58.33, (float) $rank->best_estimated_1rm, 0.01);
     }
+
+    public function test_workout_weights_accept_comma_and_dot_decimals(): void
+    {
+        $this->withoutMiddleware(TrackDailyLogin::class);
+
+        $user = User::factory()->create();
+        $workout = Workout::query()->create([
+            'user_id' => $user->id,
+            'name' => 'Decimal Pull Day',
+        ]);
+        $exercise = Exercise::query()->create([
+            'name' => 'Lat Pulldown',
+            'muscle_group' => 'Back',
+        ]);
+        $workout->exercises()->attach($exercise->id, ['sort_order' => 1]);
+
+        $this->mock(AchievementService::class, function ($mock) {
+            $mock->shouldReceive('evaluate')->once()->andReturn([]);
+        });
+
+        $this->actingAs($user)
+            ->postJson(route('add-today.workout.save'), [
+                'workout_id' => $workout->id,
+                'exercises' => [[
+                    'exercise_id' => $exercise->id,
+                    'sets' => [[
+                        'set_number' => 1,
+                        'set_type' => 'drop',
+                        'reps' => 10,
+                        'weight_kg' => '72,5',
+                        'drop_reps' => 8,
+                        'drop_weight_kg' => '52.25',
+                    ]],
+                ]],
+            ])
+            ->assertOk();
+
+        $this->assertDatabaseHas('workout_log_sets', [
+            'set_number' => 1,
+            'weight_kg' => 72.5,
+            'drop_weight_kg' => 52.25,
+        ]);
+
+        $this->actingAs($user)
+            ->get(route('add-today'))
+            ->assertOk()
+            ->assertSee('data-numeric-input="decimal"', false)
+            ->assertSee("replace(',', '.')", false);
+    }
 }

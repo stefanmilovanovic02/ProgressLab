@@ -1,7 +1,9 @@
 (() => {
-  const isNumericInput = (element) => element instanceof HTMLInputElement && element.type === 'number';
+  const isNumericInput = (element) => element instanceof HTMLInputElement
+    && (element.type === 'number' || element.hasAttribute('data-numeric-input'));
 
   const allowsDecimals = (input) => {
+    if (input.dataset.numericInput) return input.dataset.numericInput === 'decimal';
     const step = input.getAttribute('step');
     return step === 'any' || (step !== null && step !== '' && Number(step) % 1 !== 0);
   };

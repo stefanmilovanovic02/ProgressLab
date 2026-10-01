@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\User;
 use App\Services\ExperienceService;
+use App\Support\UnitConverter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -64,7 +65,7 @@ class LeaderboardController extends Controller
             'exercise' => $this->exerciseRows(
                 $users,
                 (int) $validated['exercise_id'],
-                $auth->id,
+                $auth,
                 $exerciseMode
             ),
             default => $this->loginRows($users, $auth->id),
@@ -149,12 +150,12 @@ class LeaderboardController extends Controller
     private function exerciseRows(
         Collection $users,
         int $exerciseId,
-        int $authId,
+        User $viewer,
         string $mode
     ): Collection
     {
         if ($mode === 'ranked') {
-            return $this->exerciseRankRows($users, $exerciseId, $authId);
+            return $this->exerciseRankRows($users, $exerciseId, $viewer->id);
         }
 
         $weights = DB::table('workout_log_sets as sets')
@@ -169,13 +170,14 @@ class LeaderboardController extends Controller
 
         return $users
             ->filter(fn (User $user) => isset($weights[$user->id]))
-            ->map(function (User $user) use ($weights, $authId) {
-                $weight = (float) $weights[$user->id];
+            ->map(function (User $user) use ($weights, $viewer) {
+                $weightKg = (float) $weights[$user->id];
+                $weight = UnitConverter::weightFromKg($weightKg, $viewer->unit_system, 2);
                 $formatted = rtrim(rtrim(number_format($weight, 2, '.', ''), '0'), '.');
 
-                return $this->baseRow($user, $authId) + [
-                    '_score' => $weight,
-                    'value' => $formatted . ' kg',
+                return $this->baseRow($user, $viewer->id) + [
+                    '_score' => $weightKg,
+                    'value' => $formatted . ' ' . $viewer->weightUnit(),
                     'detail' => 'Highest logged weight',
                 ];
             });

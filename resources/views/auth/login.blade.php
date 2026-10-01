@@ -50,14 +50,17 @@
 
           <div class="field">
             <label class="field-label" for="password">PASSWORD</label>
-            <input
-              class="field-input @error('password') is-invalid @enderror"
-              id="password"
-              name="password"
-              type="password"
-              placeholder="Password"
-              autocomplete="current-password"
-            />
+            <div class="input-with-icon">
+              <input
+                class="field-input @error('password') is-invalid @enderror"
+                id="password"
+                name="password"
+                type="password"
+                placeholder="Password"
+                autocomplete="current-password"
+              />
+              <x-password-toggle target="password" />
+            </div>
             @error('password')
                 <p class="field-error">{{ $message }}</p>
             @enderror

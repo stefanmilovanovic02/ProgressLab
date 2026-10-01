@@ -71,7 +71,7 @@
       <div class="ad-card__head"><div><span class="ad-eyebrow">Shared exercise data</span><h2>Recent personal records</h2></div><span class="ad-lock">Last 14 days</span></div>
       <div class="tr-record-grid">
         @forelse($recentRecords as $record)
-          <article><span>🏆</span><div><strong>{{ $record->client_full_name ?? $record->client_name }}</strong><p>{{ $record->exercise_name }} · {{ (float) $record->weight_kg }} kg × {{ $record->reps ?? '—' }}</p></div><time>{{ \Illuminate\Support\Carbon::parse($record->entry_date)->format('M j') }}</time></article>
+          <article><span>🏆</span><div><strong>{{ $record->client_full_name ?? $record->client_name }}</strong><p>{{ $record->exercise_name }} · {{ $record->display_weight }} {{ $record->weight_unit }} × {{ $record->reps ?? '—' }}</p></div><time>{{ \Illuminate\Support\Carbon::parse($record->entry_date)->format('M j') }}</time></article>
         @empty
           <div class="ad-empty">No shared personal records in the last 14 days.</div>
         @endforelse

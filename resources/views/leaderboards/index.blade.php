@@ -43,14 +43,26 @@
         </div>
 
         <div class="lb-exercise-controls" data-exercise-filter hidden>
-          <label class="lb-exercise">
-            <span class="lb-label">Exercise</span>
-            <select data-exercise-select>
-              @foreach($exercises as $exercise)
-                <option value="{{ $exercise->id }}">{{ $exercise->name }}</option>
-              @endforeach
-            </select>
-          </label>
+          <div class="lb-exercise" data-exercise-combobox>
+            <label class="lb-label" for="leaderboardExerciseSearch">Exercise</label>
+            <div class="lb-exercise__field">
+              <input
+                id="leaderboardExerciseSearch"
+                type="search"
+                inputmode="search"
+                autocomplete="off"
+                placeholder="Search exercises..."
+                role="combobox"
+                aria-autocomplete="list"
+                aria-expanded="false"
+                aria-controls="leaderboardExerciseOptions"
+                data-exercise-search
+              >
+              <button type="button" aria-label="Clear selected exercise" data-exercise-clear hidden>&times;</button>
+            </div>
+            <input type="hidden" data-exercise-select>
+            <div class="lb-exercise__menu" id="leaderboardExerciseOptions" role="listbox" data-exercise-options hidden></div>
+          </div>
           <div>
             <span class="lb-label">Compare by</span>
             <div class="lb-mode" aria-label="Exercise comparison type">
@@ -88,14 +100,89 @@
       const scopeLabel = root.querySelector('[data-scope-label]');
       const exerciseWrap = root.querySelector('[data-exercise-filter]');
       const exerciseSelect = root.querySelector('[data-exercise-select]');
+      const exerciseCombobox = root.querySelector('[data-exercise-combobox]');
+      const exerciseSearch = root.querySelector('[data-exercise-search]');
+      const exerciseOptions = root.querySelector('[data-exercise-options]');
+      const exerciseClear = root.querySelector('[data-exercise-clear]');
+      const exercises = @json($exercises->map(fn ($exercise) => ['id' => (string) $exercise->id, 'name' => $exercise->name])->values());
       const state = { scope: 'friends', metric: 'login', exerciseMode: 'weight' };
       let activeRequest;
+
+      const popularPatterns = [
+        /bench press/i,
+        /(?:barbell )?squat/i,
+        /(?:barbell )?deadlift/i,
+        /leg press/i,
+        /lat pulldown/i,
+        /(?:overhead|shoulder) press/i
+      ];
+
+      const popularExercises = popularPatterns
+        .map(pattern => exercises.find(exercise => pattern.test(exercise.name)))
+        .filter((exercise, index, items) => exercise && items.findIndex(item => item.id === exercise.id) === index)
+        .slice(0, 6);
 
       const text = (tag, className, value) => {
         const node = document.createElement(tag);
         if (className) node.className = className;
         node.textContent = value;
         return node;
+      };
+
+      const closeExerciseMenu = () => {
+        exerciseOptions.hidden = true;
+        exerciseSearch.setAttribute('aria-expanded', 'false');
+      };
+
+      const chooseExercise = exercise => {
+        exerciseSelect.value = exercise.id;
+        exerciseSearch.value = exercise.name;
+        exerciseClear.hidden = false;
+        closeExerciseMenu();
+        load();
+      };
+
+      const renderExerciseOptions = () => {
+        const query = exerciseSearch.value.trim().toLocaleLowerCase();
+        const selectedName = exercises.find(exercise => exercise.id === exerciseSelect.value)?.name ?? '';
+        const isSelectedLabel = selectedName && exerciseSearch.value === selectedName;
+        let matches;
+        let heading;
+
+        if (!query || isSelectedLabel) {
+          matches = popularExercises.length ? popularExercises : exercises.slice(0, 6);
+          heading = 'Popular exercises';
+        } else {
+          matches = exercises
+            .filter(exercise => exercise.name.toLocaleLowerCase().includes(query))
+            .sort((left, right) => {
+              const leftStarts = left.name.toLocaleLowerCase().startsWith(query);
+              const rightStarts = right.name.toLocaleLowerCase().startsWith(query);
+              return Number(rightStarts) - Number(leftStarts) || left.name.localeCompare(right.name);
+            })
+            .slice(0, 12);
+          heading = 'Search results';
+        }
+
+        exerciseOptions.replaceChildren();
+        exerciseOptions.append(text('span', 'lb-exercise__heading', heading));
+
+        if (!matches.length) {
+          exerciseOptions.append(text('span', 'lb-exercise__empty', 'No exercises match your search.'));
+        } else {
+          matches.forEach(exercise => {
+            const option = text('button', 'lb-exercise__option', exercise.name);
+            option.type = 'button';
+            option.role = 'option';
+            option.setAttribute('aria-selected', exercise.id === exerciseSelect.value ? 'true' : 'false');
+            if (exercise.id === exerciseSelect.value) option.classList.add('is-selected');
+            option.addEventListener('click', () => chooseExercise(exercise));
+            exerciseOptions.append(option);
+          });
+        }
+
+        exerciseOptions.hidden = false;
+        exerciseSearch.setAttribute('aria-expanded', 'true');
       };
 
       const showLoading = () => {
@@ -107,14 +194,17 @@
 
       const emptyState = () => {
         const rankedExercise = state.metric === 'exercise' && state.exerciseMode === 'ranked';
+        const needsExercise = state.metric === 'exercise' && !exerciseSelect.value;
         const empty = document.createElement('div');
         empty.className = 'lb-empty';
         empty.append(text('div', 'lb-empty__icon', state.metric === 'exercise' || state.metric === 'ranked' ? '🏋️' : '🏆'));
-        empty.append(text('h3', '', state.metric === 'exercise' ? 'No strength records yet' : state.scope === 'friends' ? 'No friends to rank yet' : 'No leaderboard activity yet'));
+        empty.append(text('h3', '', needsExercise ? 'Choose an exercise' : state.metric === 'exercise' ? 'No strength records yet' : state.scope === 'friends' ? 'No friends to rank yet' : 'No leaderboard activity yet'));
         empty.append(text(
           'p',
           '',
-          state.metric === 'exercise'
+          needsExercise
+            ? 'Search by exercise name, or choose one of the popular exercises.'
+            : state.metric === 'exercise'
             ? rankedExercise
               ? 'Only people who earned a rank for this exercise appear here.'
               : 'Only people who logged weight for this exercise appear here.'
@@ -225,7 +315,14 @@
           item.classList.toggle('is-active', selected);
           item.setAttribute('aria-selected', selected ? 'true' : 'false');
         });
-        load();
+        if (state.metric === 'exercise' && !exerciseSelect.value) {
+          scopeLabel.textContent = `${state.scope === 'friends' ? 'Friends' : 'Global'} leaderboard`;
+          title.textContent = 'Choose an exercise';
+          count.textContent = '';
+          emptyState();
+        } else {
+          load();
+        }
       }));
 
       root.querySelectorAll('[data-metric]').forEach(button => button.addEventListener('click', () => {
@@ -236,11 +333,45 @@
           item.setAttribute('aria-pressed', selected ? 'true' : 'false');
         });
         exerciseWrap.hidden = state.metric !== 'exercise';
-        if (state.metric === 'exercise' && !exerciseSelect.value) return emptyState();
+        if (state.metric === 'exercise' && !exerciseSelect.value) {
+          scopeLabel.textContent = `${state.scope === 'friends' ? 'Friends' : 'Global'} leaderboard`;
+          title.textContent = 'Choose an exercise';
+          count.textContent = '';
+          return emptyState();
+        }
         load();
       }));
 
-      exerciseSelect.addEventListener('change', load);
+      exerciseSearch.addEventListener('focus', renderExerciseOptions);
+      exerciseSearch.addEventListener('input', () => {
+        const selected = exercises.find(exercise => exercise.id === exerciseSelect.value);
+        if (!selected || exerciseSearch.value !== selected.name) {
+          exerciseSelect.value = '';
+          exerciseClear.hidden = !exerciseSearch.value;
+        }
+        renderExerciseOptions();
+      });
+      exerciseSearch.addEventListener('keydown', event => {
+        if (event.key === 'Escape') {
+          closeExerciseMenu();
+          exerciseSearch.blur();
+        }
+      });
+      exerciseClear.addEventListener('click', () => {
+        exerciseSelect.value = '';
+        exerciseSearch.value = '';
+        exerciseClear.hidden = true;
+        exerciseSearch.focus();
+        renderExerciseOptions();
+        if (state.metric === 'exercise') {
+          title.textContent = 'Choose an exercise';
+          count.textContent = '';
+          emptyState();
+        }
+      });
+      document.addEventListener('pointerdown', event => {
+        if (!exerciseCombobox.contains(event.target)) closeExerciseMenu();
+      });
       root.querySelectorAll('[data-exercise-mode]').forEach(button => button.addEventListener('click', () => {
         state.exerciseMode = button.dataset.exerciseMode;
         root.querySelectorAll('[data-exercise-mode]').forEach(item => {
@@ -248,7 +379,7 @@
           item.classList.toggle('is-active', selected);
           item.setAttribute('aria-pressed', selected ? 'true' : 'false');
         });
-        load();
+        if (exerciseSelect.value) load();
       }));
       load();
     })();

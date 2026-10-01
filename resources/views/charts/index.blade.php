@@ -6,7 +6,7 @@
     description="Visualize nutrition trends, workout volume, and exercise strength progress with interactive ProgressLab charts."
     robots="noindex, nofollow, noarchive"
   />
-  <link rel="stylesheet" href="{{ asset('css/auth.css') }}">
+  <link rel="stylesheet" href="{{ asset('css/auth.css') }}?v={{ filemtime(public_path('css/auth.css')) }}">
 
   {{-- Chart.js --}}
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
@@ -14,6 +14,8 @@
 <body class="auth-body">
 
   <x-navbar />
+
+  @php $weightUnit = auth()->user()->weightUnit(); @endphp
 
   <main class="pl-container">
 
@@ -38,19 +40,20 @@
 
       <div class="ch-controls">
         <div class="ch-control">
-          <label class="ch-label" for="macroSelect">Select Macronutrient</label>
+          <span class="ch-label" id="macroSelectLabel">Select Macronutrient</span>
 
-          <div class="ch-selectwrap">
-            <span class="ch-dot" data-macro-dot></span>
-            <select id="macroSelect" class="ch-select">
-              <option value="calories">Calories</option>
-              <option value="protein">Protein</option>
-              <option value="carbs">Carbs</option>
-              <option value="fat">Fat</option>
-              <option value="creatine">Creatine</option>
-              <option value="water">Water</option>
-            </select>
-            <span class="ch-chevron">⌄</span>
+          @php($macroOptions = ['calories' => 'Calories', 'protein' => 'Protein', 'carbs' => 'Carbs', 'fat' => 'Fat', 'creatine' => 'Creatine', 'water' => 'Water'])
+          <div class="ch-macro-picker" data-macro-picker data-value="{{ $defaultMacro }}">
+            <button class="ch-macro-picker__trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="macroSelectLabel macroSelectValue" data-macro-trigger>
+              <span class="ch-dot" data-macro-dot></span>
+              <span id="macroSelectValue" data-macro-value-label>{{ $macroOptions[$defaultMacro] ?? 'Calories' }}</span>
+              <span class="ch-macro-picker__arrow" aria-hidden="true"></span>
+            </button>
+            <div class="ch-macro-picker__menu" role="listbox" aria-labelledby="macroSelectLabel" data-macro-menu hidden>
+              @foreach($macroOptions as $value => $label)
+                <button type="button" role="option" aria-selected="{{ $defaultMacro === $value ? 'true' : 'false' }}" data-macro-option="{{ $value }}">{{ $label }}</button>
+              @endforeach
+            </div>
           </div>
         </div>
 
@@ -107,16 +110,26 @@
         {{-- Reuse same controls grid --}}
         <div class="ch-controls ch-controls--exercise">
             <div class="ch-control">
-            <label class="ch-label" for="epExerciseSelect">Select Exercise</label>
+            <label class="ch-label" for="epExerciseSearch">Select Exercise</label>
 
-            <div class="ch-selectwrap">
-                <select id="epExerciseSelect" class="ch-select">
-                <option value="">Choose an exercise...</option>
-                @foreach($exercises as $ex)
-                    <option value="{{ $ex->id }}">{{ $ex->name }}</option>
-                @endforeach
-                </select>
-                <span class="ch-chevron" aria-hidden="true">⌄</span>
+            <div class="ch-exercise-search" data-chart-exercise-picker>
+                <div class="ch-exercise-search__field">
+                  <input
+                    id="epExerciseSearch"
+                    type="search"
+                    inputmode="search"
+                    autocomplete="off"
+                    placeholder="Search your exercises..."
+                    role="combobox"
+                    aria-autocomplete="list"
+                    aria-expanded="false"
+                    aria-controls="epExerciseOptions"
+                    data-chart-exercise-search
+                  >
+                  <button type="button" data-chart-exercise-clear aria-label="Clear selected exercise" hidden>&times;</button>
+                </div>
+                <input id="epExerciseSelect" type="hidden" value="">
+                <div id="epExerciseOptions" class="ch-exercise-search__options" role="listbox" data-chart-exercise-options hidden></div>
             </div>
             </div>
 
@@ -151,7 +164,7 @@
             <label class="ch-check is-weight" for="epShowWeight">
             <input type="checkbox" id="epShowWeight" checked>
             <span class="ch-check__box" aria-hidden="true"></span>
-            <span class="ch-check__text">Weight (kg)</span>
+            <span class="ch-check__text">Weight ({{ $weightUnit }})</span>
             </label>
         </div>
 
@@ -176,7 +189,7 @@
             <span>Reps</span>
 
             <span class="ch-dot ch-dot--legend ch-dot--blue"></span>
-            <span>Weight (kg)</span>
+            <span>Weight ({{ $weightUnit }})</span>
             </div>
 
             <div class="ch-meta" id="epDaysText">0 days of data</div>
@@ -193,7 +206,15 @@
                 <p class="pc-subtitle">Drag the divider to compare your private check-ins.</p>
               </div>
             </div>
-            <span class="pc-private">🔒 Private</span>
+            <span class="pc-private" data-private-visibility aria-label="Progress photos are visible only to you" title="Visible only to you">
+              <svg class="pc-private__icon" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M3 3l18 18"></path>
+                <path d="M10.6 10.7a2 2 0 0 0 2.7 2.7"></path>
+                <path d="M9.9 4.3A10.8 10.8 0 0 1 12 4c5.4 0 9 5.2 9 5.2a14 14 0 0 1-2.2 2.7"></path>
+                <path d="M6.6 6.6A15.8 15.8 0 0 0 3 9.2S6.6 14.4 12 14.4c.8 0 1.6-.1 2.3-.3"></path>
+              </svg>
+              <span>Private</span>
+            </span>
           </div>
 
           @if($progressPhotos->count() < 2)
@@ -318,7 +339,7 @@
               </article>
               <article>
                 <span>Training volume</span>
-                <strong>{{ number_format($weeklyReport['training']['volume_kg'], 0) }} kg</strong>
+                <strong>{{ number_format($weeklyReport['training']['volume'], 0) }} {{ $weeklyReport['units']['weight'] }}</strong>
               </article>
             </div>
 
@@ -326,7 +347,7 @@
               <div>
                 <span>Current weight</span>
                 <strong>
-                  {{ $weeklyReport['weight']['current'] === null ? 'No entry' : number_format($weeklyReport['weight']['current'], 1).' kg' }}
+                  {{ $weeklyReport['weight']['display_current'] === null ? 'No entry' : number_format($weeklyReport['weight']['display_current'], 1).' '.$weeklyReport['units']['weight'] }}
                 </strong>
               </div>
               <div>
@@ -417,7 +438,11 @@
 
   <script>
     (function () {
-      const macroSelect = document.getElementById('macroSelect');
+      const macroSelect = document.querySelector('[data-macro-picker]');
+      const macroTrigger = macroSelect.querySelector('[data-macro-trigger]');
+      const macroMenu = macroSelect.querySelector('[data-macro-menu]');
+      const macroValueLabel = macroSelect.querySelector('[data-macro-value-label]');
+      const macroOptions = [...macroSelect.querySelectorAll('[data-macro-option]')];
       const periodBtns = document.querySelectorAll('[data-period]');
       const lockedPeriodBtns = document.querySelectorAll('[data-macro-locked-period]');
       const upgradeOverlay = document.querySelector('[data-macro-upgrade]');
@@ -430,8 +455,7 @@
       const defaultMacro = @json($defaultMacro);
       const defaultPeriod = @json($defaultPeriod);
 
-      // match UI default (you can change)
-      macroSelect.value = defaultMacro;
+      macroSelect.dataset.value = defaultMacro;
 
       // If you prefer default to month, set the correct button active:
       function setActivePeriod(p){
@@ -475,7 +499,7 @@
       });
 
       async function loadData() {
-        const macro = macroSelect.value;
+        const macro = macroSelect.dataset.value;
         const activeBtn = macroSelect.closest('.ch-card')?.querySelector('[data-period].is-active');
         const period = activeBtn ? activeBtn.dataset.period : 'month';
 
@@ -504,7 +528,51 @@
         legendMeta.textContent = `${points} days of data`;
       }
 
-      macroSelect.addEventListener('change', loadData);
+      function setMacroOpen(open, focusSelected = false) {
+        macroSelect.classList.toggle('is-open', open);
+        macroTrigger.setAttribute('aria-expanded', String(open));
+        macroMenu.hidden = !open;
+        if (open && focusSelected) {
+          (macroOptions.find(option => option.getAttribute('aria-selected') === 'true') || macroOptions[0]).focus();
+        }
+      }
+
+      function chooseMacro(option) {
+        macroSelect.dataset.value = option.dataset.macroOption;
+        macroValueLabel.textContent = option.textContent.trim();
+        macroOptions.forEach(candidate => candidate.setAttribute('aria-selected', String(candidate === option)));
+        setMacroOpen(false);
+        macroTrigger.focus();
+        loadData();
+      }
+
+      macroTrigger.addEventListener('click', () => setMacroOpen(macroMenu.hidden));
+      macroTrigger.addEventListener('keydown', event => {
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+          event.preventDefault();
+          setMacroOpen(true, true);
+        }
+      });
+      macroOptions.forEach((option, index) => {
+        option.addEventListener('click', () => chooseMacro(option));
+        option.addEventListener('keydown', event => {
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            setMacroOpen(false);
+            macroTrigger.focus();
+            return;
+          }
+          if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+          event.preventDefault();
+          const next = event.key === 'Home' ? 0 : event.key === 'End'
+            ? macroOptions.length - 1
+            : (index + (event.key === 'ArrowDown' ? 1 : -1) + macroOptions.length) % macroOptions.length;
+          macroOptions[next].focus();
+        });
+      });
+      document.addEventListener('pointerdown', event => {
+        if (!macroSelect.contains(event.target)) setMacroOpen(false);
+      });
 
       periodBtns.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -541,8 +609,14 @@
     const lockedExerciseBtns = document.querySelectorAll('[data-exercise-locked-period]');
     const exerciseUpgrade = document.querySelector('[data-exercise-upgrade]');
     const exerciseUpgradePeriod = document.querySelector('[data-exercise-upgrade-period]');
+    const exercisePicker = document.querySelector('[data-chart-exercise-picker]');
+    const exerciseSearch = document.querySelector('[data-chart-exercise-search]');
+    const exerciseOptions = document.querySelector('[data-chart-exercise-options]');
+    const exerciseClear = document.querySelector('[data-chart-exercise-clear]');
+    const exercises = @json($exercises->map(fn ($exercise) => ['id' => (string) $exercise->id, 'name' => $exercise->name])->values());
+    let selectedExerciseName = '';
 
-    if (!select || !repsToggle || !weightToggle) return;
+    if (!select || !exercisePicker || !exerciseSearch || !exerciseOptions || !exerciseClear || !repsToggle || !weightToggle) return;
 
     const apiUrl = "{{ route('charts.exercise-data') }}";
     let period = 'month';
@@ -562,7 +636,7 @@
             borderWidth: 2
             },
             {
-            label: 'Weight (kg)',
+            label: 'Weight ({{ $weightUnit }})',
             data: [],
             tension: 0.35,
             pointRadius: 3,
@@ -620,8 +694,61 @@
         chart.update();
 
         // Footer
-        legendExercise.textContent = select.options[select.selectedIndex].text;
+        legendExercise.textContent = selectedExerciseName || '—';
         daysText.textContent = `${data.days || 0} days of data`;
+    }
+
+    function closeExerciseResults() {
+        exerciseOptions.hidden = true;
+        exerciseSearch.setAttribute('aria-expanded', 'false');
+    }
+
+    function chooseExercise(exercise) {
+        select.value = exercise.id;
+        selectedExerciseName = exercise.name;
+        exerciseSearch.value = exercise.name;
+        exerciseClear.hidden = false;
+        closeExerciseResults();
+        fetchAndRender();
+    }
+
+    function renderExerciseResults() {
+        const query = exerciseSearch.value.trim().toLocaleLowerCase();
+        exerciseOptions.replaceChildren();
+
+        if (!query || (select.value && exerciseSearch.value === selectedExerciseName)) {
+            closeExerciseResults();
+            return;
+        }
+
+        const matches = exercises
+            .filter(exercise => exercise.name.toLocaleLowerCase().includes(query))
+            .sort((left, right) => {
+                const leftStarts = left.name.toLocaleLowerCase().startsWith(query);
+                const rightStarts = right.name.toLocaleLowerCase().startsWith(query);
+                return Number(rightStarts) - Number(leftStarts) || left.name.localeCompare(right.name);
+            })
+            .slice(0, 10);
+
+        if (!matches.length) {
+            const empty = document.createElement('span');
+            empty.className = 'ch-exercise-search__empty';
+            empty.textContent = 'No matching exercises in your history.';
+            exerciseOptions.appendChild(empty);
+        } else {
+            matches.forEach(exercise => {
+                const option = document.createElement('button');
+                option.type = 'button';
+                option.className = 'ch-exercise-search__option';
+                option.role = 'option';
+                option.textContent = exercise.name;
+                option.addEventListener('click', () => chooseExercise(exercise));
+                exerciseOptions.appendChild(option);
+            });
+        }
+
+        exerciseOptions.hidden = false;
+        exerciseSearch.setAttribute('aria-expanded', 'true');
     }
 
     // Period buttons
@@ -648,7 +775,39 @@
     });
 
     // Events
-    select.addEventListener('change', fetchAndRender);
+    exerciseSearch.addEventListener('input', () => {
+        if (exerciseSearch.value !== selectedExerciseName) {
+            select.value = '';
+            selectedExerciseName = '';
+            exerciseClear.hidden = !exerciseSearch.value;
+        }
+        renderExerciseResults();
+    });
+    exerciseSearch.addEventListener('keydown', event => {
+        if (event.key === 'Escape') {
+            closeExerciseResults();
+            exerciseSearch.blur();
+        }
+        if (event.key === 'Enter' && !exerciseOptions.hidden) {
+            const first = exerciseOptions.querySelector('.ch-exercise-search__option');
+            if (first) {
+                event.preventDefault();
+                first.click();
+            }
+        }
+    });
+    exerciseClear.addEventListener('click', () => {
+        select.value = '';
+        selectedExerciseName = '';
+        exerciseSearch.value = '';
+        exerciseClear.hidden = true;
+        closeExerciseResults();
+        fetchAndRender();
+        exerciseSearch.focus();
+    });
+    document.addEventListener('pointerdown', event => {
+        if (!exercisePicker.contains(event.target)) closeExerciseResults();
+    });
     repsToggle.addEventListener('change', () => { chart.data.datasets[0].hidden = !repsToggle.checked; chart.update(); });
     weightToggle.addEventListener('change', () => { chart.data.datasets[1].hidden = !weightToggle.checked; chart.update(); });
 

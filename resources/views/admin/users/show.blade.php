@@ -8,6 +8,7 @@
 </head>
 <body class="auth-body">
   <x-navbar />
+  @php $weightUnit = $user->weightUnit(); @endphp
   <main class="pl-container ad-wrap">
     <header class="ad-head">
       <div class="ad-profile-title">
@@ -23,15 +24,12 @@
     </header>
     @include('admin.partials.navigation')
 
-    <div class="ad-privacy-banner">
-      @if(auth()->user()->isOwner())
-        <strong>Owner access</strong>
-        Progress photos are available below through protected Owner-only routes. Streaks remain calculated from activity and are view-only.
-      @else
+    @unless(auth()->user()->isOwner())
+      <div class="ad-privacy-banner">
         <strong>Privacy protected</strong>
         Progress photos are never loaded or displayed for administrators. Streaks below are calculated from activity and are view-only.
-      @endif
-    </div>
+      </div>
+    @endunless
 
     <section class="ad-stat-grid ad-stat-grid--user">
       @foreach([
@@ -59,7 +57,21 @@
       <section class="pl-card ch-card ad-chart-card" aria-label="User macronutrient progress">
         <div class="ch-head"><div class="ch-head__left"><div class="ch-icon">💧</div><div><span class="ad-eyebrow">User chart</span><h2 class="ch-title">Macronutrient Progress</h2></div></div></div>
         <div class="ch-controls">
-          <div class="ch-control"><label class="ch-label" for="adminMacroSelect">Select Macronutrient</label><div class="ch-selectwrap"><span class="ch-dot" data-admin-macro-dot></span><select id="adminMacroSelect" class="ch-select" data-admin-macro><option value="calories">Calories</option><option value="protein">Protein</option><option value="carbs">Carbohydrates</option><option value="fat">Fat</option><option value="creatine">Creatine</option><option value="water">Water</option></select><span class="ch-chevron">⌄</span></div></div>
+          <div class="ch-control">
+            <span class="ch-label" id="adminMacroLabel">Select Macronutrient</span>
+            <div class="ad-chart-picker" data-admin-macro data-value="calories">
+              <button class="ad-chart-picker__trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="adminMacroLabel adminMacroValue" data-admin-picker-trigger>
+                <span class="ch-dot" data-admin-macro-dot></span>
+                <span id="adminMacroValue" data-admin-picker-label>Calories</span>
+                <span class="ad-chart-picker__arrow" aria-hidden="true"></span>
+              </button>
+              <div class="ad-chart-picker__menu" role="listbox" aria-labelledby="adminMacroLabel" data-admin-picker-menu hidden>
+                @foreach(['calories' => 'Calories', 'protein' => 'Protein', 'carbs' => 'Carbohydrates', 'fat' => 'Fat', 'creatine' => 'Creatine', 'water' => 'Water'] as $value => $label)
+                  <button type="button" role="option" aria-selected="{{ $loop->first ? 'true' : 'false' }}" data-admin-picker-option="{{ $value }}">{{ $label }}</button>
+                @endforeach
+              </div>
+            </div>
+          </div>
           <div class="ch-control"><label class="ch-label">Time Period</label><div class="ch-seg"><button type="button" class="ch-segbtn" data-admin-macro-period="week">This Week</button><button type="button" class="ch-segbtn is-active" data-admin-macro-period="month">This Month</button><button type="button" class="ch-segbtn" data-admin-macro-period="year">This Year</button><button type="button" class="ch-segbtn" data-admin-macro-period="all">All Time</button></div></div>
         </div>
         <div class="ch-chartwrap"><canvas id="adminMacroChart" height="120"></canvas></div>
@@ -70,13 +82,23 @@
       <section class="pl-card ch-card ad-chart-card" aria-label="User exercise progress">
         <div class="ch-head"><div class="ch-head__left"><div class="ch-icon">🏋️</div><div><span class="ad-eyebrow">User chart</span><h2 class="ch-title">Exercise Progress</h2></div></div></div>
         <div class="ch-controls ch-controls--exercise">
-          <div class="ch-control"><label class="ch-label" for="adminExerciseSelect">Select Exercise</label><div class="ch-selectwrap"><select id="adminExerciseSelect" class="ch-select" data-admin-exercise><option value="">Choose an exercise...</option>@foreach($chartExercises as $exercise)<option value="{{ $exercise->id }}">{{ $exercise->name }}</option>@endforeach</select><span class="ch-chevron">⌄</span></div></div>
+          <div class="ch-control">
+            <label class="ch-label" for="adminExerciseSearch">Select Exercise</label>
+            <div class="ch-exercise-search" data-admin-exercise-picker>
+              <div class="ch-exercise-search__field">
+                <input id="adminExerciseSearch" type="search" inputmode="search" autocomplete="off" placeholder="Search this user's exercises..." role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="adminExerciseOptions" data-admin-exercise-search>
+                <button type="button" data-admin-exercise-clear aria-label="Clear selected exercise" hidden>&times;</button>
+              </div>
+              <input id="adminExerciseSelect" type="hidden" value="" data-admin-exercise>
+              <div id="adminExerciseOptions" class="ch-exercise-search__options" role="listbox" data-admin-exercise-options hidden></div>
+            </div>
+          </div>
           <div class="ch-control"><label class="ch-label">Time Period</label><div class="ch-seg"><button type="button" class="ch-segbtn" data-admin-exercise-period="week">This Week</button><button type="button" class="ch-segbtn" data-admin-exercise-period="month">This Month</button><button type="button" class="ch-segbtn" data-admin-exercise-period="year">This Year</button><button type="button" class="ch-segbtn is-active" data-admin-exercise-period="all">All Time</button></div></div>
         </div>
-        <div class="ch-toggles"><div class="ch-label">Show Data</div><label class="ch-check is-reps"><input type="checkbox" data-admin-show-reps checked><span class="ch-check__box"></span><span class="ch-check__text">Reps</span></label><label class="ch-check is-weight"><input type="checkbox" data-admin-show-weight checked><span class="ch-check__box"></span><span class="ch-check__text">Weight (kg)</span></label></div>
+        <div class="ch-toggles"><div class="ch-label">Show Data</div><label class="ch-check is-reps"><input type="checkbox" data-admin-show-reps checked><span class="ch-check__box"></span><span class="ch-check__text">Reps</span></label><label class="ch-check is-weight"><input type="checkbox" data-admin-show-weight checked><span class="ch-check__box"></span><span class="ch-check__text">Weight ({{ $weightUnit }})</span></label></div>
         <div class="ch-chartwrap ch-chartwrap--exercise"><canvas id="adminExerciseChart" height="120"></canvas></div>
         <div class="ad-insight-grid"><article><span>Latest weight</span><strong data-exercise-insight="latest-weight">—</strong></article><article><span>Best weight</span><strong data-exercise-insight="highest-weight">—</strong></article><article><span>Latest reps</span><strong data-exercise-insight="latest-reps">—</strong></article><article><span>Weight change</span><strong data-exercise-insight="change-weight">—</strong></article></div>
-        <div class="ch-footer"><div class="ch-legend ch-legend--multi"><span data-admin-exercise-name>—</span><span class="ch-dot ch-dot--legend ch-dot--green"></span><span>Reps</span><span class="ch-dot ch-dot--legend ch-dot--blue"></span><span>Weight (kg)</span></div><div class="ch-meta" data-admin-exercise-days>0 days of data</div></div>
+        <div class="ch-footer"><div class="ch-legend ch-legend--multi"><span data-admin-exercise-name>—</span><span class="ch-dot ch-dot--legend ch-dot--green"></span><span>Reps</span><span class="ch-dot ch-dot--legend ch-dot--blue"></span><span>Weight ({{ $weightUnit }})</span></div><div class="ch-meta" data-admin-exercise-days>0 days of data</div></div>
       </section>
     </div>
 
@@ -101,10 +123,23 @@
           <div><span class="ad-eyebrow">Owner only</span><h2>Subscriptions</h2></div>
           <a class="ad-button ad-button--secondary" href="{{ route('admin.subscriptions.create', ['user_id' => $user->id]) }}">Add subscription</a>
         </div>
+        @if($ownerData['direct_access'])
+          <div class="ad-direct-access">
+            <div>
+              <span>Current access</span>
+              <strong>{{ $user->isTrainer() ? 'Trainer' : 'ProgressLab+' }}</strong>
+            </div>
+            <div>
+              <span>Status</span>
+              <strong>Complimentary direct grant</strong>
+            </div>
+            <p>This access was granted through the account role, so it has no payment or subscription record and does not count as revenue.</p>
+          </div>
+        @endif
         <div class="ad-table-wrap"><table class="ad-table"><thead><tr><th>Plan</th><th>Status</th><th>Paid</th><th>Starts</th><th>Ends</th><th></th></tr></thead><tbody>
           @forelse($ownerData['subscriptions'] as $subscription)
             <tr><td>{{ ucfirst($subscription->plan) }}<small>{{ $subscription->is_complimentary ? 'Complimentary' : 'Billable' }}</small></td><td><span class="ad-status ad-status--{{ $subscription->status }}">{{ ucfirst($subscription->status) }}</span></td><td>{{ $subscription->is_complimentary ? 'Free' : '€' . number_format((float) $subscription->amount_paid, 2) }}</td><td>{{ $subscription->starts_on->format('M j, Y') }}</td><td>{{ $subscription->ends_on?->format('M j, Y') ?? '—' }}</td><td><a class="ad-table-link" href="{{ route('admin.subscriptions.edit', $subscription) }}">Edit</a></td></tr>
-          @empty<tr><td colspan="6" class="ad-empty">No subscriptions recorded for this user.</td></tr>@endforelse
+          @empty<tr><td colspan="6" class="ad-empty">{{ $ownerData['direct_access'] ? 'No billing record—access is granted directly.' : 'No subscriptions recorded for this user.' }}</td></tr>@endforelse
         </tbody></table></div>
       </section>
 
@@ -150,13 +185,17 @@
       const change = value => value == null ? '—' : `${value > 0 ? '+' : ''}${number(value)}%`;
 
       const macroSelect = root.querySelector('[data-admin-macro]');
+      const macroTrigger = macroSelect.querySelector('[data-admin-picker-trigger]');
+      const macroMenu = macroSelect.querySelector('[data-admin-picker-menu]');
+      const macroValueLabel = macroSelect.querySelector('[data-admin-picker-label]');
+      const macroOptions = [...macroSelect.querySelectorAll('[data-admin-picker-option]')];
       const macroPeriods = [...root.querySelectorAll('[data-admin-macro-period]')];
       const macroChart = new Chart(document.getElementById('adminMacroChart'), { type: 'line', data: { labels: [], datasets: [{ data: [], borderWidth: 2, pointRadius: 3, tension: .35 }] }, options });
       let macroPeriod = 'month';
 
       async function loadMacro() {
         const url = new URL(@json(route('admin.users.charts.macros', $user)), window.location.origin);
-        url.searchParams.set('macro', macroSelect.value);
+        url.searchParams.set('macro', macroSelect.dataset.value);
         url.searchParams.set('period', macroPeriod);
         const response = await fetch(url, { headers: { Accept: 'application/json' } });
         if (!response.ok) return;
@@ -175,7 +214,48 @@
         root.querySelector('[data-macro-insight="change_percent"]').textContent = change(data.insights?.change_percent);
       }
 
-      macroSelect.addEventListener('change', loadMacro);
+      function setMacroOpen(open, focusSelected = false) {
+        macroSelect.classList.toggle('is-open', open);
+        macroTrigger.setAttribute('aria-expanded', String(open));
+        macroMenu.hidden = !open;
+        if (open && focusSelected) {
+          (macroOptions.find(option => option.getAttribute('aria-selected') === 'true') || macroOptions[0]).focus();
+        }
+      }
+
+      function chooseMacro(option) {
+        macroSelect.dataset.value = option.dataset.adminPickerOption;
+        macroValueLabel.textContent = option.textContent.trim();
+        macroOptions.forEach(candidate => candidate.setAttribute('aria-selected', String(candidate === option)));
+        setMacroOpen(false);
+        macroTrigger.focus();
+        loadMacro();
+      }
+
+      macroTrigger.addEventListener('click', () => setMacroOpen(macroMenu.hidden, false));
+      macroTrigger.addEventListener('keydown', event => {
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+          event.preventDefault();
+          setMacroOpen(true, true);
+        }
+      });
+      macroOptions.forEach((option, index) => {
+        option.addEventListener('click', () => chooseMacro(option));
+        option.addEventListener('keydown', event => {
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            setMacroOpen(false);
+            macroTrigger.focus();
+            return;
+          }
+          if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+          event.preventDefault();
+          const next = event.key === 'Home' ? 0 : event.key === 'End'
+            ? macroOptions.length - 1
+            : (index + (event.key === 'ArrowDown' ? 1 : -1) + macroOptions.length) % macroOptions.length;
+          macroOptions[next].focus();
+        });
+      });
       macroPeriods.forEach(button => button.addEventListener('click', () => {
         macroPeriods.forEach(item => item.classList.remove('is-active'));
         button.classList.add('is-active');
@@ -184,6 +264,11 @@
       }));
 
       const exerciseSelect = root.querySelector('[data-admin-exercise]');
+      const exercisePicker = root.querySelector('[data-admin-exercise-picker]');
+      const exerciseSearch = root.querySelector('[data-admin-exercise-search]');
+      const exerciseOptions = root.querySelector('[data-admin-exercise-options]');
+      const exerciseClear = root.querySelector('[data-admin-exercise-clear]');
+      const exercises = @json($chartExercises->map(fn ($exercise) => ['id' => (string) $exercise->id, 'name' => $exercise->name])->values());
       const exercisePeriods = [...root.querySelectorAll('[data-admin-exercise-period]')];
       const repsToggle = root.querySelector('[data-admin-show-reps]');
       const weightToggle = root.querySelector('[data-admin-show-weight]');
@@ -191,11 +276,12 @@
         type: 'line',
         data: { labels: [], datasets: [
           { label: 'Reps', data: [], borderColor: '#22c55e', pointBackgroundColor: '#22c55e', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 3, tension: .35 },
-          { label: 'Weight (kg)', data: [], borderColor: '#3b82f6', pointBackgroundColor: '#3b82f6', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 3, tension: .35 }
+          { label: 'Weight ({{ $weightUnit }})', data: [], borderColor: '#3b82f6', pointBackgroundColor: '#3b82f6', backgroundColor: 'transparent', borderWidth: 2, pointRadius: 3, tension: .35 }
         ] },
         options
       });
       let exercisePeriod = 'all';
+      let selectedExerciseName = '';
 
       function syncExerciseToggles() {
         exerciseChart.data.datasets[0].hidden = !repsToggle.checked;
@@ -223,15 +309,101 @@
         exerciseChart.data.datasets[0].data = data.reps || [];
         exerciseChart.data.datasets[1].data = data.weight || [];
         syncExerciseToggles();
-        root.querySelector('[data-admin-exercise-name]').textContent = exerciseSelect.options[exerciseSelect.selectedIndex].text;
+        root.querySelector('[data-admin-exercise-name]').textContent = selectedExerciseName || '—';
         root.querySelector('[data-admin-exercise-days]').textContent = `${data.days || 0} days of data`;
-        root.querySelector('[data-exercise-insight="latest-weight"]').textContent = data.insights?.weight?.latest == null ? '—' : `${number(data.insights.weight.latest)} kg`;
-        root.querySelector('[data-exercise-insight="highest-weight"]').textContent = data.insights?.weight?.highest == null ? '—' : `${number(data.insights.weight.highest)} kg`;
+        root.querySelector('[data-exercise-insight="latest-weight"]').textContent = data.insights?.weight?.latest == null ? '—' : `${number(data.insights.weight.latest)} ${data.weight_unit || @json($weightUnit)}`;
+        root.querySelector('[data-exercise-insight="highest-weight"]').textContent = data.insights?.weight?.highest == null ? '—' : `${number(data.insights.weight.highest)} ${data.weight_unit || @json($weightUnit)}`;
         root.querySelector('[data-exercise-insight="latest-reps"]').textContent = number(data.insights?.reps?.latest);
         root.querySelector('[data-exercise-insight="change-weight"]').textContent = change(data.insights?.weight?.change_percent);
       }
 
-      exerciseSelect.addEventListener('change', loadExercise);
+      function closeExerciseResults() {
+        exerciseOptions.hidden = true;
+        exerciseSearch.setAttribute('aria-expanded', 'false');
+      }
+
+      function chooseExercise(exercise) {
+        exerciseSelect.value = exercise.id;
+        selectedExerciseName = exercise.name;
+        exerciseSearch.value = exercise.name;
+        exerciseClear.hidden = false;
+        closeExerciseResults();
+        loadExercise();
+      }
+
+      function renderExerciseResults() {
+        const query = exerciseSearch.value.trim().toLocaleLowerCase();
+        exerciseOptions.replaceChildren();
+
+        if (!query || (exerciseSelect.value && exerciseSearch.value === selectedExerciseName)) {
+          closeExerciseResults();
+          return;
+        }
+
+        const matches = exercises
+          .filter(exercise => exercise.name.toLocaleLowerCase().includes(query))
+          .sort((left, right) => {
+            const leftStarts = left.name.toLocaleLowerCase().startsWith(query);
+            const rightStarts = right.name.toLocaleLowerCase().startsWith(query);
+            return Number(rightStarts) - Number(leftStarts) || left.name.localeCompare(right.name);
+          })
+          .slice(0, 10);
+
+        if (!matches.length) {
+          const empty = document.createElement('span');
+          empty.className = 'ch-exercise-search__empty';
+          empty.textContent = 'No matching exercises in this user’s history.';
+          exerciseOptions.appendChild(empty);
+        } else {
+          matches.forEach(exercise => {
+            const option = document.createElement('button');
+            option.type = 'button';
+            option.className = 'ch-exercise-search__option';
+            option.role = 'option';
+            option.textContent = exercise.name;
+            option.addEventListener('click', () => chooseExercise(exercise));
+            exerciseOptions.appendChild(option);
+          });
+        }
+
+        exerciseOptions.hidden = false;
+        exerciseSearch.setAttribute('aria-expanded', 'true');
+      }
+
+      exerciseSearch.addEventListener('input', () => {
+        if (exerciseSearch.value !== selectedExerciseName) {
+          exerciseSelect.value = '';
+          selectedExerciseName = '';
+          exerciseClear.hidden = !exerciseSearch.value;
+        }
+        renderExerciseResults();
+      });
+      exerciseSearch.addEventListener('keydown', event => {
+        if (event.key === 'Escape') {
+          closeExerciseResults();
+          exerciseSearch.blur();
+        }
+        if (event.key === 'Enter' && !exerciseOptions.hidden) {
+          const first = exerciseOptions.querySelector('.ch-exercise-search__option');
+          if (first) {
+            event.preventDefault();
+            first.click();
+          }
+        }
+      });
+      exerciseClear.addEventListener('click', () => {
+        exerciseSelect.value = '';
+        selectedExerciseName = '';
+        exerciseSearch.value = '';
+        exerciseClear.hidden = true;
+        closeExerciseResults();
+        loadExercise();
+        exerciseSearch.focus();
+      });
+      document.addEventListener('pointerdown', event => {
+        if (!macroSelect.contains(event.target)) setMacroOpen(false);
+        if (!exercisePicker.contains(event.target)) closeExerciseResults();
+      });
       exercisePeriods.forEach(button => button.addEventListener('click', () => {
         exercisePeriods.forEach(item => item.classList.remove('is-active'));
         button.classList.add('is-active');

@@ -17,7 +17,20 @@ class WorkoutController extends Controller
       ->latest()
       ->get();
 
-    return view('workouts.index', compact('workouts'));
+    $oldExerciseIds = collect($request->old('exercise_ids', []))
+      ->filter(fn ($id) => is_numeric($id))
+      ->map(fn ($id) => (int) $id)
+      ->unique()
+      ->values();
+    $oldSelectedExercises = $oldExerciseIds->isEmpty()
+      ? collect()
+      : Exercise::query()
+          ->whereIn('id', $oldExerciseIds)
+          ->get(['id', 'name', 'muscle_group'])
+          ->sortBy(fn (Exercise $exercise) => $oldExerciseIds->search($exercise->id))
+          ->values();
+
+    return view('workouts.index', compact('workouts', 'oldSelectedExercises'));
   }
 
   // AJAX search for exercises
@@ -25,14 +38,15 @@ class WorkoutController extends Controller
   {
     $q = trim((string) $request->query('q', ''));
 
-    if (mb_strlen($q) < 1) {
-      return response()->json([]);
-    }
-
     $results = Exercise::query()
-      ->where('name', 'like', '%' . $q . '%')
+      ->when($q !== '', function ($query) use ($q) {
+        $query->where(function ($search) use ($q) {
+          $search->where('name', 'like', '%' . $q . '%')
+            ->orWhere('muscle_group', 'like', '%' . $q . '%');
+        });
+      })
       ->orderBy('name')
-      ->limit(8)
+      ->limit(80)
       ->get(['id','name','muscle_group','image_path']);
 
     return response()->json($results);

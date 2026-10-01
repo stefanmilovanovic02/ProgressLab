@@ -33,7 +33,20 @@ class ExampleTest extends TestCase
             ->assertSee('/images/branding/progresslab-favicon.png', false)
             ->assertSee('/images/branding/progresslab-touch-icon.png', false)
             ->assertSee('/manifest.webmanifest', false)
-            ->assertSee('/js/push-notifications.js', false)
-            ->assertSee('/js/numeric-inputs.js', false);
+            ->assertSee('/js/pwa-register.js', false)
+            ->assertSee('/js/numeric-inputs.js', false)
+            ->assertSee('/js/password-toggle.js', false)
+            ->assertSee('data-password-toggle', false)
+            ->assertSee('aria-controls="password"', false);
+    }
+
+    public function test_navigation_has_an_accessible_mobile_menu(): void
+    {
+        $navigation = view('components.navbar')->render();
+
+        $this->assertStringContainsString('aria-controls="progresslab-navigation"', $navigation);
+        $this->assertStringContainsString('aria-expanded="false"', $navigation);
+        $this->assertStringContainsString('id="progresslab-navigation"', $navigation);
+        $this->assertStringContainsString("document.body.classList.toggle('pl-nav-open'", $navigation);
     }
 }

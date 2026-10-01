@@ -33,16 +33,28 @@
     <section class="pl-card ach-filters" aria-label="Achievement filters">
       <div class="ach-filters__grid">
         <div class="ach-filter">
-          <label class="ach-label" for="rarityFilter">Filter by Rarity</label>
-          <div class="ach-selectwrap">
-            <select id="rarityFilter" class="ach-select">
-              <option value="all">All Rarities</option>
-              <option value="common">Common</option>
-              <option value="uncommon">Uncommon</option>
-              <option value="rare">Rare</option>
-              <option value="epic">Epic</option>
-              <option value="legendary">Legendary</option>
-            </select>
+          <span class="ach-label" id="rarityFilterLabel">Filter by Rarity</span>
+          <div class="ach-rarity" data-rarity-picker data-value="all">
+            <button
+              id="rarityFilter"
+              class="ach-rarity__trigger"
+              type="button"
+              aria-haspopup="listbox"
+              aria-expanded="false"
+              aria-labelledby="rarityFilterLabel rarityFilterValue"
+              data-rarity-trigger
+            >
+              <span id="rarityFilterValue" data-rarity-value-label>All Rarities</span>
+              <span class="ach-rarity__arrow" aria-hidden="true"></span>
+            </button>
+            <div class="ach-rarity__menu" role="listbox" aria-labelledby="rarityFilterLabel" data-rarity-menu hidden>
+              <button type="button" role="option" aria-selected="true" data-rarity-option="all">All Rarities</button>
+              <button type="button" role="option" aria-selected="false" data-rarity-option="common">Common</button>
+              <button type="button" role="option" aria-selected="false" data-rarity-option="uncommon">Uncommon</button>
+              <button type="button" role="option" aria-selected="false" data-rarity-option="rare">Rare</button>
+              <button type="button" role="option" aria-selected="false" data-rarity-option="epic">Epic</button>
+              <button type="button" role="option" aria-selected="false" data-rarity-option="legendary">Legendary</button>
+            </div>
             <span class="ach-chevron">⌄</span>
           </div>
         </div>
@@ -79,7 +91,13 @@
           <div class="ach-card__top">
             {{-- image (db) --}}
             <div class="ach-img">
-              <img src="{{ $a['image_path'] }}" alt="{{ $a['title'] }}">
+              <img
+                src="{{ $a['image_path'] }}"
+                data-fallback="{{ $a['fallback_image_path'] }}"
+                alt="{{ $a['title'] }}"
+                loading="lazy"
+                onerror="this.onerror=null;this.src=this.dataset.fallback"
+              >
             </div>
 
             {{-- badge/icon --}}
@@ -130,7 +148,11 @@
   {{-- UI-only filter logic --}}
   <script>
     (function () {
-      const rarity = document.getElementById('rarityFilter');
+      const rarity = document.querySelector('[data-rarity-picker]');
+      const rarityTrigger = rarity.querySelector('[data-rarity-trigger]');
+      const rarityMenu = rarity.querySelector('[data-rarity-menu]');
+      const rarityValueLabel = rarity.querySelector('[data-rarity-value-label]');
+      const rarityOptions = Array.from(rarity.querySelectorAll('[data-rarity-option]'));
       const search = document.getElementById('searchAch');
       const segBtns = document.querySelectorAll('.ach-segbtn');
       const cards = Array.from(document.querySelectorAll('.ach-card'));
@@ -138,7 +160,7 @@
       let status = 'all';
 
       function apply() {
-        const r = rarity.value;
+        const r = rarity.dataset.value;
         const q = (search.value || '').trim().toLowerCase();
 
         cards.forEach(card => {
@@ -150,7 +172,55 @@
         });
       }
 
-      rarity.addEventListener('change', apply);
+      function setRarityOpen(open, focusSelected = false) {
+        rarity.classList.toggle('is-open', open);
+        rarityTrigger.setAttribute('aria-expanded', String(open));
+        rarityMenu.hidden = !open;
+
+        if (open && focusSelected) {
+          (rarityOptions.find(option => option.getAttribute('aria-selected') === 'true') || rarityOptions[0]).focus();
+        }
+      }
+
+      function chooseRarity(option) {
+        rarity.dataset.value = option.dataset.rarityOption;
+        rarityValueLabel.textContent = option.textContent.trim();
+        rarityOptions.forEach(candidate => candidate.setAttribute('aria-selected', String(candidate === option)));
+        setRarityOpen(false);
+        rarityTrigger.focus();
+        apply();
+      }
+
+      rarityTrigger.addEventListener('click', () => setRarityOpen(rarityMenu.hidden, !rarityMenu.hidden));
+      rarityTrigger.addEventListener('keydown', event => {
+        if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+          event.preventDefault();
+          setRarityOpen(true, true);
+        }
+      });
+      rarityOptions.forEach((option, index) => {
+        option.addEventListener('click', () => chooseRarity(option));
+        option.addEventListener('keydown', event => {
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            setRarityOpen(false);
+            rarityTrigger.focus();
+            return;
+          }
+
+          if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+          event.preventDefault();
+          const nextIndex = event.key === 'Home'
+            ? 0
+            : event.key === 'End'
+              ? rarityOptions.length - 1
+              : (index + (event.key === 'ArrowDown' ? 1 : -1) + rarityOptions.length) % rarityOptions.length;
+          rarityOptions[nextIndex].focus();
+        });
+      });
+      document.addEventListener('pointerdown', event => {
+        if (!rarity.contains(event.target)) setRarityOpen(false);
+      });
       search.addEventListener('input', apply);
 
       segBtns.forEach(btn => {

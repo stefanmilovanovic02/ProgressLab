@@ -127,6 +127,28 @@ class ExperienceService
         return $this->progressForXp($totalXp);
     }
 
+    public function rankCatalog(): array
+    {
+        $startingXp = 0;
+        $catalog = [];
+
+        foreach (self::RANKS as $index => $rank) {
+            $rankXp = array_sum($rank['requirements']);
+            $catalog[] = [
+                'index' => $index,
+                'name' => $rank['name'],
+                'slug' => strtolower($rank['name']),
+                'color' => $rank['color'],
+                'starting_xp' => $startingXp,
+                'completion_xp' => $startingXp + $rankXp,
+                'level_count' => count($rank['requirements']),
+            ];
+            $startingXp += $rankXp;
+        }
+
+        return $catalog;
+    }
+
     public function progressForXp(int $totalXp): array
     {
         $totalXp = max(0, $totalXp);
@@ -142,6 +164,7 @@ class ExperienceService
                     return [
                         'rank' => $rank['name'],
                         'rank_slug' => strtolower($rank['name']),
+                        'rank_index' => $rankIndex,
                         'level' => $levelIndex + 1,
                         'level_count' => 4,
                         'total_xp' => $totalXp,
@@ -166,6 +189,7 @@ class ExperienceService
         return [
             'rank' => $last['name'],
             'rank_slug' => strtolower($last['name']),
+            'rank_index' => array_key_last(self::RANKS),
             'level' => 4,
             'level_count' => 4,
             'total_xp' => $totalXp,

@@ -31,7 +31,23 @@ class User extends Authenticatable
         'location',
         'avatar_path',
         'cover_path',
+        'profile_showcase_path',
+        'profile_background_video_path',
+        'profile_quote',
+        'social_instagram',
+        'social_tiktok',
+        'social_snapchat',
+        'social_linkedin',
+        'profile_accent_color',
+        'profile_accent_opacity',
+        'profile_secondary_color',
+        'profile_secondary_opacity',
+        'profile_surface_color',
+        'profile_surface_opacity',
+        'profile_text_color',
+        'profile_text_opacity',
         'gender',
+        'unit_system',
     ];
 
     /**
@@ -183,6 +199,26 @@ class User extends Authenticatable
         ]);
     }
 
+    public function canCustomizeSocialProfile(): bool
+    {
+        return $this->hasFullChartAccess();
+    }
+
+    public function usesImperialUnits(): bool
+    {
+        return $this->unit_system === \App\Support\UnitConverter::IMPERIAL;
+    }
+
+    public function weightUnit(): string
+    {
+        return \App\Support\UnitConverter::weightUnit($this->unit_system);
+    }
+
+    public function lengthUnit(): string
+    {
+        return \App\Support\UnitConverter::lengthUnit($this->unit_system);
+    }
+
     public function sendPasswordResetNotification($token): void
     {
         $this->notify(new ResetPasswordNotification($token));
@@ -221,4 +257,26 @@ class User extends Authenticatable
 
                 return Storage::url($p);
             }
+
+        public function getProfileShowcaseUrlAttribute(): ?string
+        {
+            if (!$this->profile_showcase_path) return null;
+
+            $path = $this->profile_showcase_path;
+            if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) return $path;
+            if (str_starts_with($path, 'storage/')) return asset($path);
+
+            return Storage::url($path);
+        }
+
+        public function getProfileBackgroundVideoUrlAttribute(): ?string
+        {
+            if (!$this->profile_background_video_path) return null;
+
+            $path = $this->profile_background_video_path;
+            if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) return $path;
+            if (str_starts_with($path, 'storage/')) return asset($path);
+
+            return Storage::url($path);
+        }
 }

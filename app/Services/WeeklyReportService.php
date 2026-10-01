@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Support\UnitConverter;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -155,6 +156,14 @@ class WeeklyReportService
                     : null
             );
 
+        $weightUnit = $user->weightUnit();
+        $lengthUnit = $user->lengthUnit();
+        $displayWorkouts = $workouts->map(function (array $workout) use ($user) {
+            $workout['volume'] = UnitConverter::weightFromKg($workout['volume_kg'], $user->unit_system);
+            $workout['max_weight'] = UnitConverter::weightFromKg($workout['max_weight_kg'], $user->unit_system);
+            return $workout;
+        });
+
         return [
             'user' => [
                 'name' => $user->full_name ?: $user->name ?: $user->username ?: 'ProgressLab member',
@@ -168,7 +177,8 @@ class WeeklyReportService
             ],
             'nutrition' => $nutrition,
             'nutrition_days_logged' => $loggedNutrition->count(),
-            'workouts' => $workouts,
+            'units' => ['weight' => $weightUnit, 'length' => $lengthUnit],
+            'workouts' => $displayWorkouts,
             'training' => [
                 'workouts' => $workouts->count(),
                 'exercises' => $workouts->sum('exercises'),
@@ -176,6 +186,8 @@ class WeeklyReportService
                 'reps' => $workouts->sum('reps'),
                 'volume_kg' => round((float) $workouts->sum('volume_kg'), 1),
                 'max_weight_kg' => round((float) $workouts->max('max_weight_kg'), 1),
+                'volume' => UnitConverter::weightFromKg((float) $workouts->sum('volume_kg'), $user->unit_system),
+                'max_weight' => UnitConverter::weightFromKg((float) $workouts->max('max_weight_kg'), $user->unit_system),
             ],
             'weight' => [
                 'entries' => $weightEntries->count(),
@@ -185,6 +197,14 @@ class WeeklyReportService
                     ? round($weightEnd - $weightStart, 2)
                     : null,
                 'current' => $currentWeight,
+                'display_start' => UnitConverter::weightFromKg($weightStart, $user->unit_system),
+                'display_end' => UnitConverter::weightFromKg($weightEnd, $user->unit_system),
+                'display_change' => UnitConverter::weightFromKg(
+                    $weightStart !== null && $weightEnd !== null ? $weightEnd - $weightStart : null,
+                    $user->unit_system,
+                    2
+                ),
+                'display_current' => UnitConverter::weightFromKg($currentWeight, $user->unit_system),
             ],
             'body_checkins' => $bodyMeasurements->count(),
             'latest_body' => $latestBody ? [
@@ -194,6 +214,11 @@ class WeeklyReportService
                 'thighs_cm' => $this->number($latestBody->thighs_cm),
                 'hips_cm' => $this->number($latestBody->hips_cm),
                 'glutes_cm' => $this->number($latestBody->glutes_cm),
+                'waist' => UnitConverter::lengthFromCm($latestBody->waist_cm, $user->unit_system),
+                'arms' => UnitConverter::lengthFromCm($latestBody->arms_cm, $user->unit_system),
+                'thighs' => UnitConverter::lengthFromCm($latestBody->thighs_cm, $user->unit_system),
+                'hips' => UnitConverter::lengthFromCm($latestBody->hips_cm, $user->unit_system),
+                'glutes' => UnitConverter::lengthFromCm($latestBody->glutes_cm, $user->unit_system),
             ] : null,
         ];
     }

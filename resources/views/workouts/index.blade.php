@@ -140,7 +140,7 @@
   </main>
 
   {{-- Create Workout Modal --}}
-  <div class="wo-modal" data-create-modal>
+  <div class="wo-modal" data-create-modal data-auto-open="{{ request()->boolean('create') || $errors->any() ? 'true' : 'false' }}">
     <div class="wo-modal__backdrop" data-close-create></div>
 
     <div class="wo-modal__panel" role="dialog" aria-modal="true" aria-label="Add New Workout">
@@ -157,15 +157,37 @@
       <input type="hidden" name="_method" value="POST" data-form-method>
         <div class="wo-field">
           <label class="wo-label2">Workout Name</label>
-          <input class="wo-input" name="name" type="text" placeholder="e.g., Chest & Triceps" required>
+          <input class="wo-input" name="name" type="text" placeholder="e.g., Chest & Triceps" maxlength="60" required>
         </div>
 
-        <div class="wo-exhead">
-          <div class="wo-label2">Exercises</div>
-          <button class="wo-addbtn" type="button" id="addExerciseRow">＋ Add Exercise</button>
-        </div>
+        <div class="wo-builder-grid">
+          <div class="wo-exercise-picker">
+            <div class="wo-exhead">
+              <div>
+                <div class="wo-label2">Find exercises</div>
+                <p>Search, then select as many exercises as you need.</p>
+              </div>
+            </div>
 
-        <div class="wo-exlist" id="exerciseRows"></div>
+            <label class="wo-search-label" for="workoutExerciseSearch">Exercise or muscle group</label>
+            <input class="wo-input wo-picker-search" id="workoutExerciseSearch" type="search" placeholder="Start typing to search..." autocomplete="off">
+
+            <div class="wo-picker-status" data-picker-status aria-live="polite">Start typing to find exercises.</div>
+            <div class="wo-picker-results" data-picker-results role="listbox" aria-label="Exercise search results" aria-multiselectable="true" hidden></div>
+          </div>
+
+          <div class="wo-selected-panel">
+            <div class="wo-selected-head">
+              <div>
+                <div class="wo-label2">Workout exercises</div>
+                <strong data-selected-count>0 selected</strong>
+              </div>
+              <button type="button" data-clear-selected>Clear all</button>
+            </div>
+            <div class="wo-selected-list" data-selected-list></div>
+            <div class="wo-picker-error" data-picker-error hidden>Please select at least one exercise.</div>
+          </div>
+        </div>
 
         <div class="wo-modal__actions">
           <button class="pl-btn pl-btn--ghost" type="button" data-close-create>Cancel</button>
@@ -411,6 +433,270 @@
     }
   });
 
+  if (modal.dataset.autoOpen === 'true') {
+    setCreateMode();
+    openModal();
+    window.setTimeout(() => nameInput.focus(), 0);
+  }
+
+})();
+
+(function () {
+  const modal = document.querySelector('[data-create-modal]');
+  const form = document.getElementById('createWorkoutForm');
+  const methodInput = form?.querySelector('[data-form-method]');
+  const modalTitle = document.querySelector('[data-modal-title]');
+  const nameInput = form?.querySelector('input[name="name"]');
+  const searchInput = document.getElementById('workoutExerciseSearch');
+  const results = document.querySelector('[data-picker-results]');
+  const selectedList = document.querySelector('[data-selected-list]');
+  const selectedCount = document.querySelector('[data-selected-count]');
+  const pickerStatus = document.querySelector('[data-picker-status]');
+  const pickerError = document.querySelector('[data-picker-error]');
+  const clearSelected = document.querySelector('[data-clear-selected]');
+
+  if (!modal || !form || !methodInput || !modalTitle || !nameInput || !searchInput || !results || !selectedList || !selectedCount || !pickerStatus || !pickerError || !clearSelected) return;
+
+  const searchUrl = "{{ route('exercises.search') }}";
+  const storeUrl = "{{ route('workouts.store') }}";
+  const workoutUrl = "{{ url('/workouts') }}";
+  const oldSelectedExercises = @json($oldSelectedExercises);
+  const oldWorkoutName = @json(old('name', ''));
+  let selectedExercises = [];
+  let visibleResults = [];
+  let searchTimer = null;
+  let searchController = null;
+
+  const normalizeExercise = exercise => ({
+    id: Number(exercise.id),
+    name: String(exercise.name || ''),
+    muscle_group: String(exercise.muscle_group || ''),
+  });
+  const isSelected = id => selectedExercises.some(exercise => exercise.id === Number(id));
+
+  function openModal() {
+    modal.classList.add('is-active');
+    document.body.classList.add('wo-modal-open');
+  }
+
+  function closeModal() {
+    modal.classList.remove('is-active');
+    document.body.classList.remove('wo-modal-open');
+    if (searchController) searchController.abort();
+    form.reset();
+  }
+
+  function renderSelected() {
+    selectedList.innerHTML = '';
+    selectedCount.textContent = `${selectedExercises.length} selected`;
+    clearSelected.disabled = selectedExercises.length === 0;
+    pickerError.hidden = selectedExercises.length > 0;
+
+    if (selectedExercises.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'wo-selected-empty';
+      empty.textContent = 'No exercises selected yet. Choose several from the list above.';
+      selectedList.appendChild(empty);
+      return;
+    }
+
+    selectedExercises.forEach((exercise, index) => {
+      const row = document.createElement('div');
+      row.className = 'wo-selected-item';
+
+      const order = document.createElement('span');
+      order.className = 'wo-selected-order';
+      order.textContent = String(index + 1);
+
+      const copy = document.createElement('div');
+      const name = document.createElement('strong');
+      name.textContent = exercise.name;
+      const group = document.createElement('small');
+      group.textContent = exercise.muscle_group || 'Other';
+      copy.append(name, group);
+
+      const hidden = document.createElement('input');
+      hidden.type = 'hidden';
+      hidden.name = 'exercise_ids[]';
+      hidden.value = String(exercise.id);
+
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'wo-selected-remove';
+      remove.textContent = 'Remove';
+      remove.setAttribute('aria-label', `Remove ${exercise.name}`);
+      remove.addEventListener('click', () => {
+        selectedExercises = selectedExercises.filter(item => item.id !== exercise.id);
+        syncPicker();
+      });
+
+      row.append(order, copy, hidden, remove);
+      selectedList.appendChild(row);
+    });
+  }
+
+  function renderResults() {
+    results.innerHTML = '';
+
+    if (visibleResults.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'wo-picker-empty';
+      empty.textContent = 'No matching exercises found. Try an exercise or muscle-group name.';
+      results.appendChild(empty);
+      return;
+    }
+
+    visibleResults.forEach(exercise => {
+      const selected = isSelected(exercise.id);
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = `wo-picker-option${selected ? ' is-selected' : ''}`;
+      button.setAttribute('role', 'option');
+      button.setAttribute('aria-selected', selected ? 'true' : 'false');
+
+      const copy = document.createElement('span');
+      const name = document.createElement('strong');
+      name.textContent = exercise.name;
+      const group = document.createElement('small');
+      group.textContent = exercise.muscle_group || 'Other';
+      copy.append(name, group);
+
+      const state = document.createElement('span');
+      state.className = 'wo-picker-option__state';
+      state.textContent = selected ? 'Selected' : 'Select';
+      button.append(copy, state);
+      button.addEventListener('click', () => {
+        selectedExercises = selected
+          ? selectedExercises.filter(item => item.id !== exercise.id)
+          : [...selectedExercises, exercise];
+        syncPicker();
+      });
+      results.appendChild(button);
+    });
+  }
+
+  function syncPicker() {
+    renderSelected();
+    renderResults();
+  }
+
+  function resetSearchResults() {
+    if (searchController) searchController.abort();
+    visibleResults = [];
+    results.innerHTML = '';
+    results.hidden = true;
+    pickerStatus.textContent = 'Start typing to find exercises.';
+  }
+
+  async function loadExercises(query = '') {
+    if (!query) {
+      resetSearchResults();
+      return;
+    }
+    if (searchController) searchController.abort();
+    searchController = new AbortController();
+    results.hidden = false;
+    pickerStatus.textContent = 'Searching exercises...';
+
+    try {
+      const response = await fetch(`${searchUrl}?q=${encodeURIComponent(query)}`, {
+        headers: { 'Accept': 'application/json' },
+        signal: searchController.signal,
+      });
+      if (!response.ok) throw new Error('Exercise search failed.');
+
+      visibleResults = (await response.json()).map(normalizeExercise);
+      pickerStatus.textContent = visibleResults.length >= 80
+        ? 'Showing the first 80 matches. Type more to narrow the list.'
+        : `${visibleResults.length} ${visibleResults.length === 1 ? 'exercise' : 'exercises'} shown`;
+      renderResults();
+    } catch (error) {
+      if (error.name === 'AbortError') return;
+      visibleResults = [];
+      pickerStatus.textContent = 'Exercises could not be loaded. Try searching again.';
+      renderResults();
+    }
+  }
+
+  function setCreateMode(restoreOld = false) {
+    modalTitle.textContent = 'Add New Workout';
+    form.action = storeUrl;
+    methodInput.value = 'POST';
+    form.reset();
+    nameInput.value = restoreOld ? oldWorkoutName : '';
+    searchInput.value = '';
+    selectedExercises = restoreOld ? oldSelectedExercises.map(normalizeExercise) : [];
+    syncPicker();
+    resetSearchResults();
+  }
+
+  function setEditMode(data) {
+    modalTitle.textContent = 'Edit Workout';
+    form.action = `${workoutUrl}/${data.id}`;
+    methodInput.value = 'PUT';
+    nameInput.value = data.name || '';
+    searchInput.value = '';
+    selectedExercises = (data.exercises || []).map(normalizeExercise);
+    syncPicker();
+    resetSearchResults();
+  }
+
+  document.querySelectorAll('[data-open-create]').forEach(button => button.addEventListener('click', () => {
+    setCreateMode();
+    openModal();
+    window.setTimeout(() => nameInput.focus(), 0);
+  }));
+  document.querySelectorAll('[data-close-create]').forEach(button => button.addEventListener('click', closeModal));
+
+  searchInput.addEventListener('input', () => {
+    window.clearTimeout(searchTimer);
+    const query = searchInput.value.trim();
+    if (!query) {
+      resetSearchResults();
+      return;
+    }
+    searchTimer = window.setTimeout(() => loadExercises(query), 180);
+  });
+
+  clearSelected.addEventListener('click', () => {
+    selectedExercises = [];
+    syncPicker();
+  });
+
+  form.addEventListener('submit', event => {
+    if (selectedExercises.length > 0) return;
+    event.preventDefault();
+    pickerError.hidden = false;
+    searchInput.focus();
+  });
+
+  document.addEventListener('click', async event => {
+    const button = event.target.closest('[data-edit-workout]');
+    if (!button) return;
+
+    const id = button.getAttribute('data-workout-id');
+    if (!id) return;
+    openModal();
+    pickerStatus.textContent = 'Loading workout...';
+
+    try {
+      const response = await fetch(`${workoutUrl}/${id}/edit-data`, { headers: { 'Accept': 'application/json' } });
+      if (!response.ok) throw new Error('Failed to load workout.');
+      setEditMode(await response.json());
+    } catch (error) {
+      setCreateMode();
+    }
+  });
+
+  if (modal.dataset.autoOpen === 'true') {
+    setCreateMode({{ $errors->any() ? 'true' : 'false' }});
+    openModal();
+    window.setTimeout(() => nameInput.focus(), 0);
+  }
+
+  document.addEventListener('keydown', event => {
+    if (event.key === 'Escape' && modal.classList.contains('is-active')) closeModal();
+  });
 })();
 </script>
 <x-achievement-toasts />

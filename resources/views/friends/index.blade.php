@@ -7,9 +7,10 @@
         robots="noindex, nofollow, noarchive"
     />
 
-    <link rel="stylesheet" href="{{ asset('css/auth.css') }}">
+    <link rel="stylesheet" href="{{ asset('css/auth.css') }}?v={{ filemtime(public_path('css/auth.css')) }}">
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+    <script src="{{ asset('js/image-optimizer.js') }}?v={{ filemtime(public_path('js/image-optimizer.js')) }}"></script>
 </head>
 
 <body class="fr-body">
@@ -66,10 +67,10 @@
                 <div class="fr-results">
                     @foreach($pendingSent as $req)
                         @php $u = $req->receiver; @endphp
-                        <div class="fr-result">
+                        <div class="fr-result" data-sent-request-id="{{ $req->id }}">
                             <div class="fr-result__left" style="display:flex; gap:10px; align-items:center;">
                                 <img
-                                    src="{{ $u->avatar_path ? asset($u->avatar_path) : asset('images/default-avatar.png') }}"
+                                    src="{{ $u->avatar_url }}"
                                     alt="avatar"
                                     style="width:34px;height:34px;border-radius:999px;object-fit:cover;border:1px solid rgba(255,255,255,.10);"
                                 >
@@ -82,7 +83,7 @@
                                 </div>
                             </div>
 
-                            <button class="fr-btn fr-btn--pending" disabled>Pending</button>
+                            <button class="fr-btn fr-btn--cancel js-cancel-request" data-req="{{ $req->id }}">Revoke request</button>
                         </div>
                     @endforeach
                 </div>
@@ -99,7 +100,7 @@
                         <div class="fr-result" data-req-id="{{ $req->id }}">
                             <div class="fr-result__left" style="display:flex; gap:10px; align-items:center;">
                                 <img
-                                    src="{{ $u->avatar_path ? asset($u->avatar_path) : asset('images/default-avatar.png') }}"
+                                    src="{{ $u->avatar_url }}"
                                     alt="avatar"
                                     style="width:34px;height:34px;border-radius:999px;object-fit:cover;border:1px solid rgba(255,255,255,.10);"
                                 >
@@ -125,12 +126,36 @@
     </div>
 </div>
 
+@if($suggestedPeople->isNotEmpty())
+  <section class="fr-suggest" aria-labelledby="suggestedPeopleTitle">
+    <div class="fr-suggest__head">
+      <div>
+        <span>Discover</span>
+        <h2 id="suggestedPeopleTitle">Suggested people</h2>
+      </div>
+      <p>People near you first, then active ProgressLab members.</p>
+    </div>
+    <div class="fr-suggest__rail">
+      @foreach($suggestedPeople as $person)
+        <article class="fr-suggest__person" data-profile-id="{{ $person['id'] }}" tabindex="0" role="button" aria-label="Open {{ $person['name'] }}'s profile">
+          <div class="fr-suggest__avatar">
+            <img src="{{ $person['avatar_url'] }}" alt="" loading="lazy" decoding="async">
+            <button type="button" class="fr-suggest__add js-add" data-id="{{ $person['id'] }}" aria-label="Add {{ $person['name'] }} as a friend">+</button>
+          </div>
+          <strong>{{ $person['name'] }}</strong>
+          <span>{{ $person['nearby'] ? 'Near you' : '@'.($person['username'] ?: 'member') }}</span>
+        </article>
+      @endforeach
+    </div>
+  </section>
+@endif
+
 @if(isset($friendsCards) && count($friendsCards))
     <div class="fr-grid">
         @foreach($friendsCards as $f)
-            <div class="fr-fcard" data-friend-id="{{ $f['id'] }}">
+            <div class="fr-fcard" data-friend-id="{{ $f['id'] }}" data-profile-id="{{ $f['id'] }}" tabindex="0" role="button">
                 <div class="fr-fcard__avatarWrap">
-                    <img class="fr-fcard__avatar" src="{{ $f['avatar_url'] }}" alt="avatar">
+                    <img class="fr-fcard__avatar" src="{{ $f['avatar_url'] }}" alt="avatar" loading="lazy" decoding="async">
                     <span class="fr-fcard__dot fr-dot--{{ $f['dot'] }}"></span>
                 </div>
 
@@ -153,6 +178,88 @@
     <div class="fr-modal__backdrop" data-close-modal></div>
 
     <div class="fr-modal__panel" role="dialog" aria-modal="true">
+        <video class="fr-profile-background-video" id="fmProfileBackgroundVideo" autoplay muted loop playsinline preload="metadata" hidden></video>
+        <section class="fr-profile-hero">
+            <div class="fr-profile-cover" id="fmProfileCover"></div>
+            <div class="fr-profile-hero__actions">
+                <button class="fr-profile-add fr-btn fr-btn--add" type="button" data-profile-add hidden>Add friend</button>
+                <button class="fr-profile-customize fr-btn fr-btn--light" type="button" data-profile-customize hidden>Customize Profile</button>
+                <button class="fr-unfriend" type="button" data-profile-unfriend>Unfriend</button>
+                <button class="fr-modal__close fr-profile-close" type="button" data-close-modal aria-label="Close profile">&times;</button>
+            </div>
+            <div class="fr-profile-identity">
+                <div class="fr-modal__avatarWrap">
+                <img id="fmProfileAvatar" class="fr-modal__avatar" src="{{ asset('images/default-avatar.png') }}" alt="" decoding="async">
+                    <span id="fmProfileDot" class="fr-modal__dot fr-dot--offline"></span>
+                </div>
+                <div>
+                    <h2 id="fmProfileName" class="fr-modal__name">Member</h2>
+                    <div class="fr-profile-handle"><span id="fmProfileUser">@username</span><span id="fmProfileLocation"></span></div>
+                    <div class="fr-modal__meta">
+                        <span class="fr-pill" id="fmProfileStatus">Offline</span>
+                        <span class="fr-pill" id="fmProfileLast">Last active: —</span>
+                    </div>
+                </div>
+                <nav class="fr-profile-socials" id="fmProfileSocials" aria-label="Social profiles"></nav>
+            </div>
+            <blockquote class="fr-profile-quote" id="fmProfileQuote">Building progress one day at a time.</blockquote>
+        </section>
+
+        <aside class="fr-profile-editor" data-profile-editor hidden
+          data-avatar-url="{{ route('profile.photo.update') }}"
+          data-cover-url="{{ route('profile.cover.update') }}"
+          data-showcase-url="{{ route('profile.showcase.update') }}"
+          data-theme-url="{{ route('profile.theme.update') }}">
+            <div class="fr-profile-editor__head">
+                <div><span>Live editor</span><strong>Customize your profile</strong></div>
+                <button type="button" data-profile-editor-close aria-label="Close editor">&times;</button>
+            </div>
+            <div class="fr-profile-editor__uploads">
+                <input type="file" accept="image/jpeg,image/png,image/webp" data-profile-file="avatar" hidden>
+                <button type="button" data-profile-upload="avatar">Change Profile Photo</button>
+                <div data-profile-plus-controls hidden>
+                    <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm" data-profile-file="cover" hidden>
+                    <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" data-profile-file="showcase" hidden>
+                    <button type="button" data-profile-upload="cover">Change Background</button>
+                    <button type="button" data-profile-upload="showcase">Change Showcase</button>
+                </div>
+            </div>
+            <form class="fr-profile-editor__theme" data-profile-theme-form hidden>
+                @foreach([
+                    ['profile_accent_color', 'profile_accent_opacity', 'Accent', '#329ff2', 100],
+                    ['profile_secondary_color', 'profile_secondary_opacity', 'Secondary', '#2dd4ff', 100],
+                    ['profile_surface_color', 'profile_surface_opacity', 'Cards', '#0b1422', 92],
+                    ['profile_text_color', 'profile_text_opacity', 'Text', '#f5f8ff', 100],
+                ] as [$field, $opacityField, $label, $default, $defaultOpacity])
+                    <label class="fr-theme-control" data-theme-control>
+                        <span>{{ $label }}</span>
+                        <input class="fr-theme-control__hex" type="text" name="{{ $field }}" value="{{ $default }}" maxlength="7" pattern="#[0-9A-Fa-f]{6}" spellcheck="false" aria-label="{{ $label }} HEX color">
+                        <input class="fr-theme-control__swatch" type="color" value="{{ $default }}" data-theme-swatch aria-label="Choose {{ strtolower($label) }} color">
+                        <span class="fr-theme-control__alpha"><input type="number" name="{{ $opacityField }}" value="{{ $defaultOpacity }}" min="0" max="100" step="1" aria-label="{{ $label }} opacity"><b>%</b></span>
+                    </label>
+                @endforeach
+                <button type="submit">Save Colors</button>
+            </form>
+            <a class="fr-profile-editor__upgrade" href="{{ route('plans.index') }}" data-profile-upgrade hidden>Unlock backgrounds and colors with ProgressLab+</a>
+            <p class="fr-profile-editor__status" data-profile-editor-status aria-live="polite"></p>
+        </aside>
+
+        <div class="fr-profile-layout">
+            <section class="fr-profile-showcase">
+                <img id="fmProfileShowcase" src="" alt="Profile showcase" loading="lazy" decoding="async">
+                <div class="fr-profile-showcase__empty" id="fmProfileShowcaseEmpty">No showcase image added yet.</div>
+            </section>
+            <aside class="fr-profile-sidebar">
+                <article class="fr-rank-card" id="fmProfileRankCard">
+                    <img id="fmProfileRankIcon" src="{{ asset('images/ranks/bronze.png') }}" alt="">
+                    <div><span>Current rank</span><strong id="fmProfileRankName">Bronze I</strong><small id="fmProfileRankXp">0 XP</small></div>
+                </article>
+                <div class="fr-profile-side-title">Current streaks</div>
+                <div class="fr-profile-streaks" id="fmProfileStreaks"></div>
+                <div class="fr-profile-side-title">Recent achievements <span id="fmProfileAchievementCount"></span></div>
+                <div class="fr-profile-achievements" id="fmProfileAchievements"></div>
+            </aside>
+        </div>
         <div class="fr-modal__top">
             <div class="fr-modal__cover" id="fmCover" style="display:none;"></div>
 
@@ -244,9 +351,11 @@
             <div class="fr-section__title">📈 Strength Comparison</div>
 
             <div class="fr-compareControls">
-                <select id="fcExerciseSelect" class="fr-compareSelect">
-                    <option value="">Choose an exercise...</option>
-                </select>
+                <div class="fr-exercise-picker">
+                    <input id="fcExerciseSearch" class="fr-compareSelect" type="search" placeholder="Search a shared exercise..." autocomplete="off">
+                    <input id="fcExerciseSelect" type="hidden" value="">
+                    <div id="fcExerciseOptions" class="fr-exercise-options" hidden></div>
+                </div>
 
                 <div class="fr-compareLegend">
                     <span class="fr-legendItem">
@@ -369,6 +478,7 @@
     document.addEventListener('click', async (e) => {
         const btn = e.target.closest('.js-add');
         if(!btn) return;
+        e.stopImmediatePropagation();
 
         const id = btn.dataset.id;
         btn.disabled = true;
@@ -396,6 +506,26 @@
             console.error(err);
             btn.disabled = false;
             btn.textContent = 'Add';
+        }
+    });
+
+    document.addEventListener('click', async (e) => {
+        const button = e.target.closest('.js-cancel-request');
+        if (!button) return;
+        const requestId = button.dataset.req;
+        button.disabled = true;
+        button.textContent = 'Revoking...';
+        try {
+            const response = await fetch(`{{ url('/friends/requests') }}/${requestId}`, {
+                method: 'DELETE',
+                headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf }
+            });
+            if (!response.ok) throw new Error('Request could not be revoked.');
+            document.querySelector(`[data-sent-request-id="${CSS.escape(requestId)}"]`)?.remove();
+        } catch (error) {
+            button.disabled = false;
+            button.textContent = 'Revoke request';
+            alert(error.message);
         }
     });
 
@@ -436,16 +566,13 @@
         }
     });
 
-    const requestedFriend = new URLSearchParams(window.location.search).get('open_friend');
-    if (requestedFriend) {
-        document.querySelector(`.fr-fcard[data-friend-id="${CSS.escape(requestedFriend)}"]`)?.click();
-    }
 })();
 </script>
 
 <script>
 (() => {
     const modal = document.getElementById('friendModal');
+    const modalPanel = modal.querySelector('.fr-modal__panel');
     const closeEls = modal.querySelectorAll('[data-close-modal]');
 
     const fmCover = document.getElementById('fmCover');
@@ -456,6 +583,35 @@
     const fmLast = document.getElementById('fmLast');
     const fmUser = document.getElementById('fmUser');
     const fmEmail = document.getElementById('fmEmail');
+    const profileCover = document.getElementById('fmProfileCover');
+    const profileAvatar = document.getElementById('fmProfileAvatar');
+    const profileDot = document.getElementById('fmProfileDot');
+    const profileName = document.getElementById('fmProfileName');
+    const profileUser = document.getElementById('fmProfileUser');
+    const profileLocation = document.getElementById('fmProfileLocation');
+    const profileStatus = document.getElementById('fmProfileStatus');
+    const profileLast = document.getElementById('fmProfileLast');
+    const profileQuote = document.getElementById('fmProfileQuote');
+    const profileSocials = document.getElementById('fmProfileSocials');
+    const profileShowcase = document.getElementById('fmProfileShowcase');
+    const profileShowcaseEmpty = document.getElementById('fmProfileShowcaseEmpty');
+    const profileBackgroundVideo = document.getElementById('fmProfileBackgroundVideo');
+    const profileRankCard = document.getElementById('fmProfileRankCard');
+    const profileRankIcon = document.getElementById('fmProfileRankIcon');
+    const profileRankName = document.getElementById('fmProfileRankName');
+    const profileRankXp = document.getElementById('fmProfileRankXp');
+    const profileStreaks = document.getElementById('fmProfileStreaks');
+    const profileAchievements = document.getElementById('fmProfileAchievements');
+    const profileAchievementCount = document.getElementById('fmProfileAchievementCount');
+    const profileAdd = modal.querySelector('[data-profile-add]');
+    const customizeButton = modal.querySelector('[data-profile-customize]');
+    const profileEditor = modal.querySelector('[data-profile-editor]');
+    const editorClose = modal.querySelector('[data-profile-editor-close]');
+    const plusControls = modal.querySelector('[data-profile-plus-controls]');
+    const themeForm = modal.querySelector('[data-profile-theme-form]');
+    const upgradeLink = modal.querySelector('[data-profile-upgrade]');
+    const editorStatus = modal.querySelector('[data-profile-editor-status]');
+    const strengthSection = document.getElementById('strengthComparisonSection') || document.querySelector('.fr-compareControls')?.closest('.fr-section');
 
     const qsWorkouts = document.getElementById('qsWorkouts');
     const qsDays = document.getElementById('qsDays');
@@ -467,9 +623,11 @@
     const achCount = document.getElementById('achCount');
 
     const fcExerciseSelect = document.getElementById('fcExerciseSelect');
+    const fcExerciseSearch = document.getElementById('fcExerciseSearch');
+    const fcExerciseOptions = document.getElementById('fcExerciseOptions');
     const fcEmpty = document.getElementById('fcEmpty');
     const csrf = document.querySelector('meta[name="csrf-token"]').content;
-    const unfriendOpen = modal.querySelector('[data-unfriend-open]');
+    const unfriendOpen = modal.querySelector('[data-profile-unfriend]');
     const unfriendConfirm = modal.querySelector('[data-unfriend-confirm]');
     const unfriendName = modal.querySelector('[data-unfriend-name]');
     const unfriendButton = modal.querySelector('[data-unfriend-confirm-button]');
@@ -484,6 +642,26 @@
     let currentFriendId = null;
     let currentTrainerAccess = null;
     let fcChart = null;
+    let comparisonExercises = [];
+    const urlParameters = new URLSearchParams(window.location.search);
+    const returnToProfile = urlParameters.get('return_to') === 'profile';
+    const escapeHtml = value => String(value ?? '').replace(/[&<>"']/g, character => ({
+        '&':'&amp;', '<':'&lt;', '>':'&gt;', '"':'&quot;', "'":'&#039;'
+    }[character]));
+    const validThemeColor = (value, fallback) => /^#[0-9a-f]{6}$/i.test(value || '') ? value : fallback;
+    const validOpacity = (value, fallback = 100) => Math.min(100, Math.max(0, Number.isFinite(Number(value)) ? Number(value) : fallback));
+    const colorWithOpacity = (color, opacity) => {
+        const hex = validThemeColor(color, '#329ff2');
+        const alpha = Math.round(validOpacity(opacity) * 2.55).toString(16).padStart(2, '0');
+        return `${hex}${alpha}`;
+    };
+
+    function applyProfileTheme(theme = {}) {
+        modalPanel.style.setProperty('--profile-accent', colorWithOpacity(theme.accent, theme.accent_opacity ?? 100));
+        modalPanel.style.setProperty('--profile-secondary', colorWithOpacity(theme.secondary, theme.secondary_opacity ?? 100));
+        modalPanel.style.setProperty('--profile-surface', colorWithOpacity(theme.surface, theme.surface_opacity ?? 92));
+        modalPanel.style.setProperty('--profile-text', colorWithOpacity(theme.text, theme.text_opacity ?? 100));
+    }
 
     function openModal(){
         modal.classList.add('is-open');
@@ -492,8 +670,13 @@
 
     function closeModal(){
         closeUnfriendConfirm();
+        profileEditor.hidden = true;
+        profileBackgroundVideo.pause();
         modal.classList.remove('is-open');
         document.body.style.overflow = '';
+        if (returnToProfile) {
+            window.location.replace("{{ route('profile.show') }}");
+        }
     }
 
     function openUnfriendConfirm(){
@@ -514,6 +697,13 @@
     }
 
     closeEls.forEach(el => el.addEventListener('click', closeModal));
+    customizeButton.addEventListener('click', () => {
+        profileEditor.hidden = false;
+        editorStatus.textContent = '';
+    });
+    editorClose.addEventListener('click', () => {
+        profileEditor.hidden = true;
+    });
     unfriendOpen.addEventListener('click', openUnfriendConfirm);
     unfriendConfirm.querySelectorAll('[data-unfriend-cancel]').forEach(button => {
         button.addEventListener('click', closeUnfriendConfirm);
@@ -555,14 +745,16 @@
     });
 
     function setDot(dot){
-        fmDot.classList.remove('fr-dot--online','fr-dot--recent','fr-dot--offline');
-        fmDot.classList.add(
+        [fmDot, profileDot].filter(Boolean).forEach(element => {
+          element.classList.remove('fr-dot--online','fr-dot--recent','fr-dot--offline');
+          element.classList.add(
             dot === 'online'
                 ? 'fr-dot--online'
                 : dot === 'recent'
                     ? 'fr-dot--recent'
                     : 'fr-dot--offline'
-        );
+          );
+        });
     }
 
     function renderStreaks(streaks){
@@ -591,6 +783,28 @@
                 </div>
             `).join('')
             : `<div class="fr-ach" style="grid-column:1/-1; opacity:.7;">No achievements to display yet</div>`;
+    }
+
+    function renderProfileStreaks(streaks) {
+        profileStreaks.innerHTML = (streaks || []).slice(0, 3).map(streak => `
+          <article><span>${streak.icon || '🔥'}</span><div><strong>${escapeHtml(streak.value ?? 0)} days</strong><small>${escapeHtml(streak.label || 'Streak')}</small></div></article>
+        `).join('');
+    }
+
+    function renderProfileAchievements(achievements, total) {
+        const items = achievements || [];
+        profileAchievementCount.textContent = total ? `(${total})` : '';
+        profileAchievements.innerHTML = items.length ? items.map(item => `
+          <article title="${escapeHtml(item.title)}"><img src="${escapeHtml(item.image_url)}" alt=""><span>${escapeHtml(item.title)}</span></article>
+        `).join('') : '<p>No achievements yet.</p>';
+    }
+
+    function renderSocials(socials) {
+        const labels = { instagram: 'IG', tiktok: 'TT', snapchat: 'SC', linkedin: 'IN' };
+        profileSocials.innerHTML = Object.entries(socials || {}).map(([network, url]) => `
+          <a href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer" aria-label="${network}">${labels[network] || network.slice(0, 2).toUpperCase()}</a>
+        `).join('');
+        profileSocials.hidden = profileSocials.innerHTML === '';
     }
 
     function permissionPayload() {
@@ -702,7 +916,11 @@
     });
 
     function resetComparisonUI() {
-        fcExerciseSelect.innerHTML = `<option value="">Choose an exercise...</option>`;
+        fcExerciseSelect.value = '';
+        fcExerciseSearch.value = '';
+        fcExerciseOptions.innerHTML = '';
+        fcExerciseOptions.hidden = true;
+        comparisonExercises = [];
         fcEmpty.textContent = 'Select an exercise to compare progress.';
         fcEmpty.style.display = 'block';
 
@@ -721,9 +939,7 @@
         const data = await res.json();
         const items = data.items || [];
 
-        fcExerciseSelect.innerHTML =
-            `<option value="">Choose an exercise...</option>` +
-            items.map(x => `<option value="${x.id}">${x.name}</option>`).join('');
+        comparisonExercises = items;
 
         if (!items.length) {
             fcEmpty.textContent = 'No shared logged exercises yet.';
@@ -788,7 +1004,12 @@
                 maintainAspectRatio: false,
                 plugins: {
                     legend: { display: false },
-                    tooltip: { enabled: true }
+                    tooltip: {
+                        enabled: true,
+                        callbacks: {
+                            label: context => `${context.dataset.label}: ${context.raw} ${data.weight_unit || 'kg'}`
+                        }
+                    }
                 },
                 scales: {
                     x: {
@@ -822,6 +1043,31 @@
         fmUser.textContent = '@' + (data.user.username || '—');
         fmEmail.textContent = data.user.email || '—';
         fmAvatar.src = data.user.avatar_url || "{{ asset('images/default-avatar.png') }}";
+        profileName.textContent = data.user.name || 'Member';
+        profileUser.textContent = '@' + (data.user.username || 'member');
+        profileLocation.textContent = data.user.location ? `${String.fromCharCode(183)} ${data.user.location}` : '';
+        profileAvatar.src = data.user.avatar_url || "{{ asset('images/default-avatar.png') }}";
+        profileQuote.textContent = data.user.quote || 'Building progress one day at a time.';
+        profileCover.style.backgroundImage = data.user.cover_url ? `url("${data.user.cover_url}")` : '';
+        profileCover.classList.toggle('has-image', Boolean(data.user.cover_url));
+        modalPanel.style.setProperty('--profile-cover-image', data.user.cover_url ? `url("${data.user.cover_url}")` : 'none');
+        applyProfileTheme(data.user.theme);
+        if (data.user.background_video_url) {
+            if (profileBackgroundVideo.src !== data.user.background_video_url) {
+                profileBackgroundVideo.src = data.user.background_video_url;
+            }
+            profileBackgroundVideo.hidden = false;
+            profileBackgroundVideo.play().catch(() => {});
+        } else {
+            profileBackgroundVideo.pause();
+            profileBackgroundVideo.removeAttribute('src');
+            profileBackgroundVideo.load();
+            profileBackgroundVideo.hidden = true;
+        }
+        profileShowcase.hidden = !data.user.showcase_url;
+        profileShowcaseEmpty.hidden = Boolean(data.user.showcase_url);
+        if (data.user.showcase_url) profileShowcase.src = data.user.showcase_url;
+        renderSocials(data.user.socials);
 
         if(data.user.cover_url){
             fmCover.style.display = 'block';
@@ -848,9 +1094,13 @@
 
         setDot(dot);
         fmStatus.classList.add(`is-${dot}`);
+        profileStatus.classList.remove('is-online', 'is-recent', 'is-offline');
+        profileStatus.classList.add(`is-${dot}`);
+        profileStatus.textContent = statusText;
 
         fmLast.textContent = 'Last active: ' + (data.user.last_active || '—');
 
+        profileLast.textContent = 'Last active: ' + (data.user.last_active || '—');
         qsWorkouts.textContent = data.quick.workouts_logged ?? 0;
         qsDays.textContent = data.quick.days_this_month ?? 0;
         qsFriends.textContent = data.quick.friends ?? 0;
@@ -858,27 +1108,71 @@
 
         renderStreaks(data.streaks);
         renderAchievements(data.achievements);
+        renderProfileStreaks(data.streaks);
+        renderProfileAchievements(data.achievements, data.achievements_unlocked);
+        const roman = ['I', 'II', 'III', 'IV'][Math.max(0, (data.rank?.level || 1) - 1)];
+        profileRankName.textContent = `${data.rank?.name || 'Bronze'} ${roman}`;
+        profileRankXp.textContent = `${Number(data.rank?.total_xp || 0).toLocaleString()} XP`;
+        profileRankIcon.src = data.rank?.icon_url || "{{ asset('images/ranks/bronze.png') }}";
+        profileRankCard.style.setProperty('--profile-rank-color', data.rank?.color || '#b87333');
+        const relationship = data.relationship || {};
+        unfriendOpen.hidden = !relationship.is_friend;
+        profileAdd.hidden = relationship.is_friend || relationship.is_self;
+        customizeButton.hidden = !relationship.is_self;
+        profileEditor.hidden = true;
+        plusControls.hidden = !relationship.can_customize;
+        themeForm.hidden = !relationship.can_customize;
+        upgradeLink.hidden = Boolean(relationship.can_customize);
+        const themeValues = {
+            profile_accent_color: data.user.theme?.accent || '#329ff2',
+            profile_accent_opacity: data.user.theme?.accent_opacity ?? 100,
+            profile_secondary_color: data.user.theme?.secondary || '#2dd4ff',
+            profile_secondary_opacity: data.user.theme?.secondary_opacity ?? 100,
+            profile_surface_color: data.user.theme?.surface || '#0b1422',
+            profile_surface_opacity: data.user.theme?.surface_opacity ?? 92,
+            profile_text_color: data.user.theme?.text || '#f5f8ff',
+            profile_text_opacity: data.user.theme?.text_opacity ?? 100,
+        };
+        Object.entries(themeValues).forEach(([name, value]) => {
+            const input = themeForm.elements.namedItem(name);
+            if (input) input.value = name.endsWith('_color') ? validThemeColor(value, '#329ff2').toUpperCase() : validOpacity(value);
+        });
+        themeForm.querySelectorAll('[data-theme-control]').forEach(control => {
+            const hex = control.querySelector('.fr-theme-control__hex');
+            const swatch = control.querySelector('[data-theme-swatch]');
+            swatch.value = validThemeColor(hex.value, '#329ff2');
+        });
+        profileAdd.disabled = relationship.state !== 'add';
+        profileAdd.textContent = relationship.state === 'pending' ? 'Request pending' : relationship.state === 'incoming' ? 'Request received' : 'Add friend';
+        strengthSection.hidden = !relationship.can_compare;
         renderTrainerAccess(data.trainer_access);
+        return data;
     }
 
-    fcExerciseSelect.addEventListener('change', async () => {
-        if (!currentFriendId) return;
-
+    const showExerciseOptions = () => {
+        const query = fcExerciseSearch.value.trim().toLowerCase();
+        const matches = comparisonExercises.filter(item => !query || item.name.toLowerCase().includes(query)).slice(0, 8);
+        fcExerciseOptions.innerHTML = matches.map(item => `<button type="button" data-exercise-id="${item.id}" data-exercise-name="${escapeHtml(item.name)}">${escapeHtml(item.name)}</button>`).join('');
+        fcExerciseOptions.hidden = matches.length === 0;
+    };
+    fcExerciseSearch.addEventListener('focus', showExerciseOptions);
+    fcExerciseSearch.addEventListener('input', showExerciseOptions);
+    fcExerciseOptions.addEventListener('click', async event => {
+        const option = event.target.closest('[data-exercise-id]');
+        if (!option || !currentFriendId) return;
+        fcExerciseSelect.value = option.dataset.exerciseId;
+        fcExerciseSearch.value = option.dataset.exerciseName;
+        fcExerciseOptions.hidden = true;
         try {
             await loadComparisonChart(currentFriendId, fcExerciseSelect.value);
-        } catch (err) {
-            console.error(err);
+        } catch (error) {
+            console.error(error);
             fcEmpty.textContent = 'Could not load comparison chart.';
             fcEmpty.style.display = 'block';
         }
     });
 
-    document.addEventListener('click', async (e) => {
-        const card = e.target.closest('.fr-fcard[data-friend-id]');
-        if(!card) return;
-
-        const id = card.dataset.friendId;
-
+    async function openProfileById(id) {
         try{
             fmName.textContent = 'Loading...';
             streakWrap.innerHTML = '';
@@ -888,14 +1182,134 @@
             resetComparisonUI();
 
             openModal();
-            await loadFriend(id);
-            await loadComparisonExercises(id);
+            const data = await loadFriend(id);
+            if (data.relationship?.can_compare) await loadComparisonExercises(id);
         } catch(err){
             console.error(err);
             closeModal();
             alert('Could not load friend details.');
         }
+    }
+
+    document.addEventListener('click', async (e) => {
+        const card = e.target.closest('[data-profile-id]');
+        if(!card) return;
+        await openProfileById(card.dataset.profileId);
     });
+
+    document.addEventListener('keydown', event => {
+        const card = event.target.closest('[data-profile-id]');
+        if (card && (event.key === 'Enter' || event.key === ' ')) {
+            event.preventDefault();
+            card.click();
+        }
+    });
+
+    profileAdd.addEventListener('click', async () => {
+        if (!currentFriendId || profileAdd.disabled) return;
+        profileAdd.disabled = true;
+        profileAdd.textContent = 'Sending...';
+        const response = await fetch(`{{ route('friends.request') }}`, {
+            method: 'POST',
+            headers: {'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':csrf},
+            body: JSON.stringify({user_id: currentFriendId})
+        });
+        profileAdd.textContent = response.ok ? 'Request pending' : 'Add friend';
+        profileAdd.disabled = response.ok;
+    });
+
+    themeForm.querySelectorAll('[data-theme-control]').forEach(control => {
+        const hex = control.querySelector('.fr-theme-control__hex');
+        const swatch = control.querySelector('[data-theme-swatch]');
+        swatch.addEventListener('input', () => {
+            hex.value = swatch.value.toUpperCase();
+            themeForm.dispatchEvent(new Event('input', {bubbles: true}));
+        });
+        hex.addEventListener('input', () => {
+            if (/^#[0-9a-f]{6}$/i.test(hex.value)) swatch.value = hex.value;
+        });
+        hex.addEventListener('blur', () => {
+            hex.value = validThemeColor(hex.value, swatch.value).toUpperCase();
+        });
+    });
+
+    themeForm.addEventListener('input', event => {
+        if (event.target.matches('[data-theme-swatch]')) return;
+        applyProfileTheme({
+            accent: themeForm.elements.profile_accent_color.value,
+            accent_opacity: themeForm.elements.profile_accent_opacity.value,
+            secondary: themeForm.elements.profile_secondary_color.value,
+            secondary_opacity: themeForm.elements.profile_secondary_opacity.value,
+            surface: themeForm.elements.profile_surface_color.value,
+            surface_opacity: themeForm.elements.profile_surface_opacity.value,
+            text: themeForm.elements.profile_text_color.value,
+            text_opacity: themeForm.elements.profile_text_opacity.value,
+        });
+    });
+
+    themeForm.addEventListener('submit', async event => {
+        event.preventDefault();
+        editorStatus.textContent = 'Saving colors...';
+        const response = await fetch(profileEditor.dataset.themeUrl, {
+            method: 'PATCH',
+            headers: {'Content-Type':'application/json','Accept':'application/json','X-CSRF-TOKEN':csrf},
+            body: JSON.stringify(Object.fromEntries(new FormData(themeForm))),
+        });
+        const payload = await response.json().catch(() => ({}));
+        editorStatus.textContent = response.ok ? 'Colors saved.' : (payload.message || 'Colors could not be saved.');
+    });
+
+    modal.querySelectorAll('[data-profile-upload]').forEach(button => {
+        button.addEventListener('click', () => {
+            modal.querySelector(`[data-profile-file="${button.dataset.profileUpload}"]`)?.click();
+        });
+    });
+
+    modal.querySelectorAll('[data-profile-file]').forEach(input => {
+        input.addEventListener('change', async () => {
+            let file = input.files?.[0];
+            if (!file) return;
+            const kind = input.dataset.profileFile;
+            const button = modal.querySelector(`[data-profile-upload="${kind}"]`);
+            button.disabled = true;
+            editorStatus.textContent = `Updating ${kind === 'avatar' ? 'profile photo' : kind}...`;
+            try {
+                if (file.size > 25 * 1024 * 1024) {
+                    throw new Error('Background videos must be 25 MB or smaller.');
+                }
+                if (file.type.startsWith('image/') && file.type !== 'image/gif' && window.ProgressLabImageOptimizer) {
+                    const optimized = await window.ProgressLabImageOptimizer.optimize(file, {
+                        maxDimension: kind === 'cover' ? 1920 : 1600,
+                        targetBytes: kind === 'avatar' ? 500 * 1024 : 900 * 1024,
+                        quality: .85,
+                        baseName: kind,
+                    });
+                    file = optimized.file;
+                }
+                const formData = new FormData();
+                formData.append('_method', 'PUT');
+                formData.append(kind, file);
+                const endpoint = profileEditor.dataset[`${kind}Url`];
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: {'Accept':'application/json','X-CSRF-TOKEN':csrf},
+                    body: formData,
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) throw new Error(payload.message || 'Image could not be updated.');
+                window.location.reload();
+            } catch (error) {
+                editorStatus.textContent = error.message;
+                button.disabled = false;
+                input.value = '';
+            }
+        });
+    });
+
+    const profileFromUrl = urlParameters.get('open_profile') || urlParameters.get('open_friend');
+    if (profileFromUrl && /^\d+$/.test(profileFromUrl)) {
+        openProfileById(profileFromUrl);
+    }
 })();
 </script>
 

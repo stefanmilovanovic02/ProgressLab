@@ -25,8 +25,8 @@
       
       <div class="auth-panel">
         {{-- Stepper --}}
-        <div class="stepper" aria-label="Registration steps">
-          <div class="stepper-item is-active">
+        <div class="stepper" aria-label="Registration progress">
+          <div class="stepper-item is-current" aria-current="step">
             <div class="stepper-dot">1</div>
             <div class="stepper-label">Profile</div>
           </div>
@@ -102,13 +102,17 @@
           <div class="grid-2">
             <div class="field">
               <label class="field-label" for="password">PASSWORD</label>
-              <input
-                class="field-input @error('password') is-invalid @enderror"
-                id="password"
-                name="password"
-                type="password"
-                placeholder="Create a password"
-              />
+              <div class="input-with-icon">
+                <input
+                  class="field-input @error('password') is-invalid @enderror"
+                  id="password"
+                  name="password"
+                  type="password"
+                  placeholder="Create a password"
+                  autocomplete="new-password"
+                />
+                <x-password-toggle target="password" />
+              </div>
               @error('password')
                 <p class="field-error">{{ $message }}</p>
               @enderror
@@ -116,13 +120,17 @@
 
             <div class="field">
               <label class="field-label" for="password_confirmation">CONFIRM PASSWORD</label>
-              <input
-                class="field-input"
-                id="password_confirmation"
-                name="password_confirmation"
-                type="password"
-                placeholder="Repeat password"
-              />
+              <div class="input-with-icon">
+                <input
+                  class="field-input"
+                  id="password_confirmation"
+                  name="password_confirmation"
+                  type="password"
+                  placeholder="Repeat password"
+                  autocomplete="new-password"
+                />
+                <x-password-toggle target="password_confirmation" />
+              </div>
             </div>
           </div>
 
@@ -130,6 +138,13 @@
             <a class="auth-button auth-button--ghost" href="{{ route('login') }}">Back</a>
             <button class="auth-button" type="submit">Next</button>
           </div>
+
+          <p class="auth-legal-note">
+            By continuing, you agree to the
+            <a href="{{ route('legal.terms') }}" target="_blank" rel="noopener">Terms of Use</a>
+            and acknowledge the
+            <a href="{{ route('legal.privacy') }}" target="_blank" rel="noopener">Privacy Policy</a>.
+          </p>
         </form>
       </div>
 

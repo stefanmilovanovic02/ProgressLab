@@ -5,23 +5,32 @@
     <a href="{{ route('home') }}" class="pl-nav__brand" aria-label="ProgressLab home">
       <img
         class="pl-nav__brand-logo"
-        src="{{ asset('images/branding/progresslab-logo.png') }}?v=2"
+        src="{{ asset('images/branding/progresslab-app-192.png') }}"
         alt=""
         width="34"
         height="34"
+        decoding="async"
+        fetchpriority="high"
       >
       <span class="pl-nav__brand-text">ProgressLab</span>
     </a>
 
     {{-- Mobile toggle --}}
-    <button class="pl-nav__toggle" type="button" aria-label="Toggle menu" data-pl-nav-toggle>
+    <button
+      class="pl-nav__toggle"
+      type="button"
+      aria-label="Open navigation menu"
+      aria-controls="progresslab-navigation"
+      aria-expanded="false"
+      data-pl-nav-toggle
+    >
       <span class="pl-nav__toggle-line"></span>
       <span class="pl-nav__toggle-line"></span>
       <span class="pl-nav__toggle-line"></span>
     </button>
 
     {{-- Center/Right: Links --}}
-    <div class="pl-nav__menu" data-pl-nav-menu>
+    <div class="pl-nav__menu" id="progresslab-navigation" data-pl-nav-menu>
       @if(auth()->user()?->isAdmin())
         <a class="pl-nav__link pl-nav__link--admin {{ request()->routeIs('admin.*') ? 'is-active' : '' }}" href="{{ route('admin.dashboard') }}">
           <span aria-hidden="true">⚙</span>
@@ -78,8 +87,17 @@
       const menu = document.querySelector('[data-pl-nav-menu]');
       if (!toggle || !menu) return;
 
-      toggle.addEventListener('click', () => {
-        menu.classList.toggle('is-open');
+      const setMenuOpen = (open) => {
+        menu.classList.toggle('is-open', open);
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        toggle.setAttribute('aria-label', open ? 'Close navigation menu' : 'Open navigation menu');
+        document.body.classList.toggle('pl-nav-open', open);
+      };
+
+      toggle.addEventListener('click', () => setMenuOpen(!menu.classList.contains('is-open')));
+      menu.querySelectorAll('a').forEach((link) => link.addEventListener('click', () => setMenuOpen(false)));
+      document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') setMenuOpen(false);
       });
     })();
   </script>

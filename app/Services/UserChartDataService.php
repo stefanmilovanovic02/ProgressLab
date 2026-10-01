@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\User;
+use App\Support\UnitConverter;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -91,13 +92,17 @@ class UserChartDataService
 
         $best = $sets->groupBy('day')->map(fn ($daySets) => $daySets->first())->values();
         $reps = $best->map(fn ($set) => (int) ($set->reps ?? 0))->all();
-        $weight = $best->map(fn ($set) => (float) ($set->weight_kg ?? 0))->all();
+        $weight = $best->map(fn ($set) => UnitConverter::weightFromKg(
+            (float) ($set->weight_kg ?? 0),
+            $user->unit_system
+        ))->all();
 
         return [
             'labels' => $best->map(fn ($set) => Carbon::parse($set->day)->format('M j'))->all(),
             'reps' => $reps,
             'weight' => $weight,
             'days' => $best->count(),
+            'weight_unit' => $user->weightUnit(),
             'insights' => [
                 'reps' => $this->insights($reps),
                 'weight' => $this->insights($weight),
@@ -118,12 +123,16 @@ class UserChartDataService
         }
 
         $rows = $query->get(['recorded_on', 'weight_kg']);
-        $values = $rows->map(fn ($row) => (float) $row->weight_kg)->all();
+        $values = $rows->map(fn ($row) => UnitConverter::weightFromKg(
+            (float) $row->weight_kg,
+            $user->unit_system
+        ))->all();
 
         return [
             'labels' => $rows->map(fn ($row) => Carbon::parse($row->recorded_on)->format('M j'))->all(),
             'values' => $values,
             'days' => $rows->count(),
+            'weight_unit' => $user->weightUnit(),
             'insights' => $this->insights($values),
         ];
     }

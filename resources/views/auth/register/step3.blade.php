@@ -23,22 +23,22 @@
 
       <div class="auth-panel">
         {{-- Stepper --}}
-        <div class="stepper" aria-label="Registration steps">
-          <div class="stepper-item is-active">
+        <div class="stepper" aria-label="Registration progress">
+          <div class="stepper-item is-complete">
             <div class="stepper-dot">1</div>
             <div class="stepper-label">Profile</div>
           </div>
 
-          <div class="stepper-line"></div>
+          <div class="stepper-line is-complete"></div>
 
-          <div class="stepper-item is-active">
+          <div class="stepper-item is-complete">
             <div class="stepper-dot">2</div>
             <div class="stepper-label">TDEE</div>
           </div>
 
-          <div class="stepper-line"></div>
+          <div class="stepper-line is-complete"></div>
 
-          <div class="stepper-item is-active">
+          <div class="stepper-item is-current" aria-current="step">
             <div class="stepper-dot">3</div>
             <div class="stepper-label">Goal</div>
           </div>
@@ -47,14 +47,15 @@
         <form class="auth-form" action="{{ route('register.store.goal') }}" method="POST">
           @csrf
 
-          <h2 class="step-title">Goal</h2>
-          <p class="step-desc">We’ll generate calories & macros based on your maintenance.</p>
+          <h2 class="step-title">Choose your goal</h2>
+          <p class="step-desc">Choose your direction, then fine-tune fat and protein. Your macro preview updates instantly.</p>
 
           <div class="tdee-preview" aria-label="Maintenance">
             <div class="tdee-preview-row">
               <span class="tdee-label">Your maintenance</span>
               <span class="tdee-value">{{ $tdee ? $tdee.' kcal' : '— kcal' }}</span>
             </div>
+            <p class="tdee-note">Mifflin–St Jeor starting estimate. Compare it with your weight trend for 2–3 weeks and adjust if needed.</p>
           </div>
 
           @php $goalVal = old('goal', $data['goal'] ?? '') @endphp
@@ -79,8 +80,8 @@
             <label class="goal-card">
               <input type="radio" name="goal" value="recomp" {{ $goalVal==='recomp' ? 'checked' : '' }}>
               <div class="goal-card-inner">
-                <div class="goal-title">Recomposition</div>
-                <div class="goal-desc">Approximately maintenance calories.</div>
+                <div class="goal-title">Maintain / Recomp</div>
+                <div class="goal-desc">Stay near maintenance while improving body composition.</div>
               </div>
             </label>
           </div>
@@ -89,17 +90,15 @@
             <p class="field-error">{{ $message }}</p>
           @enderror
 
-          {{-- Optional controls (we can use later; keep for now) --}}
-          <div class="grid-2" style="margin-top: 10px;">
+          <div class="grid-2 goal-adjustments">
             <div class="field">
               <label class="field-label" for="fat_percent">
                 FAT % OF CALORIES (20–35)
                 <span class="help-badge" tabindex="0">?</span>
 
                 <span class="help-tooltip">
-                  Most lifters do best with 20–35% of calories from fat.
-                  A simple default is 30%. If you feel low energy/hormones, go higher (30–35%).
-                  If you prefer more carbs, go lower (20–25%).
+                  Most people do well with 20–35% of calories from fat.
+                  The default is 30%. Choose a lower value if you prefer more carbohydrates.
                 </span>
               </label>
 
@@ -126,9 +125,8 @@
                 <span class="help-badge" tabindex="0">?</span>
 
                 <span class="help-tooltip">
-                  Protein depends on your goal:
-                  • Bulk/Recomp: 1.6–2.2 g/kg
-                  • Cut: 1.8–2.7 g/kg
+                  Protein depends on your goal.
+                  Bulk/Maintain: 1.6–2.2 g/kg. Cut: 1.8–2.7 g/kg.
                   If unsure, use 1.8 (bulk/recomp) or 2.2 (cut).
                 </span>
               </label>
@@ -149,29 +147,35 @@
                 <p class="field-error">{{ $message }}</p>
               @enderror
             </div>
+          </div>
 
-          {{-- Preview (if controller passes it) --}}
-          @if(!empty($macros_preview))
-            <div class="macros-preview" aria-label="Macros preview">
-              <div class="tdee-preview-row">
-                <span class="tdee-label">Calories</span>
-                <span class="tdee-value">{{ $macros_preview['calories'] ?? '—' }} kcal</span>
-              </div>
-              <div class="tdee-preview-row">
-                <span class="tdee-label">Protein</span>
-                <span class="tdee-value">{{ $macros_preview['protein_g'] ?? '—' }} g</span>
-              </div>
-              <div class="tdee-preview-row">
-                <span class="tdee-label">Fats</span>
-                <span class="tdee-value">{{ $macros_preview['fat_g'] ?? '—' }} g</span>
-              </div>
-              <div class="tdee-preview-row">
-                <span class="tdee-label">Carbs</span>
-                <span class="tdee-value">{{ $macros_preview['carb_g'] ?? '—' }} g</span>
-              </div>
-              <p class="tdee-note">Preview based on your selected goal.</p>
+          <div
+            class="macros-preview macros-preview--live"
+            aria-label="Calculated daily targets"
+            aria-live="polite"
+            data-macro-preview
+            data-maintenance="{{ $tdee }}"
+            data-weight="{{ $weightKg }}"
+          >
+            <h3>Your daily targets</h3>
+            <div class="tdee-preview-row">
+              <span class="tdee-label">Calories</span>
+              <span class="tdee-value" data-preview-calories>Choose a goal</span>
             </div>
-          @endif
+            <div class="tdee-preview-row">
+              <span class="tdee-label">Protein</span>
+              <span class="tdee-value" data-preview-protein>— g</span>
+            </div>
+            <div class="tdee-preview-row">
+              <span class="tdee-label">Fats</span>
+              <span class="tdee-value" data-preview-fat>— g</span>
+            </div>
+            <div class="tdee-preview-row">
+              <span class="tdee-label">Carbs</span>
+              <span class="tdee-value" data-preview-carbs>— g</span>
+            </div>
+            <p class="tdee-note">These are starting targets and will be saved to your profile.</p>
+          </div>
 
           <div class="step-actions">
             <a class="auth-button auth-button--ghost" href="{{ route('register.macros') }}">Back</a>
@@ -186,6 +190,45 @@
 
     </section>
   </main>
+  <script>
+    (() => {
+      const preview = document.querySelector('[data-macro-preview]');
+      if (!preview) return;
+
+      const maintenance = Number(preview.dataset.maintenance);
+      const weight = Number(preview.dataset.weight);
+      const fatInput = document.getElementById('fat_percent');
+      const proteinInput = document.getElementById('protein_g_per_kg');
+      const outputs = {
+        calories: preview.querySelector('[data-preview-calories]'),
+        protein: preview.querySelector('[data-preview-protein]'),
+        fat: preview.querySelector('[data-preview-fat]'),
+        carbs: preview.querySelector('[data-preview-carbs]'),
+      };
+
+      const updatePreview = () => {
+        const selected = document.querySelector('input[name="goal"]:checked');
+        if (!selected || !maintenance || !weight) return;
+
+        const goal = selected.value;
+        const calories = Math.round(goal === 'bulk' ? maintenance * 1.08 : goal === 'cut' ? maintenance * .85 : maintenance);
+        const proteinPerKg = Number(proteinInput.value) || (goal === 'cut' ? 2.2 : 1.8);
+        const fatPercent = Number(fatInput.value) || 30;
+        const protein = Math.round(weight * proteinPerKg);
+        const fat = Math.round((calories * (fatPercent / 100)) / 9);
+        const carbs = Math.max(0, Math.round((calories - (protein * 4) - (fat * 9)) / 4));
+
+        outputs.calories.textContent = `${calories} kcal`;
+        outputs.protein.textContent = `${protein} g`;
+        outputs.fat.textContent = `${fat} g`;
+        outputs.carbs.textContent = `${carbs} g`;
+      };
+
+      document.querySelectorAll('input[name="goal"]').forEach((input) => input.addEventListener('change', updatePreview));
+      [fatInput, proteinInput].forEach((input) => input.addEventListener('input', updatePreview));
+      updatePreview();
+    })();
+  </script>
   <x-achievement-toasts />
 </body>
 </html>

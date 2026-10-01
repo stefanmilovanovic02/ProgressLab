@@ -18,6 +18,8 @@ class MeasurementsTest extends TestCase
 
         $response
             ->assertOk()
+            ->assertSee('add-today-body', false)
+            ->assertSee('app-number-stepper', false)
             ->assertSeeInOrder([
                 'Goals &amp; Measurements',
                 'Nutrition Goals',
@@ -86,5 +88,31 @@ class MeasurementsTest extends TestCase
             'weight_kg' => 82.5,
             'source' => 'add_today',
         ]);
+    }
+
+    public function test_imperial_measurements_are_displayed_in_imperial_and_stored_canonically(): void
+    {
+        $user = User::factory()->create(['unit_system' => 'imperial']);
+
+        $this->actingAs($user)
+            ->post(route('add-today.measurements.body'), [
+                'weight_kg' => 176.4,
+                'waist_cm' => 33.1,
+                'arms_cm' => 15.6,
+            ])
+            ->assertRedirect(route('add-today').'#measurements');
+
+        $measurement = $user->bodyMeasurements()->firstOrFail();
+        $this->assertEqualsWithDelta(80, (float) $measurement->weight_kg, 0.02);
+        $this->assertEqualsWithDelta(84.07, (float) $measurement->waist_cm, 0.02);
+        $this->assertEqualsWithDelta(39.62, (float) $measurement->arms_cm, 0.02);
+
+        $this->actingAs($user)
+            ->get(route('add-today'))
+            ->assertOk()
+            ->assertSee('Weight <small>lb</small>', false)
+            ->assertSee('Waist <small>in</small>', false)
+            ->assertSee('Weight (${weightUnit})', false)
+            ->assertSee('weightForStorage', false);
     }
 }

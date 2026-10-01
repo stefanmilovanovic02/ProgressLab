@@ -10,7 +10,7 @@
       @endforeach
     </select>
     @if(auth()->user()->isOwner())
-      <small class="ad-field-help">Selecting Paid grants access only. It does not create a billable subscription or increase revenue counters.</small>
+      <small class="ad-field-help">Selecting Paid or Trainer directly grants complimentary access. It increases the complimentary counter, but never paid subscriptions or revenue.</small>
     @endif
   </label>
   <label><span class="ad-label">Gender</span>

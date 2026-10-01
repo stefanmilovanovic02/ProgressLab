@@ -69,7 +69,7 @@
       <td><span>Nutrition days</span><strong>{{ $visibility['nutrition'] ? $report['nutrition_days_logged'].'/7' : '-' }}</strong></td>
       <td><span>Workouts</span><strong>{{ $visibility['training'] ? $report['training']['workouts'] : '-' }}</strong></td>
       <td><span>Total sets</span><strong>{{ $visibility['training'] ? $report['training']['sets'] : '-' }}</strong></td>
-      <td><span>Training volume</span><strong>{{ $visibility['training'] ? $format($report['training']['volume_kg']).' kg' : '-' }}</strong></td>
+      <td><span>Training volume</span><strong>{{ $visibility['training'] ? $format($report['training']['volume']).' '.$report['units']['weight'] : '-' }}</strong></td>
     </tr>
   </table>
 
@@ -115,9 +115,9 @@
         </tr>
         <tr>
           <td><strong>Highest weight used</strong></td>
-          <td class="number">{{ $format($report['training']['max_weight_kg'], 1) }} kg</td>
+          <td class="number">{{ $format($report['training']['max_weight'], 1) }} {{ $report['units']['weight'] }}</td>
           <td><strong>Total training volume</strong></td>
-          <td class="number">{{ $format($report['training']['volume_kg'], 1) }} kg</td>
+          <td class="number">{{ $format($report['training']['volume'], 1) }} {{ $report['units']['weight'] }}</td>
         </tr>
       </tbody>
     </table>
@@ -142,7 +142,7 @@
               <td class="number">{{ $workout['exercises'] }}</td>
               <td class="number">{{ $workout['sets'] }}</td>
               <td class="number">{{ $workout['reps'] }}</td>
-              <td class="number">{{ $format($workout['volume_kg'], 1) }} kg</td>
+              <td class="number">{{ $format($workout['volume'], 1) }} {{ $report['units']['weight'] }}</td>
             </tr>
           @endforeach
         </tbody>
@@ -160,15 +160,15 @@
       <tbody>
         <tr>
           <td><strong>Current weight</strong></td>
-          <td class="number">{{ $format($report['weight']['current'], 1) }} kg</td>
+          <td class="number">{{ $format($report['weight']['display_current'], 1) }} {{ $report['units']['weight'] }}</td>
           <td><strong>Weekly weight entries</strong></td>
           <td class="number">{{ $report['weight']['entries'] }}</td>
         </tr>
         <tr>
           <td><strong>Start to end</strong></td>
-          <td class="number">{{ $format($report['weight']['start'], 1) }} kg to {{ $format($report['weight']['end'], 1) }} kg</td>
+          <td class="number">{{ $format($report['weight']['display_start'], 1) }} {{ $report['units']['weight'] }} to {{ $format($report['weight']['display_end'], 1) }} {{ $report['units']['weight'] }}</td>
           <td><strong>Weekly change</strong></td>
-          <td class="number">{{ $report['weight']['change'] !== null && $report['weight']['change'] > 0 ? '+' : '' }}{{ $format($report['weight']['change'], 2) }} kg</td>
+          <td class="number">{{ $report['weight']['display_change'] !== null && $report['weight']['display_change'] > 0 ? '+' : '' }}{{ $format($report['weight']['display_change'], 2) }} {{ $report['units']['weight'] }}</td>
         </tr>
       </tbody>
     </table>
@@ -177,13 +177,13 @@
       <p class="muted">Latest saved body measurements: {{ $report['latest_body']['date'] }}</p>
       <table class="measurements">
         <tr>
-          <td><span>Waist</span><strong>{{ $format($report['latest_body']['waist_cm'], 1) }} cm</strong></td>
-          <td><span>Arms</span><strong>{{ $format($report['latest_body']['arms_cm'], 1) }} cm</strong></td>
-          <td><span>Thighs</span><strong>{{ $format($report['latest_body']['thighs_cm'], 1) }} cm</strong></td>
+          <td><span>Waist</span><strong>{{ $format($report['latest_body']['waist'], 1) }} {{ $report['units']['length'] }}</strong></td>
+          <td><span>Arms</span><strong>{{ $format($report['latest_body']['arms'], 1) }} {{ $report['units']['length'] }}</strong></td>
+          <td><span>Thighs</span><strong>{{ $format($report['latest_body']['thighs'], 1) }} {{ $report['units']['length'] }}</strong></td>
         </tr>
         <tr>
-          <td><span>Hips</span><strong>{{ $format($report['latest_body']['hips_cm'], 1) }} cm</strong></td>
-          <td><span>Glutes / seat</span><strong>{{ $format($report['latest_body']['glutes_cm'], 1) }} cm</strong></td>
+          <td><span>Hips</span><strong>{{ $format($report['latest_body']['hips'], 1) }} {{ $report['units']['length'] }}</strong></td>
+          <td><span>Glutes / seat</span><strong>{{ $format($report['latest_body']['glutes'], 1) }} {{ $report['units']['length'] }}</strong></td>
           <td><span>Check-ins this week</span><strong>{{ $report['body_checkins'] }}</strong></td>
         </tr>
       </table>

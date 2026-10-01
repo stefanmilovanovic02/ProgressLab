@@ -31,6 +31,14 @@ class HomeRecentActivityTest extends TestCase
             ->assertOk()
             ->assertSee('Recent Activity')
             ->assertSee('Your ProgressLab plan expires soon.')
-            ->assertSee('View All Notifications');
+            ->assertSee('View All Notifications')
+            ->assertSee('data-rank-open', false)
+            ->assertSee('rankOverviewDialog', false)
+            ->assertSee('/css/home.min.css', false)
+            ->assertSee('hm-weekly-chart', false)
+            ->assertDontSee('/css/auth.css', false)
+            ->assertDontSee('chart.umd.min.js', false)
+            ->assertHeader('Cache-Control', 'max-age=0, must-revalidate, no-cache, private')
+            ->assertSee('Olympian');
     }
 }

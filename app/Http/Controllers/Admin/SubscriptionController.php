@@ -43,8 +43,24 @@ class SubscriptionController extends Controller
             ->paginate(20)
             ->withQueryString();
 
+        $directGrants = collect();
+        if ($status === '' || $status === 'active') {
+            $directGrants = User::query()
+                ->whereIn('role', ['paid', 'trainer'])
+                ->whereDoesntHave('subscriptions', fn ($query) => $query->currentlyActive())
+                ->when($search !== '', fn ($query) => $query->where(function ($query) use ($search) {
+                    $query->where('full_name', 'like', "%{$search}%")
+                        ->orWhere('name', 'like', "%{$search}%")
+                        ->orWhere('username', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                }))
+                ->orderByRaw('COALESCE(full_name, name)')
+                ->get(['id', 'name', 'full_name', 'username', 'email', 'role']);
+        }
+
         return view('admin.subscriptions.index', [
             'subscriptions' => $subscriptions,
+            'directGrants' => $directGrants,
             'search' => $search,
             'status' => $status,
             'statuses' => self::STATUSES,

@@ -181,6 +181,8 @@ class AddTodayController extends Controller
             $user = $request->user();
             $today = now()->format('Y-m-d');
 
+            $this->normalizeWorkoutDecimalInputs($request);
+
             $validated = $request->validate([
                 'workout_id' => ['required','exists:workouts,id'],
                 'exercises' => ['required','array'],
@@ -412,6 +414,32 @@ class AddTodayController extends Controller
             'duration_seconds' => $log->duration_seconds,
             'estimated_duration_seconds' => $log->workout?->estimated_duration_seconds,
         ];
+    }
+
+    private function normalizeWorkoutDecimalInputs(Request $request): void
+    {
+        $exercises = $request->input('exercises');
+        if (!is_array($exercises)) {
+            return;
+        }
+
+        foreach ($exercises as &$exercise) {
+            if (!isset($exercise['sets']) || !is_array($exercise['sets'])) {
+                continue;
+            }
+
+            foreach ($exercise['sets'] as &$set) {
+                foreach (['weight_kg', 'drop_weight_kg'] as $field) {
+                    if (isset($set[$field]) && is_string($set[$field])) {
+                        $set[$field] = str_replace(',', '.', trim($set[$field]));
+                    }
+                }
+            }
+            unset($set);
+        }
+        unset($exercise);
+
+        $request->merge(['exercises' => $exercises]);
     }
 
     // friend activity code

@@ -7,6 +7,7 @@ use App\Models\TrainerClient;
 use App\Services\TrainerClientAccessService;
 use App\Services\TrainerClientStatsService;
 use App\Services\UserChartDataService;
+use App\Support\UnitConverter;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -16,8 +17,11 @@ class DashboardController extends Controller
     public function index(Request $request)
     {
         $trainer = $request->user();
+        $hasUnitPreference = Schema::hasColumn('users', 'unit_system');
+        $clientColumns = ['id', 'name', 'full_name', 'username', 'email', 'avatar_path'];
+        if ($hasUnitPreference) $clientColumns[] = 'unit_system';
         $relationships = TrainerClient::query()
-            ->with('client:id,name,full_name,username,email,avatar_path')
+            ->with(['client' => fn ($query) => $query->select($clientColumns)])
             ->where('trainer_id', $trainer->id)
             ->whereIn('status', [TrainerClient::STATUS_ACCEPTED, TrainerClient::STATUS_PENDING])
             ->latest('updated_at')
@@ -62,6 +66,16 @@ class DashboardController extends Controller
             ];
         });
 
+        $recordColumns = [
+            'users.name as client_name',
+            'users.full_name as client_full_name',
+            'exercises.name as exercise_name',
+            'sets.weight_kg',
+            'sets.reps',
+            'logs.entry_date',
+        ];
+        $recordColumns[] = $hasUnitPreference ? 'users.unit_system' : DB::raw("'metric' as unit_system");
+
         $recentRecords = $exerciseClientIds->isEmpty() ? collect() : DB::table('workout_log_sets as sets')
             ->join('workout_log_exercises as logged', 'logged.id', '=', 'sets.workout_log_exercise_id')
             ->join('workout_logs as logs', 'logs.id', '=', 'logged.workout_log_id')
@@ -79,14 +93,12 @@ class DashboardController extends Controller
             )')
             ->latest('logs.entry_date')
             ->limit(8)
-            ->get([
-                'users.name as client_name',
-                'users.full_name as client_full_name',
-                'exercises.name as exercise_name',
-                'sets.weight_kg',
-                'sets.reps',
-                'logs.entry_date',
-            ]);
+            ->get($recordColumns)
+            ->map(function ($record) {
+                $record->display_weight = UnitConverter::weightFromKg($record->weight_kg, $record->unit_system);
+                $record->weight_unit = UnitConverter::weightUnit($record->unit_system);
+                return $record;
+            });
 
         return view('trainer.index', [
             'relationships' => $relationships,
@@ -131,6 +143,12 @@ class DashboardController extends Controller
                 : collect(),
             'nutritionGoal' => $relationship->can_view_nutrition && Schema::hasTable('nutrition_goals')
                 ? $user->nutritionGoal
+                : null,
+            'todayNutrition' => $relationship->can_view_nutrition && Schema::hasTable('nutrition_entries')
+                ? \App\Models\NutritionEntry::query()
+                    ->where('user_id', $user->id)
+                    ->whereDate('entry_date', now()->toDateString())
+                    ->first()
                 : null,
         ]);
     }

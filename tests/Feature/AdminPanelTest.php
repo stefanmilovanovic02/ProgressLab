@@ -324,6 +324,7 @@ class AdminPanelTest extends TestCase
         $admin = $this->user(UserRole::Admin);
         $owner = $this->user(UserRole::Owner, 'owner@example.test');
         $member = $this->user(UserRole::Paid, 'subscriber@example.test');
+        $directGrant = $this->user(UserRole::Paid, 'complimentary-direct@example.test');
 
         $this->actingAs($admin)
             ->get(route('admin.subscriptions.index'))
@@ -373,7 +374,27 @@ class AdminPanelTest extends TestCase
             ->assertOk()
             ->assertSee('Business overview')
             ->assertSee('Complimentary access')
+            ->assertViewHas('ownerMetrics', fn (array $metrics) =>
+                $metrics['complimentary_access'] === 2
+                && $metrics['active_subscriptions'] === 1
+            )
             ->assertSee('€29.99');
+
+        $this->actingAs($owner)
+            ->get(route('admin.subscriptions.index'))
+            ->assertOk()
+            ->assertSee('Complimentary direct grants')
+            ->assertSee($directGrant->email)
+            ->assertSee('Direct role grant');
+
+        $this->actingAs($owner)
+            ->get(route('admin.users.show', $directGrant))
+            ->assertOk()
+            ->assertViewHas('ownerData', fn (array $ownerData) => $ownerData['direct_access'] === true)
+            ->assertSee('Complimentary direct grant')
+            ->assertSee('data-admin-picker-trigger', false)
+            ->assertSee('data-admin-exercise-search', false)
+            ->assertDontSee('Owner access');
     }
 
     public function test_staff_chart_endpoints_show_selected_users_macro_and_exercise_data(): void

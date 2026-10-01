@@ -22,6 +22,16 @@ class StreaksController extends Controller
             $count = 0;
             $d = $today->copy();
 
+            // A streak completed yesterday is still active throughout today.
+            // It only expires after the user misses a complete additional day.
+            if (!isset($dateSet[$d->toDateString()])) {
+                $d->subDay();
+
+                if (!isset($dateSet[$d->toDateString()])) {
+                    return 0;
+                }
+            }
+
             while (isset($dateSet[$d->toDateString()])) {
                 $count++;
                 $d->subDay();

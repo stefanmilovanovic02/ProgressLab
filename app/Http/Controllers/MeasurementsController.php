@@ -8,6 +8,7 @@ use App\Services\AchievementService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Validator;
+use App\Support\UnitConverter;
 
 class MeasurementsController extends Controller
 {
@@ -39,13 +40,15 @@ class MeasurementsController extends Controller
 
     public function storeBody(Request $request)
     {
+        $unitSystem = UnitConverter::normalize($request->user()->unit_system);
+        $imperial = $unitSystem === UnitConverter::IMPERIAL;
         $validator = Validator::make($request->all(), [
-            'weight_kg' => ['nullable', 'numeric', 'min:20', 'max:400'],
-            'waist_cm' => ['nullable', 'numeric', 'min:30', 'max:250'],
-            'arms_cm' => ['nullable', 'numeric', 'min:10', 'max:100'],
-            'thighs_cm' => ['nullable', 'numeric', 'min:20', 'max:150'],
-            'hips_cm' => ['nullable', 'numeric', 'min:30', 'max:250'],
-            'glutes_cm' => ['nullable', 'numeric', 'min:30', 'max:250'],
+            'weight_kg' => ['nullable', 'numeric', 'min:'.($imperial ? 44 : 20), 'max:'.($imperial ? 882 : 400)],
+            'waist_cm' => ['nullable', 'numeric', 'min:'.($imperial ? 12 : 30), 'max:'.($imperial ? 98 : 250)],
+            'arms_cm' => ['nullable', 'numeric', 'min:'.($imperial ? 4 : 10), 'max:'.($imperial ? 39 : 100)],
+            'thighs_cm' => ['nullable', 'numeric', 'min:'.($imperial ? 8 : 20), 'max:'.($imperial ? 59 : 150)],
+            'hips_cm' => ['nullable', 'numeric', 'min:'.($imperial ? 12 : 30), 'max:'.($imperial ? 98 : 250)],
+            'glutes_cm' => ['nullable', 'numeric', 'min:'.($imperial ? 12 : 30), 'max:'.($imperial ? 98 : 250)],
         ]);
 
         $validator->after(function ($validator) use ($request) {
@@ -63,6 +66,14 @@ class MeasurementsController extends Controller
         $values = collect($validated)
             ->map(fn ($value) => $value === null || $value === '' ? null : $value)
             ->all();
+        if (isset($values['weight_kg'])) {
+            $values['weight_kg'] = UnitConverter::weightToKg((float) $values['weight_kg'], $unitSystem);
+        }
+        foreach (['waist_cm', 'arms_cm', 'thighs_cm', 'hips_cm', 'glutes_cm'] as $field) {
+            if (isset($values[$field])) {
+                $values[$field] = UnitConverter::lengthToCm((float) $values[$field], $unitSystem);
+            }
+        }
         $user = $request->user();
         $today = now()->toDateString();
 

@@ -4,9 +4,7 @@
   padding: 68px max(20px, calc((100vw - 1260px) / 2)) 90px;
   overflow: hidden;
   isolation: isolate;
-  background:
-    radial-gradient(circle at 50% 0%, rgba(49, 105, 226, .22), transparent 38%),
-    linear-gradient(180deg, #071328 0%, #050b14 52%, #03070d 100%);
+  background: transparent;
 }
 .pr-glow { position: absolute; z-index: -1; width: 560px; height: 560px; border-radius: 50%; filter: blur(80px); opacity: .34; pointer-events: none; }
 .pr-glow--left { left: -250px; top: 260px; background: #145dff; }

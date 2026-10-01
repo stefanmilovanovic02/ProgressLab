@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Validation\Rule;
+use App\Support\UnitConverter;
 
 class RegisterController extends Controller
 {
@@ -62,18 +63,25 @@ class RegisterController extends Controller
     {
         $this->requireStep1($request);
 
+        $unitSystem = UnitConverter::normalize($request->input('unit_system'));
+        $isImperial = $unitSystem === UnitConverter::IMPERIAL;
+
         $validated = $request->validate([
+            'unit_system' => ['nullable', Rule::in([UnitConverter::METRIC, UnitConverter::IMPERIAL])],
             'gender'   => ['required', 'in:male,female'],
             'age'      => ['required', 'integer', 'min:13', 'max:90'],
-            'height'   => ['required', 'integer', 'min:120', 'max:230'], // cm
-            'weight'   => ['required', 'numeric', 'min:35', 'max:250'],  // kg
-            'activity' => ['required', 'numeric', 'min:1.2', 'max:2.2'],
+            'height'   => ['required', 'numeric', 'min:'.($isImperial ? 47 : 120), 'max:'.($isImperial ? 91 : 230)],
+            'weight'   => ['required', 'numeric', 'min:'.($isImperial ? 77 : 35), 'max:'.($isImperial ? 551 : 250)],
+            'activity' => ['required', 'numeric', Rule::in(['1.2', '1.5', '1.65', '1.7', '1.8', '2.0', '2.2'])],
         ]);
+
+        $heightCm = UnitConverter::lengthToCm((float) $validated['height'], $unitSystem);
+        $weightKg = UnitConverter::weightToKg((float) $validated['weight'], $unitSystem);
 
         $bmr = $this->calculateBmr(
             $validated['gender'],
-            (float) $validated['weight'],
-            (float) $validated['height'],
+            $weightKg,
+            $heightCm,
             (int) $validated['age']
         );
 
@@ -82,8 +90,11 @@ class RegisterController extends Controller
         $request->session()->put('register.step2', [
             'gender' => $validated['gender'],
             'age' => (int) $validated['age'],
-            'height_cm' => (int) $validated['height'],
-            'weight_kg' => (float) $validated['weight'],
+            'unit_system' => $unitSystem,
+            'height_input' => (float) $validated['height'],
+            'weight_input' => (float) $validated['weight'],
+            'height_cm' => $heightCm,
+            'weight_kg' => $weightKg,
             'activity_multiplier' => (float) $validated['activity'],
         ]);
 
@@ -101,6 +112,7 @@ class RegisterController extends Controller
 
         return view('auth.register.step3', [
             'tdee' => (int) $request->session()->get('register.tdee'),
+            'weightKg' => (float) $request->session()->get('register.step2.weight_kg'),
             'data' => $request->session()->get('register.step3', []),
             // optional preview placeholder (we can compute preview later if you want)
             'macros_preview' => $request->session()->get('register.macros_preview'),
@@ -154,6 +166,7 @@ class RegisterController extends Controller
                 'email'     => $step1['email'],
                 'password'  => $step1['password_hash'],
                 'gender'    => $step2['gender'] ?? null,
+                'unit_system' => UnitConverter::normalize($step2['unit_system'] ?? null),
             ]);
             $user->forceFill(['role' => UserRole::User])->save();
 
@@ -197,7 +210,8 @@ class RegisterController extends Controller
             ]);
         }
 
-        // Clear the registration session data
+        Auth::login($user);
+        $request->session()->regenerate();
         $request->session()->forget('register');
 
         $unlocked = app(\App\Services\AchievementService::class)->evaluate($user);
@@ -205,7 +219,7 @@ class RegisterController extends Controller
             session()->flash('unlocked', $unlocked);
         }
 
-        return redirect()->route('login')->with('status', 'Account created. Please sign in.')->with('unlocked', $unlocked);
+        return redirect()->route('home')->with('status', 'Account created. Welcome to ProgressLab!')->with('unlocked', $unlocked);
     }
 
     // Helpers

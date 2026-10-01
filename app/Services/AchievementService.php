@@ -2,6 +2,8 @@
 
 namespace App\Services;
 
+use App\Support\AchievementImage;
+
 use App\Models\Achievement;
 use App\Models\NutritionEntry;
 use App\Models\UserAchievement;
@@ -76,7 +78,7 @@ class AchievementService
                     'title' => $achievement->title,
                     'description' => $achievement->description,
                     'rarity' => $achievement->rarity,
-                    'image_path' => $achievement->image_path ? asset($achievement->image_path) : asset('images/achievements/default.png'),
+                    'image_path' => AchievementImage::url($achievement->image_path, $achievement->category),
                 ];
             }
         }

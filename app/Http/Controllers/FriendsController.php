@@ -2,6 +2,9 @@
 
 namespace App\Http\Controllers;
 
+use App\Support\AchievementImage;
+use App\Support\UnitConverter;
+
 use App\Models\FriendRequest;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -9,6 +12,7 @@ use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
 use App\Models\TrainerClient;
+use App\Services\ExperienceService;
 
 class FriendsController extends Controller
 {
@@ -82,11 +86,59 @@ class FriendsController extends Controller
             ->latest()
             ->get();
 
+        $friendIds = $friends->pluck('id');
+        $pendingUserIds = $pendingSent->pluck('receiver_id')
+            ->merge($incomingRequests->pluck('sender_id'))
+            ->unique();
+        $excludedIds = $friendIds->merge($pendingUserIds)->push($user->id)->unique();
+        $suggestionColumns = ['id', 'name', 'full_name', 'username', 'avatar_path'];
+        $hasLocation = Schema::hasColumn('users', 'location');
+        if ($hasLocation) $suggestionColumns[] = 'location';
+
+        $viewerLocation = $hasLocation ? mb_strtolower(trim((string) $user->location)) : '';
+        $suggestionQuery = User::query()->whereNotIn('users.id', $excludedIds);
+        $hasLoginActivity = Schema::hasTable('login_logs');
+        if ($hasLoginActivity) {
+            $latestActivity = DB::table('login_logs')
+                ->selectRaw('user_id, MAX(updated_at) as last_active')
+                ->groupBy('user_id');
+            $suggestionQuery->leftJoinSub(
+                $latestActivity,
+                'suggestion_activity',
+                'suggestion_activity.user_id',
+                '=',
+                'users.id'
+            );
+        }
+        if ($viewerLocation !== '') {
+            $suggestionQuery->orderByRaw(
+                'CASE WHEN LOWER(TRIM(users.location)) = ? THEN 1 ELSE 0 END DESC',
+                [$viewerLocation]
+            );
+        }
+        if ($hasLoginActivity) {
+            $suggestionQuery->orderByDesc('suggestion_activity.last_active');
+        }
+
+        $suggestedPeople = $suggestionQuery
+            ->select(collect($suggestionColumns)->map(fn ($column) => 'users.'.$column)->all())
+            ->limit(50)
+            ->get()
+            ->take(10)
+            ->map(fn (User $candidate) => [
+                'id' => $candidate->id,
+                'name' => $candidate->full_name ?: $candidate->name,
+                'username' => $candidate->username,
+                'avatar_url' => $candidate->avatar_url,
+                'nearby' => $viewerLocation !== '' && mb_strtolower(trim((string) $candidate->location)) === $viewerLocation,
+            ])->values();
+
         return view('friends.index', [
             'friendsCount' => $friendsCount,
             'friendsCards' => $friendsCards,
             'pendingSent' => $pendingSent,
             'incomingRequests' => $incomingRequests,
+            'suggestedPeople' => $suggestedPeople,
         ]);
     }
 
@@ -287,6 +339,19 @@ private function humanLastSeen($timestamp): string
         return response()->json(['ok' => true]);
     }
 
+    public function cancelRequest(Request $request, FriendRequest $friendRequest)
+    {
+        abort_unless(
+            (int) $friendRequest->sender_id === (int) $request->user()->id
+            && $friendRequest->status === 'pending',
+            403
+        );
+
+        $friendRequest->delete();
+
+        return response()->json(['ok' => true]);
+    }
+
     public function destroy(Request $request, User $user)
     {
         $auth = $request->user();
@@ -420,15 +485,15 @@ private function humanLastSeen($timestamp): string
             return $streak;
         }
 
-public function summary(Request $request, User $user)
+public function summary(Request $request, User $user, ExperienceService $experience)
 {
     $auth = $request->user();
 
     $isFriend = $auth->friends()->where('users.id', $user->id)->exists();
-    if (!$isFriend && $auth->id !== $user->id) abort(403);
+    $isSelf = $auth->id === $user->id;
 
     $trainerAccess = null;
-    if (Schema::hasTable('trainer_clients')) {
+    if (($isFriend || $isSelf) && Schema::hasTable('trainer_clients')) {
         $relationship = $auth->isTrainer()
             ? TrainerClient::query()->where('trainer_id', $auth->id)->where('client_id', $user->id)->first()
             : ($user->isTrainer()
@@ -564,7 +629,7 @@ public function summary(Request $request, User $user)
             ])
             ->map(fn($a) => [
                 'title' => $a->title,
-                'image_url' => $a->image_path ? asset($a->image_path) : null,
+                'image_url' => AchievementImage::url($a->image_path, $a->category),
                 'rarity' => $a->rarity,
                 'category' => $a->category,
             ])
@@ -572,14 +637,47 @@ public function summary(Request $request, User $user)
             ->all();
     }
 
+    $totalXp = Schema::hasTable('experience_events')
+        ? (int) DB::table('experience_events')->where('user_id', $user->id)->sum('points')
+        : 0;
+    $rank = $experience->progressForXp($totalXp);
+    $requestState = 'add';
+    if ($isFriend) {
+        $requestState = 'friends';
+    } elseif (FriendRequest::query()->where('sender_id', $auth->id)->where('receiver_id', $user->id)->where('status', 'pending')->exists()) {
+        $requestState = 'pending';
+    } elseif (FriendRequest::query()->where('sender_id', $user->id)->where('receiver_id', $auth->id)->where('status', 'pending')->exists()) {
+        $requestState = 'incoming';
+    }
+
     return response()->json([
         'user' => [
             'id' => $user->id,
             'name' => $user->full_name ?? $user->name ?? 'User',
             'username' => $user->username ?? '',
-            'email' => $user->email ?? '',
+            'email' => ($isFriend || $isSelf) ? ($user->email ?? '') : '',
             'avatar_url' => $this->publicImageUrl($user->avatar_path) ?? asset('images/default-avatar.png'),
-            'cover_url' => $this->publicImageUrl($user->cover_path), // ex: storage/covers/...
+            'cover_url' => $this->mediaUrl($user->cover_path),
+            'background_video_url' => $this->mediaUrl($user->profile_background_video_path ?? null),
+            'showcase_url' => $this->mediaUrl($user->profile_showcase_path ?? null),
+            'quote' => $user->profile_quote ?? '',
+            'location' => $user->location ?? '',
+            'socials' => collect([
+                'instagram' => $user->social_instagram ?? null,
+                'tiktok' => $user->social_tiktok ?? null,
+                'snapchat' => $user->social_snapchat ?? null,
+                'linkedin' => $user->social_linkedin ?? null,
+            ])->filter()->all(),
+            'theme' => [
+                'accent' => $user->profile_accent_color ?: '#329ff2',
+                'accent_opacity' => (int) ($user->profile_accent_opacity ?? 100),
+                'secondary' => $user->profile_secondary_color ?: '#2dd4ff',
+                'secondary_opacity' => (int) ($user->profile_secondary_opacity ?? 100),
+                'surface' => $user->profile_surface_color ?: '#0b1422',
+                'surface_opacity' => (int) ($user->profile_surface_opacity ?? 92),
+                'text' => $user->profile_text_color ?: '#f5f8ff',
+                'text_opacity' => (int) ($user->profile_text_opacity ?? 100),
+            ],
             'joined_full' => $user->created_at ? $user->created_at->format('F j, Y') : '—',
             'joined_short' => $user->created_at ? $user->created_at->format('F j') : '—',
             'status' => $status,
@@ -600,8 +698,31 @@ public function summary(Request $request, User $user)
         'achievements' => $achievements,
         'achievements_unlocked' => $achUnlockedCount,
         'trainer_access' => $trainerAccess,
+        'relationship' => [
+            'is_friend' => $isFriend,
+            'is_self' => $isSelf,
+            'can_customize' => $isSelf && $auth->canCustomizeSocialProfile(),
+            'state' => $requestState,
+            'can_compare' => $isFriend || $isSelf,
+        ],
+        'rank' => [
+            'name' => $rank['rank'],
+            'level' => $rank['level'],
+            'total_xp' => $rank['total_xp'],
+            'color' => $rank['color'],
+            'icon_url' => asset('images/ranks/'.$rank['rank_slug'].'.png'),
+        ],
     ]);
 }
+
+    private function mediaUrl(?string $path): ?string
+    {
+        if (!$path) return null;
+        if (str_starts_with($path, 'http://') || str_starts_with($path, 'https://')) return $path;
+        if (str_starts_with($path, '/storage/')) return asset(ltrim($path, '/'));
+        if (str_starts_with($path, 'storage/')) return asset($path);
+        return asset('storage/'.ltrim($path, '/'));
+    }
 
     private function consecutiveDaysStreak(array $dateStrings): int
     {
@@ -702,11 +823,11 @@ public function summary(Request $request, User $user)
 
             $labels = $allDays->map(fn($d) => \Carbon\Carbon::parse($d)->format('M j'))->values()->all();
             $myValues = $allDays
-                ->map(fn($d) => array_key_exists($d, $mine) ? (float) $mine[$d] : null)
+                ->map(fn($d) => array_key_exists($d, $mine) ? UnitConverter::weightFromKg((float) $mine[$d], $auth->unit_system) : null)
                 ->values()
                 ->all();
             $friendValues = $allDays
-                ->map(fn($d) => array_key_exists($d, $friend) ? (float) $friend[$d] : null)
+                ->map(fn($d) => array_key_exists($d, $friend) ? UnitConverter::weightFromKg((float) $friend[$d], $auth->unit_system) : null)
                 ->values()
                 ->all();
 
@@ -719,6 +840,7 @@ public function summary(Request $request, User $user)
                 'friend' => $friendValues,
                 'user_name' => $auth->full_name ?? $auth->name ?? 'You',
                 'friend_name' => $user->full_name ?? $user->name ?? 'Friend',
+                'weight_unit' => $auth->weightUnit(),
             ]);
         }
 

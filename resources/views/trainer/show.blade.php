@@ -1,18 +1,19 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <x-seo title="Client Progress" description="Read-only Trainer client analytics." robots="noindex, nofollow, noarchive" />
+  <x-seo title="Client Progress" description="Consent-based Trainer client analytics and coaching tools." robots="noindex, nofollow, noarchive" />
   <link rel="stylesheet" href="{{ asset('css/auth.css') }}?v={{ filemtime(public_path('css/auth.css')) }}">
   <link rel="stylesheet" href="{{ asset('css/admin.css') }}?v={{ filemtime(public_path('css/admin.css')) }}">
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
 <body class="auth-body">
   <x-navbar />
+  @php $weightUnit = $client->weightUnit(); @endphp
   <main class="pl-container ad-wrap">
     <header class="ad-head">
       <div class="ad-profile-title">
         <img src="{{ $client->avatar_url }}" alt="" width="64" height="64">
-        <div><span class="ad-eyebrow">Read-only client dashboard</span><h1>{{ $client->full_name ?? $client->name }}</h1><p>{{ '@' . ($client->username ?? 'user') }}</p></div>
+        <div><span class="ad-eyebrow">Client coaching dashboard</span><h1>{{ $client->full_name ?? $client->name }}</h1><p>{{ '@' . ($client->username ?? 'user') }}</p></div>
       </div>
       <div class="ad-actions">
         @if($relationship->can_view_nutrition || $relationship->can_view_exercises || $relationship->can_view_weight)
@@ -26,7 +27,7 @@
     @if($errors->any())
       <div class="ad-alert ad-alert--error"><strong>Please correct these fields:</strong><ul>@foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
     @endif
-    <div class="ad-privacy-banner"><strong>Consent-based access</strong> Shared analytics remain view-only. Planning tools can assign new workouts and nutrition targets, while progress photos remain unavailable.</div>
+    <div class="ad-privacy-banner"><strong>Consent-based access</strong> Shared analytics remain view-only. Assigned workout logs and nutrition targets can be updated for active coaching, while progress photos remain unavailable.</div>
 
     <section class="ad-card">
       <div class="ad-card__head"><div><span class="ad-eyebrow">Client controlled</span><h2>Shared areas</h2></div><span class="ad-lock">🔒 Progress photos excluded</span></div>
@@ -64,13 +65,61 @@
               <article>
                 <div><strong>{{ $assignment->clientWorkout->name }}</strong><span>{{ $assignment->clientWorkout->exercises->count() }} exercises · assigned {{ $assignment->assigned_at->format('M j, Y') }}</span></div>
                 @if($assignment->instructions)<p>{{ $assignment->instructions }}</p>@endif
+                @if($relationship->can_view_exercises)
+                  <a class="tr-assignment-open" href="{{ route('trainer.clients.workout-logs.edit', [$client, $assignment]) }}">Open workout log <span aria-hidden="true">→</span></a>
+                @endif
               </article>
             @endforeach
           </div>
         @endif
       </section>
 
-      <section class="ad-card">
+      <section class="ad-card tr-daily-nutrition">
+        <div class="ad-card__head"><div><span class="ad-eyebrow">Today’s intake</span><h2>Client nutrition</h2></div><span class="ad-lock">{{ $relationship->can_view_nutrition ? now()->format('M j') : 'Not shared' }}</span></div>
+        @if($relationship->can_view_nutrition)
+          @php
+            $dailyMetrics = [
+              ['key' => 'calories', 'label' => 'Calories', 'value' => (float) ($todayNutrition?->calories ?? 0), 'target' => (float) ($nutritionGoal?->calorie_target ?? 0), 'unit' => 'kcal', 'color' => '#ef5b78'],
+              ['key' => 'protein_g', 'label' => 'Protein', 'value' => (float) ($todayNutrition?->protein_g ?? 0), 'target' => (float) ($nutritionGoal?->protein_g ?? 0), 'unit' => 'g', 'color' => '#a875ff'],
+              ['key' => 'carbs_g', 'label' => 'Carbs', 'value' => (float) ($todayNutrition?->carbs_g ?? 0), 'target' => (float) ($nutritionGoal?->carbs_g ?? 0), 'unit' => 'g', 'color' => '#e4c77d'],
+              ['key' => 'fat_g', 'label' => 'Fat', 'value' => (float) ($todayNutrition?->fat_g ?? 0), 'target' => (float) ($nutritionGoal?->fat_g ?? 0), 'unit' => 'g', 'color' => '#f2a65a'],
+              ['key' => 'creatine_g', 'label' => 'Creatine', 'value' => (float) ($todayNutrition?->creatine_g ?? 0), 'target' => (float) ($nutritionGoal?->creatine_g ?? 0), 'unit' => 'g', 'color' => '#f4f7ff'],
+              ['key' => 'water_ml', 'label' => 'Water', 'value' => (float) ($todayNutrition?->water_ml ?? 0), 'target' => (float) ($nutritionGoal?->water_l ?? 0) * 1000, 'unit' => 'ml', 'color' => '#55b8ff'],
+            ];
+          @endphp
+          <div class="tr-macro-overview">
+            @foreach($dailyMetrics as $metric)
+              @php $percent = $metric['target'] > 0 ? min(100, ($metric['value'] / $metric['target']) * 100) : 0; @endphp
+              <div class="tr-macro-item" style="--macro-color: {{ $metric['color'] }}">
+                <div><span>{{ $metric['label'] }}</span><strong>{{ number_format($metric['value'], $metric['value'] == floor($metric['value']) ? 0 : 1) }} {{ $metric['unit'] }}</strong></div>
+                <div class="tr-macro-track"><i style="width: {{ $percent }}%"></i></div>
+                <small>@if($metric['target'] > 0)of {{ number_format($metric['target'], $metric['target'] == floor($metric['target']) ? 0 : 1) }} {{ $metric['unit'] }}@else No target set @endif</small>
+              </div>
+            @endforeach
+          </div>
+
+          <details class="tr-nutrition-editor" @if($errors->dailyNutrition->any()) open @endif>
+            <summary>Edit today’s entry <span>{{ $todayNutrition ? 'Update logged values' : 'Add missing values' }}</span></summary>
+            @if($errors->dailyNutrition->any())
+              <div class="ad-alert ad-alert--error"><ul>@foreach($errors->dailyNutrition->all() as $error)<li>{{ $error }}</li>@endforeach</ul></div>
+            @endif
+            <form method="POST" action="{{ route('trainer.clients.nutrition-entry.update', $client) }}" class="ad-form-grid">
+              @csrf @method('PATCH')
+              <label><span class="ad-label">Calories</span><input type="number" name="calories" min="0" max="50000" inputmode="numeric" value="{{ old('calories', $todayNutrition?->calories) }}" placeholder="0"></label>
+              <label><span class="ad-label">Protein (g)</span><input type="number" name="protein_g" min="0" max="1000" inputmode="numeric" value="{{ old('protein_g', $todayNutrition?->protein_g) }}" placeholder="0"></label>
+              <label><span class="ad-label">Carbs (g)</span><input type="number" name="carbs_g" min="0" max="2000" inputmode="numeric" value="{{ old('carbs_g', $todayNutrition?->carbs_g) }}" placeholder="0"></label>
+              <label><span class="ad-label">Fat (g)</span><input type="number" name="fat_g" min="0" max="1000" inputmode="numeric" value="{{ old('fat_g', $todayNutrition?->fat_g) }}" placeholder="0"></label>
+              <label><span class="ad-label">Water (ml)</span><input type="number" name="water_ml" min="0" max="10000" inputmode="numeric" value="{{ old('water_ml', $todayNutrition?->water_ml) }}" placeholder="0"></label>
+              <label><span class="ad-label">Creatine (g)</span><input type="number" name="creatine_g" min="0" max="100" step=".1" inputmode="decimal" value="{{ old('creatine_g', $todayNutrition?->creatine_g) }}" placeholder="0"></label>
+              <div class="ad-form-actions ad-field-wide"><button class="ad-button" type="submit">Save today’s nutrition</button></div>
+            </form>
+          </details>
+        @else
+          <div class="ad-empty">The client must share Nutrition charts before today’s intake can be viewed or updated.</div>
+        @endif
+      </section>
+
+      <section class="ad-card tr-nutrition-goals">
         <div class="ad-card__head"><div><span class="ad-eyebrow">Client targets</span><h2>Nutrition goals</h2></div><span class="ad-lock">{{ $relationship->can_view_nutrition ? 'Trainer managed' : 'Not shared' }}</span></div>
         @if($relationship->can_view_nutrition)
           <form method="POST" action="{{ route('trainer.clients.nutrition-targets.update', $client) }}" class="ad-form-grid">
@@ -110,7 +159,21 @@
         <section class="pl-card ch-card ad-chart-card">
           <div class="ch-head"><div class="ch-head__left"><div class="ch-icon">🥗</div><div><span class="ad-eyebrow">Shared by client</span><h2 class="ch-title">Macronutrient Progress</h2></div></div></div>
           <div class="ch-controls">
-            <div class="ch-control"><label class="ch-label">Macronutrient</label><div class="ch-selectwrap"><select class="ch-select" data-tr-macro><option value="calories">Calories</option><option value="protein">Protein</option><option value="carbs">Carbohydrates</option><option value="fat">Fat</option><option value="creatine">Creatine</option><option value="water">Water</option></select></div></div>
+            <div class="ch-control">
+              <span class="ch-label" id="trainerMacroLabel">Macronutrient</span>
+              <div class="ad-chart-picker" data-tr-macro data-value="calories">
+                <button class="ad-chart-picker__trigger" type="button" aria-haspopup="listbox" aria-expanded="false" aria-labelledby="trainerMacroLabel trainerMacroValue" data-tr-macro-trigger>
+                  <span class="ch-dot" data-tr-macro-dot></span>
+                  <span id="trainerMacroValue" data-tr-macro-label>Calories</span>
+                  <span class="ad-chart-picker__arrow" aria-hidden="true"></span>
+                </button>
+                <div class="ad-chart-picker__menu" role="listbox" aria-labelledby="trainerMacroLabel" data-tr-macro-menu hidden>
+                  @foreach(['calories' => 'Calories', 'protein' => 'Protein', 'carbs' => 'Carbohydrates', 'fat' => 'Fat', 'creatine' => 'Creatine', 'water' => 'Water'] as $value => $label)
+                    <button type="button" role="option" aria-selected="{{ $loop->first ? 'true' : 'false' }}" data-tr-macro-option="{{ $value }}">{{ $label }}</button>
+                  @endforeach
+                </div>
+              </div>
+            </div>
             @include('trainer._periods', ['attribute' => 'data-tr-macro-period', 'active' => 'month'])
           </div>
           <div class="ch-chartwrap"><canvas data-tr-macro-chart height="120"></canvas></div>
@@ -122,7 +185,17 @@
         <section class="pl-card ch-card ad-chart-card">
           <div class="ch-head"><div class="ch-head__left"><div class="ch-icon">🏋️</div><div><span class="ad-eyebrow">Shared by client</span><h2 class="ch-title">Exercise Progress</h2></div></div></div>
           <div class="ch-controls">
-            <div class="ch-control"><label class="ch-label">Exercise</label><div class="ch-selectwrap"><select class="ch-select" data-tr-exercise><option value="">Choose an exercise...</option>@foreach($chartExercises as $exercise)<option value="{{ $exercise->id }}">{{ $exercise->name }}</option>@endforeach</select></div></div>
+            <div class="ch-control">
+              <label class="ch-label" for="trainerExerciseSearch">Exercise</label>
+              <div class="ch-exercise-search" data-tr-exercise-picker>
+                <div class="ch-exercise-search__field">
+                  <input id="trainerExerciseSearch" type="search" inputmode="search" autocomplete="off" placeholder="Search this client's exercises..." role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="trainerExerciseOptions" data-tr-exercise-search>
+                  <button type="button" data-tr-exercise-clear aria-label="Clear selected exercise" hidden>&times;</button>
+                </div>
+                <input type="hidden" value="" data-tr-exercise>
+                <div id="trainerExerciseOptions" class="ch-exercise-search__options" role="listbox" data-tr-exercise-options hidden></div>
+              </div>
+            </div>
             @include('trainer._periods', ['attribute' => 'data-tr-exercise-period', 'active' => 'all'])
           </div>
           <div class="ch-chartwrap ch-chartwrap--exercise"><canvas data-tr-exercise-chart height="120"></canvas></div>
@@ -171,31 +244,90 @@
       };
 
       const macroSelect = root.querySelector('[data-tr-macro]');
+      const macroTrigger = macroSelect?.querySelector('[data-tr-macro-trigger]');
+      const macroMenu = macroSelect?.querySelector('[data-tr-macro-menu]');
+      const macroLabel = macroSelect?.querySelector('[data-tr-macro-label]');
+      const macroOptions = macroSelect ? [...macroSelect.querySelectorAll('[data-tr-macro-option]')] : [];
       const macroChart = makeChart(root.querySelector('[data-tr-macro-chart]'), single('#ff4d4d'));
       let macroPeriod = 'month';
       const loadMacro = async period => {
         macroPeriod = period || macroPeriod;
         const url = new URL(@json(route('trainer.clients.charts.macros', $client)), location.origin);
-        url.searchParams.set('macro', macroSelect.value); url.searchParams.set('period', macroPeriod);
+        url.searchParams.set('macro', macroSelect.dataset.value); url.searchParams.set('period', macroPeriod);
         const response = await fetch(url,{headers:{Accept:'application/json'}}); if(!response.ok)return;
         const data = await response.json(); const color = data.meta?.color || '#4b91ff';
-        macroChart.data.labels=data.labels||[]; macroChart.data.datasets[0].data=data.values||[]; macroChart.data.datasets[0].borderColor=color; macroChart.update(); updateInsights('macro',data.insights);
+        macroChart.data.labels=data.labels||[]; macroChart.data.datasets[0].data=data.values||[]; macroChart.data.datasets[0].borderColor=color; macroChart.data.datasets[0].pointBackgroundColor=color; macroChart.update();
+        const macroDot = macroSelect.querySelector('[data-tr-macro-dot]'); if (macroDot) macroDot.style.background=color;
+        updateInsights('macro',data.insights);
       };
-      if (macroSelect) { macroSelect.addEventListener('change',()=>loadMacro()); wirePeriods('[data-tr-macro-period]','month',loadMacro); loadMacro(); }
+      const setMacroOpen = (open, focusSelected = false) => {
+        if (!macroSelect) return;
+        macroSelect.classList.toggle('is-open', open); macroTrigger.setAttribute('aria-expanded', String(open)); macroMenu.hidden=!open;
+        if(open&&focusSelected)(macroOptions.find(option=>option.getAttribute('aria-selected')==='true')||macroOptions[0])?.focus();
+      };
+      if (macroSelect) {
+        macroTrigger.addEventListener('click',()=>setMacroOpen(macroMenu.hidden));
+        macroTrigger.addEventListener('keydown',event=>{if(event.key==='ArrowDown'||event.key==='ArrowUp'){event.preventDefault();setMacroOpen(true,true);}});
+        macroOptions.forEach((option,index)=>{
+          option.addEventListener('click',()=>{
+            macroSelect.dataset.value=option.dataset.trMacroOption;macroLabel.textContent=option.textContent.trim();
+            macroOptions.forEach(candidate=>candidate.setAttribute('aria-selected',String(candidate===option)));
+            setMacroOpen(false);macroTrigger.focus();loadMacro();
+          });
+          option.addEventListener('keydown',event=>{
+            if(event.key==='Escape'){event.preventDefault();setMacroOpen(false);macroTrigger.focus();return;}
+            if(!['ArrowDown','ArrowUp','Home','End'].includes(event.key))return;
+            event.preventDefault();
+            const next=event.key==='Home'?0:event.key==='End'?macroOptions.length-1:(index+(event.key==='ArrowDown'?1:-1)+macroOptions.length)%macroOptions.length;
+            macroOptions[next].focus();
+          });
+        });
+        wirePeriods('[data-tr-macro-period]','month',loadMacro); loadMacro();
+      }
 
       const exerciseSelect = root.querySelector('[data-tr-exercise]');
+      const exercisePicker = root.querySelector('[data-tr-exercise-picker]');
+      const exerciseSearch = root.querySelector('[data-tr-exercise-search]');
+      const exerciseOptions = root.querySelector('[data-tr-exercise-options]');
+      const exerciseClear = root.querySelector('[data-tr-exercise-clear]');
+      const exercises = @json($chartExercises->map(fn ($exercise) => ['id' => (string) $exercise->id, 'name' => $exercise->name])->values());
       const exerciseChart = makeChart(root.querySelector('[data-tr-exercise-chart]'), [
         {label:'Reps',data:[],borderColor:'#22c55e',backgroundColor:'transparent',pointBackgroundColor:'#22c55e',borderWidth:2,pointRadius:3,tension:.35},
-        {label:'Weight',data:[],borderColor:'#3b82f6',backgroundColor:'transparent',pointBackgroundColor:'#3b82f6',borderWidth:2,pointRadius:3,tension:.35}
+        {label:'Weight ({{ $weightUnit }})',data:[],borderColor:'#3b82f6',backgroundColor:'transparent',pointBackgroundColor:'#3b82f6',borderWidth:2,pointRadius:3,tension:.35}
       ]);
       let exercisePeriod='all';
+      let selectedExerciseName='';
       const loadExercise = async period => {
-        exercisePeriod=period||exercisePeriod; if(!exerciseSelect.value)return;
+        exercisePeriod=period||exercisePeriod;
+        if(!exerciseSelect.value){exerciseChart.data.labels=[];exerciseChart.data.datasets.forEach(dataset=>dataset.data=[]);exerciseChart.update();updateInsights('exercise',null);return;}
         const url=new URL(@json(route('trainer.clients.charts.exercise-data',$client)),location.origin); url.searchParams.set('exercise_id',exerciseSelect.value);url.searchParams.set('period',exercisePeriod);
         const response=await fetch(url,{headers:{Accept:'application/json'}});if(!response.ok)return;const data=await response.json();
         exerciseChart.data.labels=data.labels||[];exerciseChart.data.datasets[0].data=data.reps||[];exerciseChart.data.datasets[1].data=data.weight||[];exerciseChart.update();updateInsights('exercise',data.insights?.weight);
       };
-      if(exerciseSelect){exerciseSelect.addEventListener('change',()=>loadExercise());wirePeriods('[data-tr-exercise-period]','all',loadExercise);}
+      const closeExerciseResults=()=>{if(!exerciseOptions)return;exerciseOptions.hidden=true;exerciseSearch.setAttribute('aria-expanded','false');};
+      const chooseExercise=exercise=>{exerciseSelect.value=exercise.id;selectedExerciseName=exercise.name;exerciseSearch.value=exercise.name;exerciseClear.hidden=false;closeExerciseResults();loadExercise();};
+      const renderExerciseResults=()=>{
+        const query=exerciseSearch.value.trim().toLocaleLowerCase();exerciseOptions.replaceChildren();
+        if(!query||(exerciseSelect.value&&exerciseSearch.value===selectedExerciseName)){closeExerciseResults();return;}
+        const matches=exercises.filter(exercise=>exercise.name.toLocaleLowerCase().includes(query)).sort((left,right)=>{
+          const leftStarts=left.name.toLocaleLowerCase().startsWith(query);const rightStarts=right.name.toLocaleLowerCase().startsWith(query);
+          return Number(rightStarts)-Number(leftStarts)||left.name.localeCompare(right.name);
+        }).slice(0,10);
+        if(!matches.length){const empty=document.createElement('span');empty.className='ch-exercise-search__empty';empty.textContent='No matching exercises in this client’s history.';exerciseOptions.appendChild(empty);}
+        else matches.forEach(exercise=>{const option=document.createElement('button');option.type='button';option.className='ch-exercise-search__option';option.role='option';option.textContent=exercise.name;option.addEventListener('click',()=>chooseExercise(exercise));exerciseOptions.appendChild(option);});
+        exerciseOptions.hidden=false;exerciseSearch.setAttribute('aria-expanded','true');
+      };
+      if(exerciseSelect){
+        exerciseSearch.addEventListener('input',()=>{if(exerciseSearch.value!==selectedExerciseName){exerciseSelect.value='';selectedExerciseName='';exerciseClear.hidden=!exerciseSearch.value;}renderExerciseResults();});
+        exerciseSearch.addEventListener('keydown',event=>{if(event.key==='Escape'){closeExerciseResults();exerciseSearch.blur();}if(event.key==='Enter'&&!exerciseOptions.hidden){const first=exerciseOptions.querySelector('.ch-exercise-search__option');if(first){event.preventDefault();first.click();}}});
+        exerciseClear.addEventListener('click',()=>{exerciseSelect.value='';selectedExerciseName='';exerciseSearch.value='';exerciseClear.hidden=true;closeExerciseResults();loadExercise();exerciseSearch.focus();});
+        wirePeriods('[data-tr-exercise-period]','all',loadExercise);
+      }
+
+      document.addEventListener('pointerdown',event=>{
+        if(macroSelect&&!macroSelect.contains(event.target))setMacroOpen(false);
+        if(exercisePicker&&!exercisePicker.contains(event.target))closeExerciseResults();
+      });
 
       const weightChart=makeChart(root.querySelector('[data-tr-weight-chart]'),single('#a875ff'));let weightPeriod='all';
       const loadWeight=async period=>{weightPeriod=period||weightPeriod;const url=new URL(@json(route('trainer.clients.charts.weight',$client)),location.origin);url.searchParams.set('period',weightPeriod);const response=await fetch(url,{headers:{Accept:'application/json'}});if(!response.ok)return;const data=await response.json();weightChart.data.labels=data.labels||[];weightChart.data.datasets[0].data=data.values||[];weightChart.update();updateInsights('weight',data.insights);};
